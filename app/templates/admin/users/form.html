@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>
+        {% if user %}
+            Изменение пользователя
+        {% else %}
+            Создание пользователя
+        {% endif %}
+    </title>
+</head>
+<body>
+    <header>
+        <a href="{{ url_for('admin.users') }}">← К пользователям</a>
+
+        <h1>
+            {% if user %}
+                Изменение пользователя
+            {% else %}
+                Создание пользователя
+            {% endif %}
+        </h1>
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <section>
+                {% for category, message in messages %}
+                    <p>{{ message }}</p>
+                {% endfor %}
+            </section>
+        {% endif %}
+    {% endwith %}
+
+    <main>
+        <form method="post">
+            <input
+                type="hidden"
+                name="csrf_token"
+                value="{{ csrf_token() }}"
+            >
+
+            <p>
+                <label for="full_name">ФИО</label><br>
+                <input
+                    id="full_name"
+                    name="full_name"
+                    type="text"
+                    value="{{ user.full_name if user else '' }}"
+                    required
+                >
+            </p>
+
+            <p>
+                <label for="username">Логин</label><br>
+                <input
+                    id="username"
+                    name="username"
+                    type="text"
+                    value="{{ user.username if user else '' }}"
+                    required
+                >
+            </p>
+
+            <p>
+                <label for="email">Email</label><br>
+                <input
+                    id="email"
+                    name="email"
+                    type="email"
+                    value="{{ user.email if user else '' }}"
+                    required
+                >
+            </p>
+
+            <p>
+                <label for="role">Роль</label><br>
+
+                <select
+                    id="role"
+                    name="role"
+                    required
+                >
+                    {% for value, label in roles %}
+                        <option
+                            value="{{ value }}"
+                            {% if user and user.role == value %}
+                                selected
+                            {% endif %}
+                        >
+                            {{ label }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </p>
+
+            <p>
+                <label for="department_id">
+                    Кафедра
+                </label>
+                <br>
+
+                <select
+                    id="department_id"
+                    name="department_id"
+                >
+                    <option value="">
+                        Не выбрана
+                    </option>
+
+                    {% for department in departments %}
+                        <option
+                            value="{{ department.id }}"
+                            {% if user and user.department_id == department.id %}
+                                selected
+                            {% endif %}
+                        >
+                            {{ department.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </p>
+
+            <p>
+                <label for="language">
+                    Язык
+                </label>
+                <br>
+
+                <select
+                    id="language"
+                    name="language"
+                    required
+                >
+                    {% for value, label in languages %}
+                        <option
+                            value="{{ value }}"
+                            {% if user and user.language == value %}
+                                selected
+                            {% endif %}
+                        >
+                            {{ label }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </p>
+
+            <p>
+                <label for="password">
+                    {% if user %}
+                        Новый пароль
+                    {% else %}
+                        Пароль
+                    {% endif %}
+                </label>
+                <br>
+
+                <input
+                    id="password"
+                    name="password"
+                    type="password"
+                    {% if not user %}
+                        required
+                    {% endif %}
+                    autocomplete="new-password"
+                >
+            </p>
+
+            <p>
+                <label for="password_confirmation">
+                    Подтверждение пароля
+                </label>
+                <br>
+
+                <input
+                    id="password_confirmation"
+                    name="password_confirmation"
+                    type="password"
+                    {% if not user %}
+                        required
+                    {% endif %}
+                    autocomplete="new-password"
+                >
+            </p>
+
+            {% if user %}
+                <p>
+                    <label>
+                        <input
+                            type="checkbox"
+                            name="is_active"
+                            {% if user.is_active %}
+                                checked
+                            {% endif %}
+                        >
+
+                        Активная учетная запись
+                    </label>
+                </p>
+            {% endif %}
+
+            <button type="submit">
+                {% if user %}
+                    Сохранить
+                {% else %}
+                    Создать пользователя
+                {% endif %}
+            </button>
+        </form>
+    </main>
+</body>
+</html>

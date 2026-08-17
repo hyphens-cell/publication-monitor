@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1"
+    >
+    <title>
+        {% if item %}
+            Изменение пункта
+        {% else %}
+            Добавление публикации
+        {% endif %}
+    </title>
+</head>
+<body>
+    <header>
+        <a
+            href="{{ url_for(
+                'plans.plan_detail',
+                plan_id=plan.id
+            ) }}"
+        >
+            ← К плану
+        </a>
+
+        <h1>
+            {% if item %}
+                Изменение пункта плана
+            {% else %}
+                Добавление публикации
+            {% endif %}
+        </h1>
+
+        <p>
+            План на {{ plan.year }} год
+        </p>
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <section>
+                {% for category, message in messages %}
+                    <p>{{ message }}</p>
+                {% endfor %}
+            </section>
+        {% endif %}
+    {% endwith %}
+
+    <main>
+        <form method="post">
+            <input
+                type="hidden"
+                name="csrf_token"
+                value="{{ csrf_token() }}"
+            >
+
+            <p>
+                <label for="title">
+                    Название статьи
+                </label>
+                <br>
+
+                <input
+                    id="title"
+                    name="title"
+                    type="text"
+                    maxlength="1000"
+                    value="{{ item.title if item else '' }}"
+                    required
+                >
+            </p>
+
+            <p>
+                <label for="publication_type_id">
+                    Тип публикации
+                </label>
+                <br>
+
+                <select
+                    id="publication_type_id"
+                    name="publication_type_id"
+                    required
+                >
+                    <option value="">
+                        Выберите тип
+                    </option>
+
+                    {% for value in publication_types %}
+                        <option
+                            value="{{ value.id }}"
+                            {% if item and item.publication_type_id == value.id %}
+                                selected
+                            {% endif %}
+                        >
+                            {% if current_user.language == "kk" %}
+                                {{ value.name_kk }}
+                            {% else %}
+                                {{ value.name_ru }}
+                            {% endif %}
+                        </option>
+                    {% endfor %}
+                </select>
+            </p>
+
+            <p>
+                <label for="journal">
+                    Предполагаемый журнал
+                </label>
+                <br>
+
+                <input
+                    id="journal"
+                    name="journal"
+                    type="text"
+                    maxlength="500"
+                    value="{{ item.journal if item else '' }}"
+                >
+            </p>
+
+            <p>
+                <label for="quartile_id">
+                    Квартиль
+                </label>
+                <br>
+
+                <select
+                    id="quartile_id"
+                    name="quartile_id"
+                >
+                    <option value="">
+                        Не указан
+                    </option>
+
+                    {% for value in quartiles %}
+                        <option
+                            value="{{ value.id }}"
+                            {% if item and item.quartile_id == value.id %}
+                                selected
+                            {% endif %}
+                        >
+                            {% if current_user.language == "kk" %}
+                                {{ value.name_kk }}
+                            {% else %}
+                                {{ value.name_ru }}
+                            {% endif %}
+                        </option>
+                    {% endfor %}
+                </select>
+            </p>
+
+            <p>
+                <label for="planned_date">
+                    Планируемая дата
+                </label>
+                <br>
+
+                <input
+                    id="planned_date"
+                    name="planned_date"
+                    type="date"
+                    value="{% if item and item.planned_date %}{{ item.planned_date.isoformat() }}{% endif %}"
+                >
+            </p>
+
+            <fieldset>
+                <legend>
+                    Предполагаемые авторы
+                </legend>
+
+                {% if employees %}
+                    {% for employee in employees %}
+                        <label>
+                            <input
+                                type="checkbox"
+                                name="author_ids"
+                                value="{{ employee.id }}"
+                                {% if employee.id in selected_author_ids %}
+                                    checked
+                                {% endif %}
+                            >
+
+                            {{ employee.full_name }}
+
+                            {% if employee.position %}
+                                — {{ employee.position }}
+                            {% endif %}
+                        </label>
+
+                        <br>
+                    {% endfor %}
+                {% else %}
+                    <p>
+                        Активных сотрудников кафедры пока нет.
+                    </p>
+                {% endif %}
+            </fieldset>
+
+            <p>
+                <button type="submit">
+                    {% if item %}
+                        Сохранить изменения
+                    {% else %}
+                        Добавить публикацию
+                    {% endif %}
+                </button>
+            </p>
+        </form>
+    </main>
+</body>
+</html>

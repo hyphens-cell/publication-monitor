@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Сотрудники</title>
+</head>
+<body>
+    <header>
+        <h1>Сотрудники кафедры</h1>
+
+        <p>
+            Заведующий:
+            <strong>{{ current_user.full_name }}</strong>
+        </p>
+
+        <nav>
+            <a href="{{ url_for('main.index') }}">
+                Главная
+            </a>
+
+            |
+
+            <a href="{{ url_for('employees.create_employee') }}">
+                Добавить сотрудника
+            </a>
+        </nav>
+
+        <form
+            method="post"
+            action="{{ url_for('auth.logout') }}"
+        >
+            <input
+                type="hidden"
+                name="csrf_token"
+                value="{{ csrf_token() }}"
+            >
+
+            <button type="submit">
+                Выйти
+            </button>
+        </form>
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <section>
+                {% for category, message in messages %}
+                    <p>{{ message }}</p>
+                {% endfor %}
+            </section>
+        {% endif %}
+    {% endwith %}
+
+    <main>
+        <table>
+            <thead>
+                <tr>
+                    <th>ФИО</th>
+                    <th>Должность</th>
+                    <th>Email</th>
+                    <th>Статус</th>
+                    <th>Действия</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for employee in employees %}
+                    <tr>
+                        <td>{{ employee.full_name }}</td>
+
+                        <td>
+                            {{ employee.position or "—" }}
+                        </td>
+
+                        <td>
+                            {{ employee.email or "—" }}
+                        </td>
+
+                        <td>
+                            {% if employee.is_active %}
+                                Активен
+                            {% else %}
+                                Архивирован
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            <a
+                                href="{{ url_for(
+                                    'employees.edit_employee',
+                                    employee_id=employee.id
+                                ) }}"
+                            >
+                                Изменить
+                            </a>
+
+                            {% if employee.is_active %}
+                                <form
+                                    method="post"
+                                    action="{{ url_for(
+                                        'employees.archive_employee',
+                                        employee_id=employee.id
+                                    ) }}"
+                                >
+                                    <input
+                                        type="hidden"
+                                        name="csrf_token"
+                                        value="{{ csrf_token() }}"
+                                    >
+
+                                    <button type="submit">
+                                        Архивировать
+                                    </button>
+                                </form>
+                            {% else %}
+                                <form
+                                    method="post"
+                                    action="{{ url_for(
+                                        'employees.restore_employee',
+                                        employee_id=employee.id
+                                    ) }}"
+                                >
+                                    <input
+                                        type="hidden"
+                                        name="csrf_token"
+                                        value="{{ csrf_token() }}"
+                                    >
+
+                                    <button type="submit">
+                                        Восстановить
+                                    </button>
+                                </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="5">
+                            Сотрудников пока нет.
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </main>
+</body>
+</html>

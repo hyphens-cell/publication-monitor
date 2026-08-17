@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Главная — Мониторинг публикаций</title>
+</head>
+<body>
+    <header>
+        <h1>Мониторинг публикационной активности</h1>
+
+        <p>
+            Пользователь:
+            <strong>{{ current_user.full_name }}</strong>
+        </p>
+
+        <p>
+            Роль:
+            <strong>{{ current_user.role }}</strong>
+        </p>
+
+        <form method="post" action="{{ url_for('auth.logout') }}">
+            <input
+                type="hidden"
+                name="csrf_token"
+                value="{{ csrf_token() }}"
+            >
+
+            <button type="submit">
+                Выйти
+            </button>
+        </form>
+    </header>
+
+    <main>
+        {% if current_user.role == "TECH_ADMIN" %}
+            <h2>Технический администратор</h2>
+            <p>Управление пользователями, кафедрами, журналом и резервными копиями.</p>
+        {% elif current_user.role == "ADMIN" %}
+            <h2>Монитор / Администратор</h2>
+            <p>Контроль планов, публикаций и публикационной активности.</p>
+        {% elif current_user.role == "DEPARTMENT_HEAD" %}
+            <h2>Заведующий кафедрой</h2>
+            <p>Планы кафедры и публикационная деятельность.</p>
+        {% endif %}
+        {% if current_user.role == "TECH_ADMIN" %}
+    <h2>Технический администратор</h2>
+
+    <p>
+        Управление пользователями, кафедрами, журналом и резервными копиями.
+    </p>
+
+    <nav>
+        <a href="{{ url_for('admin.users') }}">
+            Пользователи
+        </a>
+        
+        <a href="{{ url_for('admin.departments') }}">
+            Кафедры
+        </a>
+    </nav>
+        {% elif current_user.role == "ADMIN" %}
+            <h2>Монитор / Администратор</h2>
+
+            <p>
+                Контроль планов, публикаций и публикационной активности.
+            </p>
+        {% elif current_user.role == "DEPARTMENT_HEAD" %}
+            <h2>Заведующий кафедрой</h2>
+
+            <p>
+                Планы кафедры и публикационная деятельность.
+            </p>
+        {% endif %}
+        
+    </main>
+</body>
+</html>

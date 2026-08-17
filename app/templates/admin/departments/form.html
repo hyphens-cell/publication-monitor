@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>
+        {% if department %}
+            Изменение кафедры
+        {% else %}
+            Создание кафедры
+        {% endif %}
+    </title>
+</head>
+<body>
+    <header>
+        <a href="{{ url_for('admin.departments') }}">
+            ← К кафедрам
+        </a>
+
+        <h1>
+            {% if department %}
+                Изменение кафедры
+            {% else %}
+                Создание кафедры
+            {% endif %}
+        </h1>
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <section>
+                {% for category, message in messages %}
+                    <p>{{ message }}</p>
+                {% endfor %}
+            </section>
+        {% endif %}
+    {% endwith %}
+
+    <main>
+        <form method="post">
+            <input
+                type="hidden"
+                name="csrf_token"
+                value="{{ csrf_token() }}"
+            >
+
+            <p>
+                <label for="name">
+                    Название кафедры
+                </label>
+
+                <br>
+
+                <input
+                    id="name"
+                    name="name"
+                    type="text"
+                    maxlength="255"
+                    value="{{ department.name if department else '' }}"
+                    required
+                >
+            </p>
+
+            <p>
+                <label for="code">
+                    Код кафедры
+                </label>
+
+                <br>
+
+                <input
+                    id="code"
+                    name="code"
+                    type="text"
+                    maxlength="50"
+                    value="{{ department.code if department else '' }}"
+                    required
+                >
+            </p>
+
+            <button type="submit">
+                {% if department %}
+                    Сохранить
+                {% else %}
+                    Создать кафедру
+                {% endif %}
+            </button>
+        </form>
+    </main>
+</body>
+</html>

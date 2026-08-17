@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>
+        {% if employee %}
+            Изменение сотрудника
+        {% else %}
+            Добавление сотрудника
+        {% endif %}
+    </title>
+</head>
+<body>
+    <header>
+        <a href="{{ url_for('employees.employees') }}">
+            ← К сотрудникам
+        </a>
+
+        <h1>
+            {% if employee %}
+                Изменение сотрудника
+            {% else %}
+                Добавление сотрудника
+            {% endif %}
+        </h1>
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <section>
+                {% for category, message in messages %}
+                    <p>{{ message }}</p>
+                {% endfor %}
+            </section>
+        {% endif %}
+    {% endwith %}
+
+    <main>
+        <form method="post">
+            <input
+                type="hidden"
+                name="csrf_token"
+                value="{{ csrf_token() }}"
+            >
+
+            <p>
+                <label for="full_name">
+                    ФИО
+                </label>
+                <br>
+
+                <input
+                    id="full_name"
+                    name="full_name"
+                    type="text"
+                    maxlength="255"
+                    value="{{ employee.full_name if employee else '' }}"
+                    required
+                >
+            </p>
+
+            <p>
+                <label for="position">
+                    Должность
+                </label>
+                <br>
+
+                <input
+                    id="position"
+                    name="position"
+                    type="text"
+                    maxlength="255"
+                    value="{{ employee.position if employee else '' }}"
+                >
+            </p>
+
+            <p>
+                <label for="email">
+                    Email
+                </label>
+                <br>
+
+                <input
+                    id="email"
+                    name="email"
+                    type="email"
+                    maxlength="255"
+                    value="{{ employee.email if employee else '' }}"
+                >
+            </p>
+
+            <button type="submit">
+                {% if employee %}
+                    Сохранить
+                {% else %}
+                    Добавить сотрудника
+                {% endif %}
+            </button>
+        </form>
+    </main>
+</body>
+</html>

@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1"
+    >
+    <title>План {{ plan.year }}</title>
+</head>
+<body>
+    <header>
+        <a href="{{ url_for('plans.plans') }}">
+            ← К планам
+        </a>
+
+        <h1>
+            План на {{ plan.year }} год
+        </h1>
+
+        <p>
+            Статус:
+
+            {% if plan.status == "DRAFT" %}
+                Черновик
+            {% elif plan.status == "SUBMITTED" %}
+                На рассмотрении
+            {% elif plan.status == "APPROVED" %}
+                Утверждён
+            {% elif plan.status == "RETURNED" %}
+                На доработке
+            {% else %}
+                {{ plan.status }}
+            {% endif %}
+        </p>
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <section>
+                {% for category, message in messages %}
+                    <p>{{ message }}</p>
+                {% endfor %}
+            </section>
+        {% endif %}
+    {% endwith %}
+
+    <main>
+
+        {% if not monitor and plan.status in ["DRAFT", "RETURNED"] %}
+            <section>
+                <h2>Действия</h2>
+
+                <p>
+                    <a
+                        href="{{ url_for(
+                            'plans.create_plan_item',
+                            plan_id=plan.id
+                        ) }}"
+                    >
+                        Добавить публикацию
+                    </a>
+                </p>
+
+                <form
+                    method="post"
+                    action="{{ url_for(
+                        'plans.submit_plan',
+                        plan_id=plan.id
+                    ) }}"
+                >
+                    <input
+                        type="hidden"
+                        name="csrf_token"
+                        value="{{ csrf_token() }}"
+                    >
+
+                    <button type="submit">
+                        Отправить на согласование
+                    </button>
+                </form>
+            </section>
+        {% endif %}
+
+        {% if monitor and plan.status == "SUBMITTED" %}
+            <section>
+                <h2>Решение администратора</h2>
+
+                <form
+                    method="post"
+                    action="{{ url_for(
+                        'plans.approve_plan',
+                        plan_id=plan.id
+                    ) }}"
+                >
+                    <input
+                        type="hidden"
+                        name="csrf_token"
+                        value="{{ csrf_token() }}"
+                    >
+
+                    <button type="submit">
+                        Одобрить план
+                    </button>
+                </form>
+
+                <h3>Вернуть на доработку</h3>
+
+                <form
+                    method="post"
+                    action="{{ url_for(
+                        'plans.return_plan',
+                        plan_id=plan.id
+                    ) }}"
+                >
+                    <input
+                        type="hidden"
+                        name="csrf_token"
+                        value="{{ csrf_token() }}"
+                    >
+
+                    <p>
+                        <label for="comment">
+                            Замечания
+                        </label>
+                    </p>
+
+                    <textarea
+                        id="comment"
+                        name="comment"
+                        rows="6"
+                        cols="60"
+                        required
+                    ></textarea>
+
+                    <p>
+                        <button type="submit">
+                            Вернуть на доработку
+                        </button>
+                    </p>
+                </form>
+            </section>
+        {% endif %}
+
+        {% if plan.status == "RETURNED" %}
+            {% set latest_return = versions|selectattr(
+                "status",
+                "equalto",
+                "RETURNED"
+            )|first %}
+
+            {% if latest_return and latest_return.comment %}
+                <section>
+                    <h2>Замечания администратора</h2>
+
+                    <p>
+                        {{ latest_return.comment }}
+                    </p>
+                </section>
+            {% endif %}
+        {% endif %}
+
+        <section>
+            <h2>
+                Запланированные публикации
+            </h2>
+
+            {% if plan.items %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>№</th>
+                            <th>Название</th>
+                            <th>Тип</th>
+                            <th>Журнал</th>
+                            <th>Квартиль</th>
+                            <th>Авторы</th>
+                            <th>Дата</th>
+
+                            {% if not monitor and plan.status in ["DRAFT", "RETURNED"] %}
+                                <th>Действия</th>
+                            {% endif %}
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for item in plan.items %}
+                            <tr>
+                                <td>
+                                    {{ loop.index }}
+                                </td>
+
+                                <td>
+                                    {{ item.title }}
+                                </td>
+
+                                <td>
+                                    {% if current_user.language == "kk" %}
+                                        {{ item.publication_type.name_kk }}
+                                    {% else %}
+                                        {{ item.publication_type.name_ru }}
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    {{ item.journal or "—" }}
+                                </td>
+
+                                <td>
+                                    {% if item.quartile %}
+                                        {% if current_user.language == "kk" %}
+                                            {{ item.quartile.name_kk }}
+                                        {% else %}
+                                            {{ item.quartile.name_ru }}
+                                        {% endif %}
+                                    {% else %}
+                                        —
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    {% if item.author_links %}
+                                        {% for link in item.author_links %}
+                                            {{ link.employee.full_name }}{% if not loop.last %}, {% endif %}
+                                        {% endfor %}
+                                    {% else %}
+                                        —
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    {{ item.planned_date or "—" }}
+                                </td>
+
+                                {% if not monitor and plan.status in ["DRAFT", "RETURNED"] %}
+                                    <td>
+                                        <p>
+                                            <a
+                                                href="{{ url_for(
+                                                    'plans.edit_plan_item',
+                                                    plan_id=plan.id,
+                                                    item_id=item.id
+                                                ) }}"
+                                            >
+                                                Изменить
+                                            </a>
+                                        </p>
+
+                                        <form
+                                            method="post"
+                                            action="{{ url_for(
+                                                'plans.delete_plan_item',
+                                                plan_id=plan.id,
+                                                item_id=item.id
+                                            ) }}"
+                                        >
+                                            <input
+                                                type="hidden"
+                                                name="csrf_token"
+                                                value="{{ csrf_token() }}"
+                                            >
+
+                                            <button type="submit">
+                                                Удалить
+                                            </button>
+                                        </form>
+                                    </td>
+                                {% endif %}
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p>
+                    В плане пока нет запланированных публикаций.
+                </p>
+            {% endif %}
+        </section>
+
+        <section>
+            <h2>История согласования</h2>
+
+            {% if versions %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Версия</th>
+                            <th>Статус</th>
+                            <th>Пользователь</th>
+                            <th>Дата</th>
+                            <th>Комментарий</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for version in versions %}
+                            <tr>
+                                <td>
+                                    {{ version.version_number }}
+                                </td>
+
+                                <td>
+                                    {% if version.status == "SUBMITTED" %}
+                                        Отправлен на согласование
+                                    {% elif version.status == "RETURNED" %}
+                                        Возвращён на доработку
+                                    {% elif version.status == "APPROVED" %}
+                                        Одобрен
+                                    {% else %}
+                                        {{ version.status }}
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    {{ version.creator.full_name }}
+                                </td>
+
+                                <td>
+                                    {{ version.created_at }}
+                                </td>
+
+                                <td>
+                                    {{ version.comment or "—" }}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p>
+                    История согласования пока пуста.
+                </p>
+            {% endif %}
+        </section>
+
+    </main>
+</body>
+</html>

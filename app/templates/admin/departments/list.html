@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Кафедры</title>
+</head>
+<body>
+    <header>
+        <h1>Кафедры</h1>
+
+        <p>
+            <strong>{{ current_user.full_name }}</strong>
+        </p>
+
+        <nav>
+            <a href="{{ url_for('main.index') }}">Главная</a>
+            |
+            <a href="{{ url_for('admin.create_department') }}">
+                Создать кафедру
+            </a>
+            |
+            <a href="{{ url_for('admin.users') }}">
+                Пользователи
+            </a>
+        </nav>
+
+        <form method="post" action="{{ url_for('auth.logout') }}">
+            <input
+                type="hidden"
+                name="csrf_token"
+                value="{{ csrf_token() }}"
+            >
+
+            <button type="submit">
+                Выйти
+            </button>
+        </form>
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <section>
+                {% for category, message in messages %}
+                    <p>{{ message }}</p>
+                {% endfor %}
+            </section>
+        {% endif %}
+    {% endwith %}
+
+    <main>
+        <table>
+            <thead>
+                <tr>
+                    <th>Название</th>
+                    <th>Код</th>
+                    <th>Статус</th>
+                    <th>Действия</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for department in departments %}
+                    <tr>
+                        <td>{{ department.name }}</td>
+                        <td>{{ department.code }}</td>
+
+                        <td>
+                            {% if department.is_active %}
+                                Активна
+                            {% else %}
+                                Архивирована
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            <a
+                                href="{{ url_for(
+                                    'admin.edit_department',
+                                    department_id=department.id
+                                ) }}"
+                            >
+                                Изменить
+                            </a>
+
+                            {% if department.is_active %}
+                                <form
+                                    method="post"
+                                    action="{{ url_for(
+                                        'admin.archive_department',
+                                        department_id=department.id
+                                    ) }}"
+                                >
+                                    <input
+                                        type="hidden"
+                                        name="csrf_token"
+                                        value="{{ csrf_token() }}"
+                                    >
+
+                                    <button type="submit">
+                                        Архивировать
+                                    </button>
+                                </form>
+                            {% else %}
+                                <form
+                                    method="post"
+                                    action="{{ url_for(
+                                        'admin.restore_department',
+                                        department_id=department.id
+                                    ) }}"
+                                >
+                                    <input
+                                        type="hidden"
+                                        name="csrf_token"
+                                        value="{{ csrf_token() }}"
+                                    >
+
+                                    <button type="submit">
+                                        Восстановить
+                                    </button>
+                                </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="4">
+                            Кафедр пока нет.
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </main>
+</body>
+</html>

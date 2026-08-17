@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1"
+    >
+    <title>Создание плана</title>
+</head>
+<body>
+    <header>
+        <a href="{{ url_for('plans.plans') }}">
+            ← К планам
+        </a>
+
+        <h1>
+            Создание плана на {{ year }} год
+        </h1>
+    </header>
+
+    <main>
+        <p>
+            План создаётся на следующий календарный год.
+        </p>
+
+        <form method="post">
+            <input
+                type="hidden"
+                name="csrf_token"
+                value="{{ csrf_token() }}"
+            >
+
+            <button type="submit">
+                Создать черновик
+            </button>
+        </form>
+    </main>
+</body>
+</html>
