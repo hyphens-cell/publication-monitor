@@ -1,0 +1,569 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1"
+    >
+    <title>{{ publication.title }}</title>
+</head>
+<body>
+    <header>
+        <p>
+            <a href="{{ url_for('publications.publications') }}">
+                ← К публикациям
+            </a>
+        </p>
+
+        <h1>{{ publication.title }}</h1>
+
+        <p>
+            <strong>Статус:</strong>
+            {{ publication_statuses.get(
+                publication.status,
+                publication.status
+            ) }}
+        </p>
+
+        <p>
+            <strong>Проверка:</strong>
+
+            {% if publication.verification_status == "PENDING" %}
+                На проверке
+            {% elif publication.verification_status == "APPROVED" %}
+                Проверена
+            {% elif publication.verification_status == "RETURNED" %}
+                Возвращена на доработку
+            {% else %}
+                {{ publication.verification_status }}
+            {% endif %}
+        </p>
+
+        <p>
+            <a
+                href="{{ url_for(
+                    'publications.edit_publication',
+                    publication_id=publication.id
+                ) }}"
+            >
+                Изменить публикацию
+            </a>
+        </p>
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <section>
+                {% for category, message in messages %}
+                    <p>{{ message }}</p>
+                {% endfor %}
+            </section>
+        {% endif %}
+    {% endwith %}
+
+    <main>
+        <section>
+            <h2>Основные сведения</h2>
+
+            <p>
+                <strong>Название:</strong>
+                {{ publication.title }}
+            </p>
+
+            <p>
+                <strong>Журнал:</strong>
+                {{ publication.journal or "—" }}
+            </p>
+
+            <p>
+                <strong>Кафедра:</strong>
+                {{ publication.department.name }}
+            </p>
+
+            <p>
+                <strong>Квартиль:</strong>
+
+                {% if publication.quartile %}
+                    {% if current_user.language == "kk" %}
+                        {{ publication.quartile.name_kk }}
+                    {% else %}
+                        {{ publication.quartile.name_ru }}
+                    {% endif %}
+                {% else %}
+                    —
+                {% endif %}
+            </p>
+        </section>
+
+        <section>
+            <h2>Авторы</h2>
+
+            {% if publication.author_links %}
+                <ol>
+                    {% for link in publication.author_links %}
+                        <li>
+                            {{ link.employee.full_name }}
+
+                            {% if link.employee.position %}
+                                — {{ link.employee.position }}
+                            {% endif %}
+                        </li>
+                    {% endfor %}
+                </ol>
+            {% else %}
+                <p>Авторы не указаны.</p>
+            {% endif %}
+        </section>
+
+        <section>
+            <h2>Библиографические сведения</h2>
+
+            <p>
+                <strong>Год:</strong>
+                {{ publication.publication_year or "—" }}
+            </p>
+
+            <p>
+                <strong>Том:</strong>
+                {{ publication.volume or "—" }}
+            </p>
+
+            <p>
+                <strong>Выпуск:</strong>
+                {{ publication.issue or "—" }}
+            </p>
+
+            <p>
+                <strong>Страницы:</strong>
+                {{ publication.pages or "—" }}
+            </p>
+        </section>
+
+        <section>
+            <h2>Идентификаторы</h2>
+
+            <p>
+                <strong>DOI:</strong>
+                {{ publication.doi or "—" }}
+            </p>
+
+            <p>
+                <strong>Ссылка:</strong>
+
+                {% if publication.url %}
+                    <a
+                        href="{{ publication.url }}"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                    >
+                        {{ publication.url }}
+                    </a>
+                {% else %}
+                    —
+                {% endif %}
+            </p>
+        </section>
+
+        <section>
+            <h2>Индексация</h2>
+
+            <p>
+                <strong>Тип индексации:</strong>
+
+                {% if publication.indexing_type %}
+                    {% if current_user.language == "kk" %}
+                        {{ publication.indexing_type.name_kk }}
+                    {% else %}
+                        {{ publication.indexing_type.name_ru }}
+                    {% endif %}
+                {% else %}
+                    —
+                {% endif %}
+            </p>
+        </section>
+
+        <section>
+            <h2>Аффилиация</h2>
+
+            <p>{{ publication.affiliation or "—" }}</p>
+        </section>
+
+        <section>
+            <h2>Примечания</h2>
+
+            <p>{{ publication.notes or "—" }}</p>
+        </section>
+
+        <section>
+            <h2>Подтверждающие файлы</h2>
+
+            {% if publication.attachments %}
+                <ul>
+                    {% for attachment in publication.attachments %}
+                        <li>
+                            <strong>
+                                {{ attachment.original_filename }}
+                            </strong>
+
+                            {% if attachment.file_size %}
+                                — {{ attachment.file_size }} байт
+                            {% endif %}
+
+                            <p>
+                                <strong>Проверка файла:</strong>
+
+                                {% if attachment.review_status == "PENDING" %}
+                                    На проверке
+                                {% elif attachment.review_status == "APPROVED" %}
+                                    Принят
+                                {% elif attachment.review_status == "REJECTED" %}
+                                    Отклонён
+                                {% else %}
+                                    {{ attachment.review_status }}
+                                {% endif %}
+                            </p>
+
+                            {% if attachment.review_comment %}
+                                <p>
+                                    <strong>Причина отклонения:</strong>
+                                    {{ attachment.review_comment }}
+                                </p>
+                            {% endif %}
+
+                            <p>
+                                <a
+                                    href="{{ url_for(
+                                        'publications.download_publication_attachment',
+                                        publication_id=publication.id,
+                                        attachment_id=attachment.id
+                                    ) }}"
+                                >
+                                    Скачать
+                                </a>
+                            </p>
+
+                            {% if current_user.role == "DEPARTMENT_HEAD" %}
+                                {% if attachment.uploaded_by == current_user.id %}
+                                    <form
+                                        method="post"
+                                        action="{{ url_for(
+                                            'publications.delete_publication_attachment',
+                                            publication_id=publication.id,
+                                            attachment_id=attachment.id
+                                        ) }}"
+                                    >
+                                        <input
+                                            type="hidden"
+                                            name="csrf_token"
+                                            value="{{ csrf_token() }}"
+                                        >
+
+                                        <button type="submit">
+                                            Удалить файл
+                                        </button>
+                                    </form>
+                                {% endif %}
+                            {% endif %}
+
+                            {% if current_user.role == "ADMIN" %}
+                                {% if attachment.review_status != "APPROVED" %}
+                                    <form
+                                        method="post"
+                                        action="{{ url_for(
+                                            'publications.approve_publication_attachment',
+                                            publication_id=publication.id,
+                                            attachment_id=attachment.id
+                                        ) }}"
+                                    >
+                                        <input
+                                            type="hidden"
+                                            name="csrf_token"
+                                            value="{{ csrf_token() }}"
+                                        >
+
+                                        <button type="submit">
+                                            Принять файл
+                                        </button>
+                                    </form>
+                                {% endif %}
+
+                                {% if attachment.review_status != "REJECTED" %}
+                                    <form
+                                        method="post"
+                                        action="{{ url_for(
+                                            'publications.reject_publication_attachment',
+                                            publication_id=publication.id,
+                                            attachment_id=attachment.id
+                                        ) }}"
+                                    >
+                                        <input
+                                            type="hidden"
+                                            name="csrf_token"
+                                            value="{{ csrf_token() }}"
+                                        >
+
+                                        <label
+                                            for="comment-{{ attachment.id }}"
+                                        >
+                                            Причина отклонения
+                                        </label>
+
+                                        <br>
+
+                                        <textarea
+                                            id="comment-{{ attachment.id }}"
+                                            name="comment"
+                                            rows="4"
+                                            required
+                                        ></textarea>
+
+                                        <br>
+
+                                        <button type="submit">
+                                            Отклонить файл
+                                        </button>
+                                    </form>
+                                {% endif %}
+
+                                {% if attachment.reviewer %}
+                                    <p>
+                                        Проверил:
+                                        {{ attachment.reviewer.full_name }}
+                                    </p>
+                                {% endif %}
+
+                                {% if attachment.reviewed_at %}
+                                    <p>
+                                        Проверено:
+                                        {{ attachment.reviewed_at.strftime(
+                                            "%d.%m.%Y %H:%M"
+                                        ) }}
+                                    </p>
+                                {% endif %}
+                            {% endif %}
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p>
+                    Подтверждающие файлы не загружены.
+                </p>
+            {% endif %}
+
+            {% if current_user.role == "DEPARTMENT_HEAD" %}
+                <form
+                    method="post"
+                    action="{{ url_for(
+                        'publications.upload_publication_attachment',
+                        publication_id=publication.id
+                    ) }}"
+                    enctype="multipart/form-data"
+                >
+                    <input
+                        type="hidden"
+                        name="csrf_token"
+                        value="{{ csrf_token() }}"
+                    >
+
+                    <p>
+                        <label for="file">
+                            Загрузить оттиск
+                        </label>
+                        <br>
+
+                        <input
+                            id="file"
+                            name="file"
+                            type="file"
+                            accept=".pdf,.doc,.docx,.jpg,.jpeg,.zip,.rar"
+                            required
+                        >
+                    </p>
+
+                    <button type="submit">
+                        Загрузить файл
+                    </button>
+                </form>
+            {% endif %}
+        </section>
+
+        {% if current_user.role == "DEPARTMENT_HEAD" and allowed_statuses %}
+            <section>
+                <h2>Изменить статус публикации</h2>
+
+                <form
+                    method="post"
+                    action="{{ url_for(
+                        'publications.change_publication_status',
+                        publication_id=publication.id
+                    ) }}"
+                >
+                    <input
+                        type="hidden"
+                        name="csrf_token"
+                        value="{{ csrf_token() }}"
+                    >
+
+                    <p>
+                        <label for="status">
+                            Новый статус
+                        </label>
+                        <br>
+
+                        <select
+                            id="status"
+                            name="status"
+                            required
+                        >
+                            <option value="">
+                                Выберите статус
+                            </option>
+
+                            {% for status in allowed_statuses %}
+                                <option value="{{ status }}">
+                                    {{ publication_statuses[status] }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </p>
+
+                    <button type="submit">
+                        Изменить статус
+                    </button>
+                </form>
+            </section>
+        {% endif %}
+
+        {% if current_user.role == "ADMIN" %}
+            <section>
+                <h2>Проверка публикации</h2>
+
+                {% if not publication.attachments %}
+                    <p>
+                        Нельзя принять публикацию:
+                        нет подтверждающих файлов.
+                    </p>
+                {% elif publication.attachments|selectattr(
+                    "review_status",
+                    "equalto",
+                    "APPROVED"
+                )|list|length != publication.attachments|length %}
+                    <p>
+                        Нельзя принять публикацию:
+                        не все файлы приняты.
+                    </p>
+                {% else %}
+                    <form
+                        method="post"
+                        action="{{ url_for(
+                            'publications.verify_publication',
+                            publication_id=publication.id
+                        ) }}"
+                    >
+                        <input
+                            type="hidden"
+                            name="csrf_token"
+                            value="{{ csrf_token() }}"
+                        >
+
+                        <button type="submit">
+                            Подтвердить публикацию
+                        </button>
+                    </form>
+                {% endif %}
+
+                <h3>Вернуть публикацию на доработку</h3>
+
+                <form
+                    method="post"
+                    action="{{ url_for(
+                        'publications.return_publication',
+                        publication_id=publication.id
+                    ) }}"
+                >
+                    <input
+                        type="hidden"
+                        name="csrf_token"
+                        value="{{ csrf_token() }}"
+                    >
+
+                    <label for="publication-comment">
+                        Замечание
+                    </label>
+
+                    <br>
+
+                    <textarea
+                        id="publication-comment"
+                        name="comment"
+                        rows="6"
+                        required
+                    ></textarea>
+
+                    <br>
+
+                    <button type="submit">
+                        Вернуть публикацию
+                    </button>
+                </form>
+            </section>
+        {% endif %}
+
+        <section>
+            <h2>История статусов</h2>
+
+            {% if publication.history %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Дата</th>
+                            <th>Пользователь</th>
+                            <th>Предыдущий статус</th>
+                            <th>Новый статус</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for history in publication.history %}
+                            <tr>
+                                <td>
+                                    {{ history.changed_at.strftime(
+                                        "%d.%m.%Y %H:%M"
+                                    ) }}
+                                </td>
+
+                                <td>
+                                    {{ history.user.full_name }}
+                                </td>
+
+                                <td>
+                                    {% if history.old_status %}
+                                        {{ publication_statuses.get(
+                                            history.old_status,
+                                            history.old_status
+                                        ) }}
+                                    {% else %}
+                                        —
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    {{ publication_statuses.get(
+                                        history.new_status,
+                                        history.new_status
+                                    ) }}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p>
+                    История изменений отсутствует.
+                </p>
+            {% endif %}
+        </section>
+    </main>
+</body>
+</html>

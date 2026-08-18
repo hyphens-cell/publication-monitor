@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1"
+    >
+    <title>Публикации</title>
+</head>
+<body>
+    <header>
+        <p>
+            <a href="{{ url_for('main.index') }}">
+                ← Главная
+            </a>
+        </p>
+
+        <h1>Публикации</h1>
+
+        <p>
+            Вы вошли как:
+            <strong>{{ current_user.full_name }}</strong>
+        </p>
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <section>
+                {% for category, message in messages %}
+                    <p>{{ message }}</p>
+                {% endfor %}
+            </section>
+        {% endif %}
+    {% endwith %}
+
+    <main>
+        {% if publications %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Название</th>
+                        <th>Журнал</th>
+                        <th>Квартиль</th>
+                        <th>Статус</th>
+                        <th>Кафедра</th>
+                        <th>Дата создания</th>
+                        <th>Действие</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for publication in publications %}
+                        <tr>
+                            <td>
+                                {{ publication.title }}
+                            </td>
+
+                            <td>
+                                {{ publication.journal or "—" }}
+                            </td>
+
+                            <td>
+                                {% if publication.quartile %}
+                                    {% if current_user.language == "kk" %}
+                                        {{ publication.quartile.name_kk }}
+                                    {% else %}
+                                        {{ publication.quartile.name_ru }}
+                                    {% endif %}
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                {% if publication.status == "PREPARATION" %}
+                                    Подготовка статьи
+                                {% elif publication.status == "SUBMITTED_TO_JOURNAL" %}
+                                    Отправлена в журнал
+                                {% elif publication.status == "UNDER_REVIEW" %}
+                                    На рецензировании
+                                {% elif publication.status == "REVISION_REQUIRED" %}
+                                    Требуется доработка
+                                {% elif publication.status == "ACCEPTED" %}
+                                    Принята к публикации
+                                {% elif publication.status == "PUBLISHED" %}
+                                    Опубликована
+                                {% elif publication.status == "REJECTED" %}
+                                    Отклонена
+                                {% else %}
+                                    {{ publication.status }}
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                {% if publication.department %}
+                                    {{ publication.department.name }}
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                {{ publication.created_at.strftime("%d.%m.%Y") }}
+                            </td>
+
+                            <td>
+                                <a
+                                    href="{{ url_for(
+                                        'publications.publication_detail',
+                                        publication_id=publication.id
+                                    ) }}"
+                                >
+                                    Открыть
+                                </a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>
+                Публикаций пока нет.
+            </p>
+        {% endif %}
+    </main>
+</body>
+</html>

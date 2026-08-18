@@ -370,6 +370,28 @@ class Publication(db.Model):
     notes = db.Column(db.Text, nullable=True)
     status = db.Column(db.String(50), nullable=False, default="PREPARATION")
 
+    verification_status = db.Column(
+        db.String(30),
+        nullable=False,
+        default="PENDING",
+    )
+
+    verified_by = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+
+    verified_at = db.Column(
+        db.DateTime,
+        nullable=True,
+    )
+
+    verifier = db.relationship(
+        "User",
+        foreign_keys=[verified_by],
+    )
+
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     updated_at = db.Column(
         db.DateTime,
@@ -501,6 +523,32 @@ class Attachment(db.Model):
         nullable=False,
     )
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    review_status = db.Column(
+        db.String(30),
+        nullable=False,
+        default="PENDING",
+    )
+
+    reviewed_by = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+
+    reviewed_at = db.Column(
+        db.DateTime,
+        nullable=True,
+    )
+
+    review_comment = db.Column(
+        db.Text,
+        nullable=True,
+    )
+
+    reviewer = db.relationship(
+        "User",
+        foreign_keys=[reviewed_by],
+    )
 
     publication = db.relationship(
         "Publication",

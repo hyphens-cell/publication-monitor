@@ -7,6 +7,8 @@ from sqlalchemy import func, select
 from app.auth import admin_required, department_head_required, roles_required
 from app.extensions import db
 from app.models import Employee, Plan, PlanItem, PlanItemAuthor, PlanVersion, ReferenceValue
+from app.publications import create_publications_from_plan
+
 
 
 plans_bp = Blueprint(
@@ -873,6 +875,11 @@ def approve_plan(plan_id):
     create_plan_version(
         plan=plan,
         status=PLAN_STATUS_APPROVED,
+    )
+
+    create_publications_from_plan(
+        plan=plan,
+        user_id=current_user.id,
     )
 
     db.session.commit()

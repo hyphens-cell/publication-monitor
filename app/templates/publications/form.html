@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1"
+    >
+    <title>Редактирование публикации</title>
+</head>
+<body>
+    <header>
+        <p>
+            <a
+                href="{{ url_for(
+                    'publications.publication_detail',
+                    publication_id=publication.id
+                ) }}"
+            >
+                ← К публикации
+            </a>
+        </p>
+
+        <h1>Редактирование публикации</h1>
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <section>
+                {% for category, message in messages %}
+                    <p>{{ message }}</p>
+                {% endfor %}
+            </section>
+        {% endif %}
+    {% endwith %}
+
+    <main>
+        <form method="post">
+            <input
+                type="hidden"
+                name="csrf_token"
+                value="{{ csrf_token() }}"
+            >
+
+            <p>
+                <label for="title">
+                    Название
+                </label>
+                <br>
+                <input
+                    id="title"
+                    name="title"
+                    type="text"
+                    value="{{ publication.title }}"
+                    maxlength="1000"
+                    required
+                >
+            </p>
+
+            <p>
+                <label for="journal">
+                    Журнал / издание
+                </label>
+                <br>
+                <input
+                    id="journal"
+                    name="journal"
+                    type="text"
+                    value="{{ publication.journal or '' }}"
+                    maxlength="500"
+                >
+            </p>
+
+            <p>
+                <label for="publication_year">
+                    Год публикации
+                </label>
+                <br>
+                <input
+                    id="publication_year"
+                    name="publication_year"
+                    type="number"
+                    min="1900"
+                    max="2100"
+                    value="{{ publication.publication_year or '' }}"
+                >
+            </p>
+
+            <p>
+                <label for="volume">
+                    Том
+                </label>
+                <br>
+                <input
+                    id="volume"
+                    name="volume"
+                    type="text"
+                    value="{{ publication.volume or '' }}"
+                    maxlength="100"
+                >
+            </p>
+
+            <p>
+                <label for="issue">
+                    Выпуск
+                </label>
+                <br>
+                <input
+                    id="issue"
+                    name="issue"
+                    type="text"
+                    value="{{ publication.issue or '' }}"
+                    maxlength="100"
+                >
+            </p>
+
+            <p>
+                <label for="pages">
+                    Страницы
+                </label>
+                <br>
+                <input
+                    id="pages"
+                    name="pages"
+                    type="text"
+                    value="{{ publication.pages or '' }}"
+                    maxlength="100"
+                >
+            </p>
+
+            <p>
+                <label for="doi">
+                    DOI
+                </label>
+                <br>
+                <input
+                    id="doi"
+                    name="doi"
+                    type="text"
+                    value="{{ publication.doi or '' }}"
+                    maxlength="500"
+                >
+            </p>
+
+            <p>
+                <label for="url">
+                    Ссылка
+                </label>
+                <br>
+                <input
+                    id="url"
+                    name="url"
+                    type="url"
+                    value="{{ publication.url or '' }}"
+                    maxlength="1000"
+                >
+            </p>
+
+            <p>
+                <label for="indexing_type_id">
+                    Тип индексации
+                </label>
+                <br>
+
+                <select
+                    id="indexing_type_id"
+                    name="indexing_type_id"
+                >
+                    <option value="">
+                        Не выбран
+                    </option>
+
+                    {% for indexing_type in indexing_types %}
+                        <option
+                            value="{{ indexing_type.id }}"
+                            {% if publication.indexing_type_id == indexing_type.id %}
+                                selected
+                            {% endif %}
+                        >
+                            {% if current_user.language == "kk" %}
+                                {{ indexing_type.name_kk }}
+                            {% else %}
+                                {{ indexing_type.name_ru }}
+                            {% endif %}
+                        </option>
+                    {% endfor %}
+                </select>
+            </p>
+
+            <p>
+                <label for="quartile_id">
+                    Квартиль
+                </label>
+                <br>
+
+                <select
+                    id="quartile_id"
+                    name="quartile_id"
+                >
+                    <option value="">
+                        Не выбран
+                    </option>
+
+                    {% for quartile in quartiles %}
+                        <option
+                            value="{{ quartile.id }}"
+                            {% if publication.quartile_id == quartile.id %}
+                                selected
+                            {% endif %}
+                        >
+                            {% if current_user.language == "kk" %}
+                                {{ quartile.name_kk }}
+                            {% else %}
+                                {{ quartile.name_ru }}
+                            {% endif %}
+                        </option>
+                    {% endfor %}
+                </select>
+            </p>
+
+            <p>
+                <label for="affiliation">
+                    Аффилиация
+                </label>
+                <br>
+                <textarea
+                    id="affiliation"
+                    name="affiliation"
+                    rows="4"
+                >{{ publication.affiliation or '' }}</textarea>
+            </p>
+
+            <p>
+                <label for="notes">
+                    Примечания
+                </label>
+                <br>
+                <textarea
+                    id="notes"
+                    name="notes"
+                    rows="6"
+                >{{ publication.notes or '' }}</textarea>
+            </p>
+
+            <button type="submit">
+                Сохранить
+            </button>
+        </form>
+    </main>
+</body>
+</html>
