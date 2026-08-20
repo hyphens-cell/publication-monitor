@@ -1,0 +1,430 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1"
+    >
+
+    <title>Мониторинг</title>
+</head>
+
+<body>
+    <header>
+        <h1>Мониторинг публикационной деятельности</h1>
+
+        <p>
+            <a href="{{ url_for('main.index') }}">
+                ← На главную
+            </a>
+        </p>
+    </header>
+
+    <main>
+        <section>
+            <h2>Фильтры</h2>
+
+            <form
+                method="get"
+                action="{{ url_for('monitoring.dashboard') }}"
+            >
+                <p>
+                    <label for="year">
+                        Год
+                    </label>
+                    <br>
+
+                    <select
+                        id="year"
+                        name="year"
+                    >
+                        <option value="">
+                            Все годы
+                        </option>
+
+                        {% for year in years %}
+                            <option
+                                value="{{ year }}"
+                                {% if selected_year == year %}
+                                    selected
+                                {% endif %}
+                            >
+                                {{ year }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </p>
+
+                <p>
+                    <label for="department_id">
+                        Кафедра
+                    </label>
+                    <br>
+
+                    <select
+                        id="department_id"
+                        name="department_id"
+                    >
+                        <option value="">
+                            Все кафедры
+                        </option>
+
+                        {% for department in departments %}
+                            <option
+                                value="{{ department.id }}"
+                                {% if selected_department_id == department.id %}
+                                    selected
+                                {% endif %}
+                            >
+                                {{ department.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </p>
+
+                <button type="submit">
+                    Применить
+                </button>
+
+                <a href="{{ url_for('monitoring.dashboard') }}">
+                    Сбросить
+                </a>
+            </form>
+        </section>
+
+        <section>
+            <h2>Общая информация</h2>
+
+            <p>
+                <strong>Планов:</strong>
+                {{ summary.plans_count }}
+            </p>
+
+            <p>
+                <strong>Утверждённых планов:</strong>
+                {{ summary.approved_plans_count }}
+            </p>
+
+            <p>
+                <strong>Публикаций:</strong>
+                {{ summary.publications_count }}
+            </p>
+
+            <p>
+                <strong>Ожидают проверки:</strong>
+
+                <a
+                    href="{{ url_for(
+                        'publications.publications',
+                        verification_status='PENDING',
+                        department_id=selected_department_id,
+                        plan_year=selected_year
+                    ) }}"
+                >
+                    {{ summary.pending_publications_count }}
+                </a>
+            </p>
+
+            <p>
+                <strong>Проверено:</strong>
+
+                <a
+                    href="{{ url_for(
+                        'publications.publications',
+                        verification_status='APPROVED',
+                        department_id=selected_department_id,
+                        plan_year=selected_year
+                    ) }}"
+                >
+                    {{ summary.approved_publications_count }}
+                </a>
+            </p>
+
+            <p>
+                <strong>Возвращено:</strong>
+
+                <a
+                    href="{{ url_for(
+                        'publications.publications',
+                        verification_status='RETURNED',
+                        department_id=selected_department_id,
+                        plan_year=selected_year
+                    ) }}"
+                >
+                    {{ summary.returned_publications_count }}
+                </a>
+            </p>
+
+            <p>
+                <strong>Дубликатов:</strong>
+
+                <a
+                    href="{{ url_for(
+                        'publications.publications',
+                        verification_status='DUPLICATE',
+                        department_id=selected_department_id,
+                        plan_year=selected_year
+                    ) }}"
+                >
+                    {{ summary.duplicate_publications_count }}
+                </a>
+            </p>
+        </section>
+        <section>
+            <h2>Требует внимания</h2>
+
+            <h3>
+                Ожидают проверки
+            </h3>
+
+            {% if attention.pending %}
+                <ul>
+                    {% for publication in attention.pending %}
+                        <li>
+                            <a
+                                href="{{ url_for(
+                                    'publications.publication_detail',
+                                    publication_id=publication.id
+                                ) }}"
+                            >
+                                {{ publication.title }}
+                            </a>
+
+                            —
+                            {{ publication.department.name }}
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p>
+                    Публикаций, ожидающих проверки, нет.
+                </p>
+            {% endif %}
+
+            <h3>
+                Возвращено
+            </h3>
+
+            {% if attention.returned %}
+                <ul>
+                    {% for publication in attention.returned %}
+                        <li>
+                            <a
+                                href="{{ url_for(
+                                    'publications.publication_detail',
+                                    publication_id=publication.id
+                                ) }}"
+                            >
+                                {{ publication.title }}
+                            </a>
+
+                            —
+                            {{ publication.department.name }}
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p>
+                    Возвращённых публикаций нет.
+                </p>
+            {% endif %}
+
+            <h3>
+                Дубликаты
+            </h3>
+
+            {% if attention.duplicate %}
+                <ul>
+                    {% for publication in attention.duplicate %}
+                        <li>
+                            <a
+                                href="{{ url_for(
+                                    'publications.publication_detail',
+                                    publication_id=publication.id
+                                ) }}"
+                            >
+                                {{ publication.title }}
+                            </a>
+
+                            —
+                            {{ publication.department.name }}
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p>
+                    Дубликатов нет.
+                </p>
+            {% endif %}
+        </section>
+        <section>
+            <h2>Общее выполнение</h2>
+
+            <p>
+                <strong>Запланировано:</strong>
+                {{ summary.planned_count }}
+            </p>
+
+            <p>
+                <strong>Выполнено:</strong>
+                {{ summary.actual_count }}
+            </p>
+
+            <p>
+                <strong>Процент выполнения:</strong>
+                {{ summary.overall_progress }}%
+            </p>
+        </section>
+
+        <section>
+            <h2>Выполнение по кафедрам</h2>
+
+            {% if summary.department_progress %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Кафедра</th>
+                            <th>Планов</th>
+                            <th>Запланировано</th>
+                            <th>Создано</th>
+                            <th>Проверено</th>
+                            <th>На проверке</th>
+                            <th>Возвращено</th>
+                            <th>Дубликаты</th>
+                            <th>Выполнение</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for item in summary.department_progress %}
+                            <tr>
+                                <td>
+                                    {{ item.department.name }}
+                                </td>
+
+                                <td>
+                                    {{ item.plans_count }}
+                                </td>
+
+                                <td>
+                                    {{ item.planned_count }}
+                                </td>
+
+                                <td>
+                                    {{ item.created_count }}
+                                </td>
+
+                                <td>
+                                    {{ item.actual_count }}
+                                </td>
+
+                                <td>
+                                    {{ item.pending_count }}
+                                </td>
+
+                                <td>
+                                    {{ item.returned_count }}
+                                </td>
+
+                                <td>
+                                    {{ item.duplicate_count }}
+                                </td>
+
+                                <td>
+                                    {{ item.progress }}%
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p>
+                    Активные кафедры отсутствуют.
+                </p>
+            {% endif %}
+        </section>
+
+        <section>
+            <h2>Выполнение планов</h2>
+
+            {% if summary.plan_progress %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Год</th>
+                            <th>Кафедра</th>
+                            <th>План</th>
+                            <th>Запланировано</th>
+                            <th>Создано</th>
+                            <th>Проверено</th>
+                            <th>На проверке</th>
+                            <th>Возвращено</th>
+                            <th>Дубликаты</th>
+                            <th>Выполнение</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for item in summary.plan_progress %}
+                            <tr>
+                                <td>
+                                    {{ item.plan.year }}
+                                </td>
+
+                                <td>
+                                    {{ item.plan.department.name }}
+                                </td>
+
+                                <td>
+                                    <a
+                                        href="{{ url_for(
+                                            'plans.plan_detail',
+                                            plan_id=item.plan.id
+                                        ) }}"
+                                    >
+                                        №{{ item.plan.id }}
+                                    </a>
+                                </td>
+
+                                <td>
+                                    {{ item.planned_count }}
+                                </td>
+
+                                <td>
+                                    {{ item.created_count }}
+                                </td>
+
+                                <td>
+                                    {{ item.actual_count }}
+                                </td>
+
+                                <td>
+                                    {{ item.pending_count }}
+                                </td>
+
+                                <td>
+                                    {{ item.returned_count }}
+                                </td>
+
+                                <td>
+                                    {{ item.duplicate_count }}
+                                </td>
+
+                                <td>
+                                    {{ item.progress }}%
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p>
+                    Утверждённых планов нет.
+                </p>
+            {% endif %}
+        </section>
+    </main>
+</body>
+</html>

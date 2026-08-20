@@ -96,6 +96,89 @@
             </p>
         </section>
 
+        {% if current_user.role == "ADMIN" and doi_conflicts %}
+            <section>
+                <h2>Конфликт DOI</h2>
+
+                <p>
+                    Обнаружены публикации с одинаковым DOI.
+                    Монитор должен определить, какая публикация является корректной.
+                </p>
+
+                <p>
+                    <strong>DOI:</strong>
+                    {{ publication.doi }}
+                </p>
+
+                {% for conflict in doi_conflicts %}
+                    <article>
+                        <h3>
+                            Публикация №{{ conflict.id }}
+                        </h3>
+
+                        <p>
+                            <strong>Название:</strong>
+                            {{ conflict.title }}
+                        </p>
+
+                        <p>
+                            <strong>Журнал:</strong>
+                            {{ conflict.journal or "—" }}
+                        </p>
+
+                        <p>
+                            <strong>Год:</strong>
+                            {{ conflict.publication_year or "—" }}
+                        </p>
+
+                        <p>
+                            <strong>Статус проверки:</strong>
+                            {{ publication_verification_statuses.get(
+                                conflict.verification_status,
+                                conflict.verification_status
+                            ) }}
+                        </p>
+
+                        <form
+                            method="post"
+                            action="{{ url_for(
+                                'publications.resolve_doi_conflict',
+                                publication_id=publication.id
+                            ) }}"
+                        >
+                            <input
+                                type="hidden"
+                                name="csrf_token"
+                                value="{{ csrf_token() }}"
+                            >
+
+                            <input
+                                type="hidden"
+                                name="conflict_id"
+                                value="{{ conflict.id }}"
+                            >
+
+                            <button
+                                type="submit"
+                                name="action"
+                                value="keep_current"
+                            >
+                                Оставить текущую публикацию
+                            </button>
+
+                            <button
+                                type="submit"
+                                name="action"
+                                value="keep_conflict"
+                            >
+                                Оставить публикацию №{{ conflict.id }}
+                            </button>
+                        </form>
+                    </article>
+                {% endfor %}
+            </section>
+        {% endif %}
+
         <section>
             <h2>Авторы</h2>
 

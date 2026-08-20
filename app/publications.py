@@ -15,7 +15,7 @@ from flask import (
 )
 from flask_login import current_user
 from werkzeug.utils import secure_filename
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.auth import roles_required
 from app.extensions import db
@@ -53,12 +53,14 @@ PUBLICATION_STATUSES = {
 PUBLICATION_VERIFICATION_PENDING = "PENDING"
 PUBLICATION_VERIFICATION_APPROVED = "APPROVED"
 PUBLICATION_VERIFICATION_RETURNED = "RETURNED"
+PUBLICATION_VERIFICATION_DUPLICATE = "DUPLICATE"
 
 
 PUBLICATION_VERIFICATION_STATUSES = {
     PUBLICATION_VERIFICATION_PENDING: "На проверке",
     PUBLICATION_VERIFICATION_APPROVED: "Проверена",
     PUBLICATION_VERIFICATION_RETURNED: "Возвращена на доработку",
+    PUBLICATION_VERIFICATION_DUPLICATE: "Дубликат",
 }
 
 
@@ -191,6 +193,50 @@ publications_bp = Blueprint(
 def publications():
     query = Publication.query
 
+    verification_status = request.args.get(
+        "verification_status",
+        "",
+    ).strip()
+
+    department_id = request.args.get(
+        "department_id",
+        "",
+    ).strip()
+    plan_year = request.args.get(
+        "plan_year",
+        "",
+    ).strip()
+
+    if verification_status:
+        if verification_status not in PUBLICATION_VERIFICATION_STATUSES:
+            abort(400)
+
+        query = query.filter(
+            Publication.verification_status == verification_status
+        )
+
+    if department_id:
+        try:
+            department_id_value = int(department_id)
+        except ValueError:
+            abort(400)
+
+        query = query.filter(
+            Publication.department_id == department_id_value
+        )
+
+    if plan_year:
+        try:
+            plan_year_value = int(plan_year)
+        except ValueError:
+            abort(400)
+
+        query = query.join(
+            Publication.plan_item
+        ).filter(
+            Plan.year == plan_year_value
+        )
+
     if current_user.role == "DEPARTMENT_HEAD":
         if current_user.department_id is None:
             abort(403)
@@ -227,6 +273,8 @@ def publication_detail(publication_id):
     ):
         abort(403)
 
+    doi_conflicts = find_doi_conflicts(publication)
+
     return render_template(
         "publications/detail.html",
         publication=publication,
@@ -236,6 +284,7 @@ def publication_detail(publication_id):
             set(),
         ),
         publication_verification_statuses=PUBLICATION_VERIFICATION_STATUSES,
+        doi_conflicts=doi_conflicts,
     )
 
 @publications_bp.route(
@@ -294,6 +343,8 @@ def edit_publication(publication_id):
 
         if not title:
             errors.append("Введите название публикации.")
+
+        
 
         publication_year_value = None
 
@@ -767,6 +818,250 @@ def reject_publication_attachment(publication_id, attachment_id):
         )
     )
 
+def find_publication_duplicates(publication):
+    duplicates = {}
+
+    normalized_doi = (
+        publication.doi.strip().lower()
+        if publication.doi
+        else None
+    )
+
+    if normalized_doi:
+        candidate_publications = db.session.scalars(
+            select(Publication).where(
+                Publication.id != publication.id,
+                Publication.doi.is_not(None),
+            )
+        ).all()
+
+        for candidate in candidate_publications:
+            candidate_doi = (
+                candidate.doi.strip().lower()
+                if candidate.doi
+                else None
+            )
+
+            if candidate_doi == normalized_doi:
+                duplicates[candidate.id] = candidate
+
+    normalized_title = publication.title.strip().lower()
+
+    normalized_journal = (
+        publication.journal.strip().lower()
+        if publication.journal
+        else None
+    )
+
+    if normalized_title and normalized_journal:
+        candidate_query = select(Publication).where(
+            Publication.id != publication.id,
+            Publication.title.is_not(None),
+            Publication.journal.is_not(None),
+        )
+
+        if publication.publication_year is not None:
+            candidate_query = candidate_query.where(
+                Publication.publication_year
+                == publication.publication_year
+            )
+
+        candidate_publications = db.session.scalars(
+            candidate_query
+        ).all()
+
+        for candidate in candidate_publications:
+            candidate_title = (
+                candidate.title.strip().lower()
+                if candidate.title
+                else ""
+            )
+
+            candidate_journal = (
+                candidate.journal.strip().lower()
+                if candidate.journal
+                else ""
+            )
+
+            if (
+                candidate_title == normalized_title
+                and candidate_journal == normalized_journal
+            ):
+                duplicates[candidate.id] = candidate
+
+    return list(duplicates.values())
+
+def find_doi_conflicts(publication):
+    if not publication.doi:
+        return []
+
+    normalized_doi = publication.doi.strip().lower()
+
+    return db.session.scalars(
+        select(Publication).where(
+            Publication.id != publication.id,
+            Publication.doi.is_not(None),
+            func.lower(Publication.doi) == normalized_doi,
+        )
+    ).all()
+
+@publications_bp.route(
+    "/<int:publication_id>/resolve-doi",
+    methods=["POST"],
+)
+@roles_required("ADMIN")
+def resolve_doi_conflict(publication_id):
+    publication = db.session.get(
+        Publication,
+        publication_id,
+    )
+
+    if publication is None:
+        abort(404)
+
+    conflict_id = request.form.get(
+        "conflict_id",
+        "",
+    ).strip()
+
+    action = request.form.get(
+        "action",
+        "",
+    ).strip()
+
+    try:
+        conflict_id_value = int(conflict_id)
+    except ValueError:
+        flash(
+            "Некорректный идентификатор конфликтующей публикации.",
+            "danger",
+        )
+
+        return redirect(
+            url_for(
+                "publications.publication_detail",
+                publication_id=publication.id,
+            )
+        )
+
+    conflict = db.session.get(
+        Publication,
+        conflict_id_value,
+    )
+
+    if conflict is None:
+        abort(404)
+
+    if conflict.id == publication.id:
+        flash(
+            "Нельзя разрешить конфликт публикации с самой собой.",
+            "danger",
+        )
+
+        return redirect(
+            url_for(
+                "publications.publication_detail",
+                publication_id=publication.id,
+            )
+        )
+
+    publication_doi = (
+        publication.doi.strip().lower()
+        if publication.doi
+        else None
+    )
+
+    conflict_doi = (
+        conflict.doi.strip().lower()
+        if conflict.doi
+        else None
+    )
+
+    if not publication_doi or publication_doi != conflict_doi:
+        flash(
+            "У публикаций нет одинакового DOI.",
+            "danger",
+        )
+
+        return redirect(
+            url_for(
+                "publications.publication_detail",
+                publication_id=publication.id,
+            )
+        )
+
+    if action == "keep_current":
+        winner = publication
+        loser = conflict
+
+    elif action == "keep_conflict":
+        winner = conflict
+        loser = publication
+
+    else:
+        flash(
+            "Некорректное решение по конфликту DOI.",
+            "danger",
+        )
+
+        return redirect(
+            url_for(
+                "publications.publication_detail",
+                publication_id=publication.id,
+            )
+        )
+
+    winner.verification_status = (
+        PUBLICATION_VERIFICATION_APPROVED
+    )
+    winner.verified_by = current_user.id
+    winner.verified_at = datetime.utcnow()
+
+    loser.verification_status = (
+        PUBLICATION_VERIFICATION_DUPLICATE
+    )
+    loser.verified_by = current_user.id
+    loser.verified_at = datetime.utcnow()
+
+    db.session.add(
+        Comment(
+            user_id=current_user.id,
+            entity_type="PUBLICATION",
+            entity_id=winner.id,
+            text=(
+                "Монитор разрешил конфликт DOI. "
+                f"Выбрана публикация №{winner.id}."
+            ),
+        )
+    )
+
+    db.session.add(
+        Comment(
+            user_id=current_user.id,
+            entity_type="PUBLICATION",
+            entity_id=loser.id,
+            text=(
+                "Публикация признана дубликатом "
+                f"публикации №{winner.id} "
+                "по результату проверки DOI."
+            ),
+        )
+    )
+
+    db.session.commit()
+
+    flash(
+        f"Конфликт DOI разрешён. "
+        f"Публикация №{winner.id} оставлена.",
+        "success",
+    )
+
+    return redirect(
+        url_for(
+            "publications.publication_detail",
+            publication_id=winner.id,
+        )
+    )
 
 @publications_bp.route(
     "/<int:publication_id>/verify",
@@ -781,6 +1076,145 @@ def verify_publication(publication_id):
 
     if publication is None:
         abort(404)
+
+    errors = []
+
+    if publication.plan_item is None:
+        errors.append(
+            "Публикация не связана с пунктом плана."
+        )
+    else:
+        plan = publication.plan_item.plan
+
+        if plan is None:
+            errors.append(
+                "Для публикации не найден план."
+            )
+        else:
+            if plan.status != "APPROVED":
+                errors.append(
+                    "Связанный план не утверждён."
+                )
+
+            if publication.department_id != plan.department_id:
+                errors.append(
+                    "Кафедра публикации не соответствует кафедре плана."
+                )
+
+            if (
+                publication.title.strip()
+                != publication.plan_item.title.strip()
+            ):
+                errors.append(
+                    "Название публикации не соответствует утверждённому плану."
+                )
+
+            planned_journal = (
+                publication.plan_item.journal or ""
+            ).strip()
+
+            publication_journal = (
+                publication.journal or ""
+            ).strip()
+
+            if planned_journal != publication_journal:
+                errors.append(
+                    "Журнал публикации не соответствует утверждённому плану."
+                )
+
+            if (
+                publication.quartile_id
+                != publication.plan_item.quartile_id
+            ):
+                errors.append(
+                    "Квартиль публикации не соответствует утверждённому плану."
+                )
+
+            planned_author_ids = [
+                author_link.employee_id
+                for author_link in publication.plan_item.author_links
+            ]
+
+            publication_author_ids = [
+                author_link.employee_id
+                for author_link in publication.author_links
+            ]
+
+            if planned_author_ids != publication_author_ids:
+                errors.append(
+                    "Состав или порядок авторов не соответствует утверждённому плану."
+                )
+
+    if not publication.title.strip():
+        errors.append(
+            "Не указано название публикации."
+        )
+
+    if not publication.journal or not publication.journal.strip():
+        errors.append(
+            "Не указан журнал."
+        )
+
+    if not publication.author_links:
+        errors.append(
+            "Не указаны авторы публикации."
+        )
+
+    if not publication.affiliation or not publication.affiliation.strip():
+        errors.append(
+            "Не указана аффилиация."
+        )
+
+    doi_conflicts = find_doi_conflicts(
+        publication
+    )
+
+    if doi_conflicts:
+        conflict_ids = ", ".join(
+            str(conflict.id)
+            for conflict in doi_conflicts
+        )
+
+        errors.append(
+            "Обнаружен конфликт DOI. "
+            f"Публикации с таким DOI: № {conflict_ids}. "
+            "Сначала необходимо разрешить конфликт монитором."
+        )
+
+    if not publication.attachments:
+        errors.append(
+            "Не загружен подтверждающий файл."
+        )
+    else:
+        not_approved_attachments = [
+            attachment
+            for attachment in publication.attachments
+            if attachment.review_status != "APPROVED"
+        ]
+
+        if not_approved_attachments:
+            errors.append(
+                "Необходимо дождаться проверки всех подтверждающих файлов."
+            )
+
+    if errors:
+        flash(
+            "Публикация не может быть подтверждена:",
+            "danger",
+        )
+
+        for error in errors:
+            flash(
+                error,
+                "danger",
+            )
+
+        return redirect(
+            url_for(
+                "publications.publication_detail",
+                publication_id=publication.id,
+            )
+        )
 
     publication.verification_status = (
         PUBLICATION_VERIFICATION_APPROVED

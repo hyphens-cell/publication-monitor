@@ -346,7 +346,7 @@ class Publication(db.Model):
     )
 
     title = db.Column(db.String(1000), nullable=False)
-    doi = db.Column(db.String(500), unique=True, nullable=True)
+    doi = db.Column(db.String(500),  nullable=True)
     url = db.Column(db.String(1000), nullable=True)
 
     journal = db.Column(db.String(500), nullable=True)
