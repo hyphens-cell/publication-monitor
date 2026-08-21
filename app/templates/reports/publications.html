@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1"
+    >
+
+    <title>Отчёт по публикациям</title>
+</head>
+
+<body>
+    <header>
+        <h1>Отчёт по публикациям</h1>
+
+        <p>
+            <a href="{{ url_for('main.index') }}">
+                ← На главную
+            </a>
+        </p>
+
+        <p>
+            <a href="{{ url_for('monitoring.dashboard') }}">
+                ← Мониторинг
+            </a>
+        </p>
+    </header>
+
+    <main>
+        <section>
+            <h2>Фильтры</h2>
+
+            <form
+                method="get"
+                action="{{ url_for('reports.publications_report') }}"
+            >
+                <p>
+                    <label for="year">
+                        Год плана
+                    </label>
+                    <br>
+
+                    <select id="year" name="year">
+                        <option value="">
+                            Все годы
+                        </option>
+
+                        {% for value in years %}
+                            <option
+                                value="{{ value }}"
+                                {% if selected_year == value %}
+                                    selected
+                                {% endif %}
+                            >
+                                {{ value }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </p>
+
+                <p>
+                    <label for="department_id">
+                        Кафедра
+                    </label>
+                    <br>
+
+                    <select
+                        id="department_id"
+                        name="department_id"
+                    >
+                        <option value="">
+                            Все кафедры
+                        </option>
+
+                        {% for department in departments %}
+                            <option
+                                value="{{ department.id }}"
+                                {% if selected_department_id == department.id %}
+                                    selected
+                                {% endif %}
+                            >
+                                {{ department.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </p>
+
+                <p>
+                    <label for="publication_status">
+                        Статус публикации
+                    </label>
+                    <br>
+
+                    <select
+                        id="publication_status"
+                        name="publication_status"
+                    >
+                        <option value="">
+                            Все статусы
+                        </option>
+
+                        {% for status, label in publication_statuses.items() %}
+                            <option
+                                value="{{ status }}"
+                                {% if selected_publication_status == status %}
+                                    selected
+                                {% endif %}
+                            >
+                                {{ label }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </p>
+
+                <p>
+                    <label for="verification_status">
+                        Статус проверки
+                    </label>
+                    <br>
+
+                    <select
+                        id="verification_status"
+                        name="verification_status"
+                    >
+                        <option value="">
+                            Все статусы
+                        </option>
+
+                        {% for status, label in verification_statuses.items() %}
+                            <option
+                                value="{{ status }}"
+                                {% if selected_verification_status == status %}
+                                    selected
+                                {% endif %}
+                            >
+                                {{ label }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </p>
+
+                <p>
+                    <label for="quartile_id">
+                        Квартиль
+                    </label>
+                    <br>
+
+                    <select
+                        id="quartile_id"
+                        name="quartile_id"
+                    >
+                        <option value="">
+                            Все квартили
+                        </option>
+
+                        {% for quartile in quartiles %}
+                            <option
+                                value="{{ quartile.id }}"
+                                {% if selected_quartile_id == quartile.id %}
+                                    selected
+                                {% endif %}
+                            >
+                                {% if current_user.language == "kk" %}
+                                    {{ quartile.name_kk }}
+                                {% else %}
+                                    {{ quartile.name_ru }}
+                                {% endif %}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </p>
+
+                <p>
+                    <label for="indexing_type_id">
+                        Тип индексации
+                    </label>
+                    <br>
+
+                    <select
+                        id="indexing_type_id"
+                        name="indexing_type_id"
+                    >
+                        <option value="">
+                            Все типы
+                        </option>
+
+                        {% for indexing_type in indexing_types %}
+                            <option
+                                value="{{ indexing_type.id }}"
+                                {% if selected_indexing_type_id == indexing_type.id %}
+                                    selected
+                                {% endif %}
+                            >
+                                {% if current_user.language == "kk" %}
+                                    {{ indexing_type.name_kk }}
+                                {% else %}
+                                    {{ indexing_type.name_ru }}
+                                {% endif %}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </p>
+
+                <button type="submit">
+                    Применить
+                </button>
+
+                <a
+                    href="{{ url_for('reports.publications_report') }}"
+                >
+                    Сбросить
+                </a>
+                <p>
+                    <a
+                        href="{{ url_for(
+                            'reports.export_publications_excel',
+                            year=selected_year,
+                            department_id=selected_department_id,
+                            quartile_id=selected_quartile_id,
+                            indexing_type_id=selected_indexing_type_id,
+                            publication_status=selected_publication_status,
+                            verification_status=selected_verification_status
+                        ) }}"
+                    >
+                        Скачать Excel
+                    </a>
+                </p>
+                <p>
+                    <a
+                        href="{{ url_for(
+                            'reports.export_publications_pdf',
+                            year=selected_year,
+                            department_id=selected_department_id,
+                            quartile_id=selected_quartile_id,
+                            indexing_type_id=selected_indexing_type_id,
+                            publication_status=selected_publication_status,
+                            verification_status=selected_verification_status
+                        ) }}"
+                    >
+                        Скачать PDF
+                    </a>
+                </p>
+            </form>
+        </section>
+
+        <section>
+            <h2>
+                Публикации:
+                {{ publications|length }}
+            </h2>
+
+            {% if publications %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Год плана</th>
+                            <th>Кафедра</th>
+                            <th>План</th>
+                            <th>Публикация</th>
+                            <th>Журнал</th>
+                            <th>Год публикации</th>
+                            <th>DOI</th>
+                            <th>Квартиль</th>
+                            <th>Индексация</th>
+                            <th>Статус</th>
+                            <th>Проверка</th>
+                            <th>Проверяющий</th>
+                            <th>Дата проверки</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for publication in publications %}
+                            <tr>
+                                <td>
+                                    {{ publication.plan_item.plan.year }}
+                                </td>
+
+                                <td>
+                                    {{ publication.department.name }}
+                                </td>
+
+                                <td>
+                                    №{{ publication.plan_item.plan.id }}
+                                </td>
+
+                                <td>
+                                    <a
+                                        href="{{ url_for(
+                                            'publications.publication_detail',
+                                            publication_id=publication.id
+                                        ) }}"
+                                    >
+                                        {{ publication.title }}
+                                    </a>
+                                </td>
+
+                                <td>
+                                    {{ publication.journal or "—" }}
+                                </td>
+
+                                <td>
+                                    {{ publication.publication_year or "—" }}
+                                </td>
+
+                                <td>
+                                    {{ publication.doi or "—" }}
+                                </td>
+
+                                <td>
+                                    {% if publication.quartile %}
+                                        {% if current_user.language == "kk" %}
+                                            {{ publication.quartile.name_kk }}
+                                        {% else %}
+                                            {{ publication.quartile.name_ru }}
+                                        {% endif %}
+                                    {% else %}
+                                        —
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    {% if publication.indexing_type %}
+                                        {% if current_user.language == "kk" %}
+                                            {{ publication.indexing_type.name_kk }}
+                                        {% else %}
+                                            {{ publication.indexing_type.name_ru }}
+                                        {% endif %}
+                                    {% else %}
+                                        —
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    {% if publication.status in publication_statuses %}
+                                        {{ publication_statuses[publication.status] }}
+                                    {% else %}
+                                        {{ publication.status }}
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    {% if publication.verification_status in verification_statuses %}
+                                        {{ verification_statuses[publication.verification_status] }}
+                                    {% else %}
+                                        {{ publication.verification_status }}
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    {% if publication.verifier %}
+                                        {{ publication.verifier.full_name }}
+                                    {% else %}
+                                        —
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    {% if publication.verified_at %}
+                                        {{ publication.verified_at.strftime(
+                                            "%d.%m.%Y %H:%M"
+                                        ) }}
+                                    {% else %}
+                                        —
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p>
+                    По выбранным фильтрам публикации не найдены.
+                </p>
+            {% endif %}
+        </section>
+    </main>
+</body>
+</html>

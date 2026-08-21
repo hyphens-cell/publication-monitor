@@ -756,11 +756,7 @@ def download_publication_attachment(publication_id, attachment_id):
     )
 
 
-@publications_bp.route(
-    "/<int:publication_id>/attachments/<int:attachment_id>/delete",
-    methods=["POST"],
-)
-@roles_required("DEPARTMENT_HEAD")
+
 @publications_bp.route(
     "/<int:publication_id>/attachments/<int:attachment_id>/delete",
     methods=["POST"],
