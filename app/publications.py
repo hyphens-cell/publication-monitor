@@ -187,6 +187,57 @@ publications_bp = Blueprint(
     url_prefix="/publications",
 )
 
+def synchronize_publication_verification_status(
+    publication: Publication,
+) -> None:
+    if (
+        publication.verification_status
+        == PUBLICATION_VERIFICATION_DUPLICATE
+    ):
+        return
+
+    attachments = publication.attachments
+
+    if not attachments:
+        publication.verification_status = (
+            PUBLICATION_VERIFICATION_PENDING
+        )
+        publication.verified_by = None
+        publication.verified_at = None
+        return
+
+    review_statuses = {
+        attachment.review_status
+        for attachment in attachments
+    }
+
+    if "REJECTED" in review_statuses:
+        publication.verification_status = (
+            PUBLICATION_VERIFICATION_RETURNED
+        )
+        publication.verified_by = None
+        publication.verified_at = None
+        return
+
+    if "PENDING" in review_statuses:
+        publication.verification_status = (
+            PUBLICATION_VERIFICATION_PENDING
+        )
+        publication.verified_by = None
+        publication.verified_at = None
+        return
+
+    if review_statuses == {"APPROVED"}:
+        publication.verification_status = (
+            PUBLICATION_VERIFICATION_APPROVED
+        )
+        return
+
+    publication.verification_status = (
+        PUBLICATION_VERIFICATION_PENDING
+    )
+    publication.verified_by = None
+    publication.verified_at = None
 
 @publications_bp.route("/")
 @roles_required("ADMIN", "DEPARTMENT_HEAD")
@@ -646,6 +697,17 @@ def upload_publication_attachment(publication_id):
     )
 
     db.session.add(attachment)
+
+    if (
+        publication.verification_status
+        != PUBLICATION_VERIFICATION_DUPLICATE
+    ):
+        publication.verification_status = (
+            PUBLICATION_VERIFICATION_PENDING
+        )
+        publication.verified_by = None
+        publication.verified_at = None
+
     db.session.commit()
 
     flash(
@@ -699,8 +761,19 @@ def download_publication_attachment(publication_id, attachment_id):
     methods=["POST"],
 )
 @roles_required("DEPARTMENT_HEAD")
-def delete_publication_attachment(publication_id, attachment_id):
-    publication = db.session.get(Publication, publication_id)
+@publications_bp.route(
+    "/<int:publication_id>/attachments/<int:attachment_id>/delete",
+    methods=["POST"],
+)
+@roles_required("DEPARTMENT_HEAD")
+def delete_publication_attachment(
+    publication_id,
+    attachment_id,
+):
+    publication = db.session.get(
+        Publication,
+        publication_id,
+    )
 
     if publication is None:
         abort(404)
@@ -708,9 +781,15 @@ def delete_publication_attachment(publication_id, attachment_id):
     if publication.department_id != current_user.department_id:
         abort(403)
 
-    attachment = db.session.get(Attachment, attachment_id)
+    attachment = db.session.get(
+        Attachment,
+        attachment_id,
+    )
 
-    if attachment is None or attachment.publication_id != publication.id:
+    if (
+        attachment is None
+        or attachment.publication_id != publication.id
+    ):
         abort(404)
 
     if attachment.uploaded_by != current_user.id:
@@ -720,9 +799,18 @@ def delete_publication_attachment(publication_id, attachment_id):
         os.remove(attachment.file_path)
 
     db.session.delete(attachment)
+    db.session.flush()
+
+    synchronize_publication_verification_status(
+        publication
+    )
+
     db.session.commit()
 
-    flash("Файл удалён.", "success")
+    flash(
+        "Файл удалён.",
+        "success",
+    )
 
     return redirect(
         url_for(
@@ -737,25 +825,70 @@ def delete_publication_attachment(publication_id, attachment_id):
     methods=["POST"],
 )
 @roles_required("ADMIN")
-def approve_publication_attachment(publication_id, attachment_id):
-    publication = db.session.get(Publication, publication_id)
+def approve_publication_attachment(
+    publication_id,
+    attachment_id,
+):
+    publication = db.session.get(
+        Publication,
+        publication_id,
+    )
 
     if publication is None:
         abort(404)
 
-    attachment = db.session.get(Attachment, attachment_id)
+    attachment = db.session.get(
+        Attachment,
+        attachment_id,
+    )
 
-    if attachment is None or attachment.publication_id != publication.id:
+    if (
+        attachment is None
+        or attachment.publication_id != publication.id
+    ):
         abort(404)
+
+    if (
+        publication.verification_status
+        == PUBLICATION_VERIFICATION_DUPLICATE
+    ):
+        flash(
+            "Нельзя проверять файл публикации, признанной дубликатом.",
+            "danger",
+        )
+
+        return redirect(
+            url_for(
+                "publications.publication_detail",
+                publication_id=publication.id,
+            )
+        )
 
     attachment.review_status = "APPROVED"
     attachment.reviewed_by = current_user.id
     attachment.reviewed_at = datetime.utcnow()
     attachment.review_comment = None
 
+    synchronize_publication_verification_status(
+        publication
+    )
+
+    if (
+        publication.verification_status
+        == PUBLICATION_VERIFICATION_APPROVED
+    ):
+        publication.verified_by = current_user.id
+        publication.verified_at = datetime.utcnow()
+    else:
+        publication.verified_by = None
+        publication.verified_at = None
+
     db.session.commit()
 
-    flash("Файл принят.", "success")
+    flash(
+        "Файл принят.",
+        "success",
+    )
 
     return redirect(
         url_for(
@@ -770,21 +903,55 @@ def approve_publication_attachment(publication_id, attachment_id):
     methods=["POST"],
 )
 @roles_required("ADMIN")
-def reject_publication_attachment(publication_id, attachment_id):
-    publication = db.session.get(Publication, publication_id)
+def reject_publication_attachment(
+    publication_id,
+    attachment_id,
+):
+    publication = db.session.get(
+        Publication,
+        publication_id,
+    )
 
     if publication is None:
         abort(404)
 
-    attachment = db.session.get(Attachment, attachment_id)
+    attachment = db.session.get(
+        Attachment,
+        attachment_id,
+    )
 
-    if attachment is None or attachment.publication_id != publication.id:
+    if (
+        attachment is None
+        or attachment.publication_id != publication.id
+    ):
         abort(404)
 
-    comment = request.form.get("comment", "").strip()
+    if (
+        publication.verification_status
+        == PUBLICATION_VERIFICATION_DUPLICATE
+    ):
+        flash(
+            "Нельзя проверять файл публикации, признанной дубликатом.",
+            "danger",
+        )
+
+        return redirect(
+            url_for(
+                "publications.publication_detail",
+                publication_id=publication.id,
+            )
+        )
+
+    comment = request.form.get(
+        "comment",
+        "",
+    ).strip()
 
     if not comment:
-        flash("Укажите причину отклонения файла.", "danger")
+        flash(
+            "Укажите причину отклонения файла.",
+            "danger",
+        )
 
         return redirect(
             url_for(
@@ -798,6 +965,10 @@ def reject_publication_attachment(publication_id, attachment_id):
     attachment.reviewed_at = datetime.utcnow()
     attachment.review_comment = comment
 
+    synchronize_publication_verification_status(
+        publication
+    )
+
     db.session.add(
         Comment(
             user_id=current_user.id,
@@ -809,7 +980,10 @@ def reject_publication_attachment(publication_id, attachment_id):
 
     db.session.commit()
 
-    flash("Файл отклонён.", "warning")
+    flash(
+        "Файл отклонён.",
+        "warning",
+    )
 
     return redirect(
         url_for(
