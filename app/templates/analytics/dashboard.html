@@ -9,11 +9,262 @@
     >
 
     <title>Аналитика</title>
+
+    <script
+        src="https://cdn.jsdelivr.net/npm/chart.js"
+    ></script>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 24px;
+            font-family:
+                Arial,
+                Helvetica,
+                sans-serif;
+            color: #222;
+            background: #f5f6f8;
+        }
+
+        header,
+        main {
+            width: min(
+                1400px,
+                100%
+            );
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        header {
+            margin-bottom: 24px;
+        }
+
+        header h1 {
+            margin-top: 0;
+            margin-bottom: 12px;
+        }
+
+        section {
+            margin-bottom: 24px;
+            padding: 24px;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 12px;
+        }
+
+        section h2 {
+            margin-top: 0;
+            margin-bottom: 20px;
+        }
+
+        form {
+            display: grid;
+            grid-template-columns:
+                repeat(
+                    3,
+                    minmax(
+                        180px,
+                        1fr
+                    )
+                );
+            gap: 16px;
+        }
+
+        form p {
+            margin: 0;
+        }
+
+        form p:last-child {
+            grid-column: 1 / -1;
+        }
+
+        label {
+            display: inline-block;
+            margin-bottom: 6px;
+            font-weight: 600;
+        }
+
+        select,
+        button {
+            min-height: 40px;
+            width: 100%;
+            padding: 8px 12px;
+            font: inherit;
+        }
+
+        button {
+            width: auto;
+            cursor: pointer;
+        }
+
+        a {
+            color: #2457a6;
+        }
+
+        .filter-actions {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .export-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns:
+                repeat(
+                    3,
+                    minmax(
+                        0,
+                        1fr
+                    )
+                );
+            gap: 16px;
+        }
+
+        .summary-card {
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+        }
+
+        .summary-card-label {
+            margin-bottom: 8px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .summary-card-value {
+            font-size: 30px;
+            font-weight: 700;
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns:
+                repeat(
+                    2,
+                    minmax(
+                        0,
+                        1fr
+                    )
+                );
+            gap: 24px;
+        }
+
+        .chart-card {
+            min-width: 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            background: #fff;
+        }
+
+        .chart-card-full {
+            grid-column: 1 / -1;
+        }
+
+        .chart-card h3 {
+            margin-top: 0;
+            margin-bottom: 16px;
+        }
+
+        .chart-container {
+            position: relative;
+            width: 100%;
+            height: 320px;
+        }
+
+        .chart-container-large {
+            height: 420px;
+        }
+
+        .table-wrapper {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        table {
+            width: 100%;
+            min-width: 620px;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            text-align: left;
+            vertical-align: top;
+        }
+
+        th {
+            font-weight: 700;
+            background: #f0f1f3;
+        }
+
+        @media (max-width: 900px) {
+            body {
+                padding: 16px;
+            }
+
+            form {
+                grid-template-columns: 1fr;
+            }
+
+            form p:last-child {
+                grid-column: auto;
+            }
+
+            .summary-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .chart-card-full {
+                grid-column: auto;
+            }
+        }
+
+        @media (max-width: 600px) {
+            section {
+                padding: 16px;
+            }
+
+            .chart-container {
+                height: 280px;
+            }
+
+            .chart-container-large {
+                height: 360px;
+            }
+
+            .summary-card-value {
+                font-size: 26px;
+            }
+        }
+    </style>
 </head>
 
 <body>
     <header>
-        <h1>Аналитика публикационной деятельности</h1>
+        <h1>
+            Аналитика публикационной деятельности
+        </h1>
 
         <p>
             <a href="{{ url_for('main.index') }}">
@@ -118,37 +369,45 @@
                 </p>
 
                 <p>
-                    <button type="submit">
-                        Применить
-                    </button>
+                    <span class="filter-actions">
+                        <button type="submit">
+                            Применить
+                        </button>
 
-                    <a href="{{ url_for('analytics.dashboard') }}">
-                        Сбросить
-                    </a>
+                        <a
+                            href="{{ url_for(
+                                'analytics.dashboard'
+                            ) }}"
+                        >
+                            Сбросить
+                        </a>
+                    </span>
                 </p>
 
                 <p>
-                    <a
-                        href="{{ url_for(
-                            'analytics.export_excel',
-                            year=selected_year,
-                            department_id=selected_department_id,
-                            publication_type_id=selected_publication_type_id
-                        ) }}"
-                    >
-                        Скачать Excel
-                    </a>
+                    <span class="export-actions">
+                        <a
+                            href="{{ url_for(
+                                'analytics.export_excel',
+                                year=selected_year,
+                                department_id=selected_department_id,
+                                publication_type_id=selected_publication_type_id
+                            ) }}"
+                        >
+                            Скачать Excel
+                        </a>
 
-                    <a
-                        href="{{ url_for(
-                            'analytics.export_pdf',
-                            year=selected_year,
-                            department_id=selected_department_id,
-                            publication_type_id=selected_publication_type_id
-                        ) }}"
-                    >
-                        Скачать PDF
-                    </a>
+                        <a
+                            href="{{ url_for(
+                                'analytics.export_pdf',
+                                year=selected_year,
+                                department_id=selected_department_id,
+                                publication_type_id=selected_publication_type_id
+                            ) }}"
+                        >
+                            Скачать PDF
+                        </a>
+                    </span>
                 </p>
             </form>
         </section>
@@ -156,62 +415,134 @@
         <section>
             <h2>Итог</h2>
 
-            <p>
-                <strong>План:</strong>
-                {{ summary.planned_count }}
-            </p>
+            <div class="summary-grid">
+                <article class="summary-card">
+                    <div class="summary-card-label">
+                        План
+                    </div>
 
-            <p>
-                <strong>Факт:</strong>
-                {{ summary.actual_count }}
-            </p>
+                    <div class="summary-card-value">
+                        {{ summary.planned_count }}
+                    </div>
+                </article>
 
-            <p>
-                <strong>Выполнение:</strong>
-                {{ summary.progress }}%
-            </p>
+                <article class="summary-card">
+                    <div class="summary-card-label">
+                        Факт
+                    </div>
+
+                    <div class="summary-card-value">
+                        {{ summary.actual_count }}
+                    </div>
+                </article>
+
+                <article class="summary-card">
+                    <div class="summary-card-label">
+                        Выполнение
+                    </div>
+
+                    <div class="summary-card-value">
+                        {{ summary.progress }}%
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <section>
+            <h2>Графики</h2>
+
+            <div class="charts-grid">
+                <article class="chart-card">
+                    <h3>
+                        План и факт
+                    </h3>
+
+                    <div class="chart-container">
+                        <canvas
+                            id="analyticsPlanFactChart"
+                        ></canvas>
+                    </div>
+                </article>
+
+                <article class="chart-card">
+                    <h3>
+                        Выполнение по кафедрам
+                    </h3>
+
+                    <div class="chart-container">
+                        <canvas
+                            id="analyticsDepartmentProgressChart"
+                        ></canvas>
+                    </div>
+                </article>
+
+                <article class="chart-card chart-card-full">
+                    <h3>
+                        План и факт по типам публикаций
+                    </h3>
+
+                    <div class="chart-container-large">
+                        <canvas
+                            id="analyticsPublicationTypeChart"
+                        ></canvas>
+                    </div>
+                </article>
+            </div>
         </section>
 
         <section>
             <h2>По типам публикаций</h2>
 
             {% if by_publication_type %}
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Тип публикации</th>
-                            <th>План</th>
-                            <th>Факт</th>
-                            <th>Выполнение</th>
-                        </tr>
-                    </thead>
-
-                    <tbody>
-                        {% for item in by_publication_type %}
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
                             <tr>
-                                <td>
-                                    {% if current_user.language == "kk" %}
-                                        {{ item.name_kk }}
-                                    {% else %}
-                                        {{ item.name_ru }}
-                                    {% endif %}
-                                </td>
+                                <th>
+                                    Тип публикации
+                                </th>
 
-                                <td>
-                                    {{ item.planned_count }}
-                                </td>
+                                <th>
+                                    План
+                                </th>
 
-                                <td>
-                                    {{ item.actual_count }}
-                                </td>
+                                <th>
+                                    Факт
+                                </th>
 
-                                <td>
-                                    {{ item.progress }}%
-                                </td>
+                                <th>
+                                    Выполнение
+                                </th>
                             </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                        </thead>
+
+                        <tbody>
+                            {% for item in by_publication_type %}
+                                <tr>
+                                    <td>
+                                        {% if current_user.language == "kk" %}
+                                            {{ item.name_kk }}
+                                        {% else %}
+                                            {{ item.name_ru }}
+                                        {% endif %}
+                                    </td>
+
+                                    <td>
+                                        {{ item.planned_count }}
+                                    </td>
+
+                                    <td>
+                                        {{ item.actual_count }}
+                                    </td>
+
+                                    <td>
+                                        {{ item.progress }}%
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             {% else %}
                 <p>
                     Данных для выбранных фильтров нет.
@@ -223,38 +554,51 @@
             <h2>По кафедрам</h2>
 
             {% if by_department %}
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Кафедра</th>
-                            <th>План</th>
-                            <th>Факт</th>
-                            <th>Выполнение</th>
-                        </tr>
-                    </thead>
-
-                    <tbody>
-                        {% for item in by_department %}
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
                             <tr>
-                                <td>
-                                    {{ item.name }}
-                                </td>
+                                <th>
+                                    Кафедра
+                                </th>
 
-                                <td>
-                                    {{ item.planned_count }}
-                                </td>
+                                <th>
+                                    План
+                                </th>
 
-                                <td>
-                                    {{ item.actual_count }}
-                                </td>
+                                <th>
+                                    Факт
+                                </th>
 
-                                <td>
-                                    {{ item.progress }}%
-                                </td>
+                                <th>
+                                    Выполнение
+                                </th>
                             </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                        </thead>
+
+                        <tbody>
+                            {% for item in by_department %}
+                                <tr>
+                                    <td>
+                                        {{ item.name }}
+                                    </td>
+
+                                    <td>
+                                        {{ item.planned_count }}
+                                    </td>
+
+                                    <td>
+                                        {{ item.actual_count }}
+                                    </td>
+
+                                    <td>
+                                        {{ item.progress }}%
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             {% else %}
                 <p>
                     Данных для выбранных фильтров нет.
@@ -262,5 +606,226 @@
             {% endif %}
         </section>
     </main>
+
+    <script
+        id="analytics-data"
+        type="application/json"
+    >
+{
+    "language": {{ current_user.language | tojson }},
+    "summary": {
+        "planned": {{ summary.planned_count | tojson }},
+        "actual": {{ summary.actual_count | tojson }},
+        "progress": {{ summary.progress | tojson }}
+    },
+    "departments": {{ by_department | tojson }},
+    "publicationTypes": {{ by_publication_type | tojson }}
+}
+    </script>
+
+    <script>
+        const analyticsDataElement =
+            document.getElementById(
+                "analytics-data"
+            );
+
+        const analyticsData = JSON.parse(
+            analyticsDataElement.textContent
+        );
+
+        const planFactCanvas =
+            document.getElementById(
+                "analyticsPlanFactChart"
+            );
+
+        if (planFactCanvas) {
+            new Chart(
+                planFactCanvas,
+                {
+                    type: "bar",
+
+                    data: {
+                        labels: [
+                            "План",
+                            "Факт"
+                        ],
+
+                        datasets: [
+                            {
+                                label: "Количество",
+
+                                data: [
+                                    analyticsData.summary.planned,
+                                    analyticsData.summary.actual
+                                ]
+                            }
+                        ]
+                    },
+
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+
+                                ticks: {
+                                    precision: 0
+                                }
+                            }
+                        }
+                    }
+                }
+            );
+        }
+
+        const departmentCanvas =
+            document.getElementById(
+                "analyticsDepartmentProgressChart"
+            );
+
+        if (
+            departmentCanvas
+            && analyticsData.departments.length > 0
+        ) {
+            new Chart(
+                departmentCanvas,
+                {
+                    type: "bar",
+
+                    data: {
+                        labels:
+                            analyticsData.departments.map(
+                                item => item.name
+                            ),
+
+                        datasets: [
+                            {
+                                label: "План",
+
+                                data:
+                                    analyticsData.departments.map(
+                                        item =>
+                                            item.planned_count
+                                    )
+                            },
+
+                            {
+                                label: "Факт",
+
+                                data:
+                                    analyticsData.departments.map(
+                                        item =>
+                                            item.actual_count
+                                    )
+                            }
+                        ]
+                    },
+
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+
+                        indexAxis: "y",
+
+                        scales: {
+                            x: {
+                                beginAtZero: true,
+
+                                ticks: {
+                                    precision: 0
+                                }
+                            }
+                        }
+                    }
+                }
+            );
+        }
+
+        const publicationTypeCanvas =
+            document.getElementById(
+                "analyticsPublicationTypeChart"
+            );
+
+        if (
+            publicationTypeCanvas
+            && analyticsData.publicationTypes.length > 0
+        ) {
+            new Chart(
+                publicationTypeCanvas,
+                {
+                    type: "bar",
+
+                    data: {
+                        labels:
+                            analyticsData.publicationTypes.map(
+                                item => {
+                                    if (
+                                        analyticsData.language
+                                        === "kk"
+                                    ) {
+                                        return (
+                                            item.name_kk
+                                            || item.name_ru
+                                            || "Без названия"
+                                        );
+                                    }
+
+                                    return (
+                                        item.name_ru
+                                        || item.name_kk
+                                        || "Без названия"
+                                    );
+                                }
+                            ),
+
+                        datasets: [
+                            {
+                                label: "План",
+
+                                data:
+                                    analyticsData.publicationTypes.map(
+                                        item =>
+                                            item.planned_count
+                                    )
+                            },
+
+                            {
+                                label: "Факт",
+
+                                data:
+                                    analyticsData.publicationTypes.map(
+                                        item =>
+                                            item.actual_count
+                                    )
+                            }
+                        ]
+                    },
+
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+
+                                ticks: {
+                                    precision: 0
+                                }
+                            }
+                        }
+                    }
+                }
+            );
+        }
+    </script>
 </body>
 </html>
