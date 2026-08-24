@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1"
+    >
+
+    <title>Аналитика</title>
+</head>
+
+<body>
+    <header>
+        <h1>Аналитика публикационной деятельности</h1>
+
+        <p>
+            <a href="{{ url_for('main.index') }}">
+                ← На главную
+            </a>
+        </p>
+    </header>
+
+    <main>
+        <section>
+            <h2>Фильтры</h2>
+
+            <form method="get">
+                <p>
+                    <label for="year">
+                        Год
+                    </label>
+                    <br>
+
+                    <select
+                        id="year"
+                        name="year"
+                    >
+                        <option value="">
+                            Все годы
+                        </option>
+
+                        {% for year in years %}
+                            <option
+                                value="{{ year }}"
+                                {% if selected_year == year %}
+                                    selected
+                                {% endif %}
+                            >
+                                {{ year }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </p>
+
+                <p>
+                    <label for="department_id">
+                        Кафедра
+                    </label>
+                    <br>
+
+                    <select
+                        id="department_id"
+                        name="department_id"
+                        {% if current_user.role == "DEPARTMENT_HEAD" %}
+                            disabled
+                        {% endif %}
+                    >
+                        {% if current_user.role != "DEPARTMENT_HEAD" %}
+                            <option value="">
+                                Все кафедры
+                            </option>
+                        {% endif %}
+
+                        {% for department in departments %}
+                            <option
+                                value="{{ department.id }}"
+                                {% if selected_department_id == department.id %}
+                                    selected
+                                {% endif %}
+                            >
+                                {{ department.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </p>
+
+                <p>
+                    <label for="publication_type_id">
+                        Тип публикации
+                    </label>
+                    <br>
+
+                    <select
+                        id="publication_type_id"
+                        name="publication_type_id"
+                    >
+                        <option value="">
+                            Все типы
+                        </option>
+
+                        {% for publication_type in publication_types %}
+                            <option
+                                value="{{ publication_type.id }}"
+                                {% if selected_publication_type_id == publication_type.id %}
+                                    selected
+                                {% endif %}
+                            >
+                                {% if current_user.language == "kk" %}
+                                    {{ publication_type.name_kk }}
+                                {% else %}
+                                    {{ publication_type.name_ru }}
+                                {% endif %}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </p>
+
+                <p>
+                    <button type="submit">
+                        Применить
+                    </button>
+
+                    <a href="{{ url_for('analytics.dashboard') }}">
+                        Сбросить
+                    </a>
+                </p>
+
+                <p>
+                    <a
+                        href="{{ url_for(
+                            'analytics.export_excel',
+                            year=selected_year,
+                            department_id=selected_department_id,
+                            publication_type_id=selected_publication_type_id
+                        ) }}"
+                    >
+                        Скачать Excel
+                    </a>
+
+                    <a
+                        href="{{ url_for(
+                            'analytics.export_pdf',
+                            year=selected_year,
+                            department_id=selected_department_id,
+                            publication_type_id=selected_publication_type_id
+                        ) }}"
+                    >
+                        Скачать PDF
+                    </a>
+                </p>
+            </form>
+        </section>
+
+        <section>
+            <h2>Итог</h2>
+
+            <p>
+                <strong>План:</strong>
+                {{ summary.planned_count }}
+            </p>
+
+            <p>
+                <strong>Факт:</strong>
+                {{ summary.actual_count }}
+            </p>
+
+            <p>
+                <strong>Выполнение:</strong>
+                {{ summary.progress }}%
+            </p>
+        </section>
+
+        <section>
+            <h2>По типам публикаций</h2>
+
+            {% if by_publication_type %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Тип публикации</th>
+                            <th>План</th>
+                            <th>Факт</th>
+                            <th>Выполнение</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for item in by_publication_type %}
+                            <tr>
+                                <td>
+                                    {% if current_user.language == "kk" %}
+                                        {{ item.name_kk }}
+                                    {% else %}
+                                        {{ item.name_ru }}
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    {{ item.planned_count }}
+                                </td>
+
+                                <td>
+                                    {{ item.actual_count }}
+                                </td>
+
+                                <td>
+                                    {{ item.progress }}%
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p>
+                    Данных для выбранных фильтров нет.
+                </p>
+            {% endif %}
+        </section>
+
+        <section>
+            <h2>По кафедрам</h2>
+
+            {% if by_department %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Кафедра</th>
+                            <th>План</th>
+                            <th>Факт</th>
+                            <th>Выполнение</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for item in by_department %}
+                            <tr>
+                                <td>
+                                    {{ item.name }}
+                                </td>
+
+                                <td>
+                                    {{ item.planned_count }}
+                                </td>
+
+                                <td>
+                                    {{ item.actual_count }}
+                                </td>
+
+                                <td>
+                                    {{ item.progress }}%
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p>
+                    Данных для выбранных фильтров нет.
+                </p>
+            {% endif %}
+        </section>
+    </main>
+</body>
+</html>

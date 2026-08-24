@@ -15,6 +15,7 @@ from app.publications import publications_bp
 from app.seed_reference_values import seed_reference_values
 from app.monitoring import monitoring_bp
 from app.reports import reports_bp
+from app.analytics import analytics_bp
 
 def create_app():
     app = Flask(__name__)
@@ -42,6 +43,7 @@ def create_app():
     app.register_blueprint(publications_bp)
     app.register_blueprint(monitoring_bp)
     app.register_blueprint(reports_bp)
+    app.register_blueprint(analytics_bp)
     @app.cli.command("seed-reference-values")
     def seed_reference_values_command():
         created_count = seed_reference_values()
