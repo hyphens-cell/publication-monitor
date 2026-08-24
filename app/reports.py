@@ -439,8 +439,8 @@ def create_publications_pdf(publications):
     document = SimpleDocTemplate(
         output,
         pagesize=landscape(A4),
-        rightMargin=7 * mm,
-        leftMargin=7 * mm,
+        rightMargin=4 * mm,
+        leftMargin=4 * mm,
         topMargin=8 * mm,
         bottomMargin=8 * mm,
         title="Отчёт по публикациям",
@@ -526,21 +526,20 @@ def create_publications_pdf(publications):
                 for value in values
             ]
         )
-
     column_widths = [
-        10 * mm,
-        26 * mm,
-        10 * mm,
-        40 * mm,
-        25 * mm,
-        10 * mm,
-        25 * mm,
-        16 * mm,
-        23 * mm,
-        24 * mm,
+        8 * mm,
         22 * mm,
-        26 * mm,
-        21 * mm,
+        8 * mm,
+        20 * mm,
+        34 * mm,
+        20 * mm,
+        8 * mm,
+        20 * mm,
+        13 * mm,
+        19 * mm,
+        19 * mm,
+        22 * mm,
+        17 * mm,
     ]
 
     table = Table(

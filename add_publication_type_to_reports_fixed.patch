@@ -1,0 +1,135 @@
+--- a/app/reports.py
++++ b/app/reports.py
+@@ -113,6 +113,11 @@
+         "",
+     ).strip()
+ 
++    publication_type_raw = request.args.get(
++        "publication_type_id",
++        "",
++    ).strip()
++
+     quartile_raw = request.args.get(
+         "quartile_id",
+         "",
+@@ -135,6 +140,7 @@
+ 
+     year = None
+     department_id = None
++    publication_type_id = None
+     quartile_id = None
+     indexing_type_id = None
+ 
+@@ -147,6 +153,12 @@
+     if department_raw:
+         try:
+             department_id = int(department_raw)
++        except ValueError:
++            abort(400)
++
++    if publication_type_raw:
++        try:
++            publication_type_id = int(publication_type_raw)
+         except ValueError:
+             abort(400)
+ 
+@@ -180,6 +192,7 @@
+     return {
+         "year": year,
+         "department_id": department_id,
++        "publication_type_id": publication_type_id,
+         "quartile_id": quartile_id,
+         "indexing_type_id": indexing_type_id,
+         "publication_status": (
+@@ -194,6 +207,7 @@
+ def build_publications_report_query(
+     year=None,
+     department_id=None,
++    publication_type_id=None,
+     publication_status=None,
+     verification_status=None,
+     quartile_id=None,
+@@ -222,6 +236,11 @@
+             Publication.department_id == department_id,
+         )
+ 
++    if publication_type_id is not None:
++        query = query.where(
++            PlanItem.publication_type_id == publication_type_id,
++        )
++
+     if publication_status:
+         query = query.where(
+             Publication.status == publication_status,
+@@ -280,6 +299,18 @@
+     return publication.indexing_type.name_ru
+ 
+ 
++def get_publication_type_name(publication):
++    publication_type = publication.plan_item.publication_type
++
++    if publication_type is None:
++        return ""
++
++    if current_user.language == "kk":
++        return publication_type.name_kk
++
++    return publication_type.name_ru
++
++
+ def get_publication_report_row(publication):
+     plan = publication.plan_item.plan
+ 
+@@ -299,6 +330,7 @@
+         plan.year,
+         publication.department.name,
+         f"№{plan.id}",
++        get_publication_type_name(publication),
+         publication.title,
+         publication.journal or "",
+         publication.publication_year or "",
+@@ -328,6 +360,7 @@
+         "Год плана",
+         "Кафедра",
+         "План",
++        "Тип публикации",
+         "Название публикации",
+         "Журнал",
+         "Год публикации",
+@@ -490,6 +523,7 @@
+         "Год",
+         "Кафедра",
+         "План",
++        "Тип публикации",
+         "Публикация",
+         "Журнал",
+         "Год",
+@@ -643,6 +677,10 @@
+ 
+     years = get_report_years()
+ 
++    publication_types = get_report_reference_values(
++        "PUBLICATION_TYPE",
++    )
++
+     quartiles = get_report_reference_values(
+         "QUARTILE",
+     )
+@@ -656,6 +694,7 @@
+         publications=publications,
+         departments=departments,
+         years=years,
++        publication_types=publication_types,
+         quartiles=quartiles,
+         indexing_types=indexing_types,
+         publication_statuses=REPORT_PUBLICATION_STATUSES,
+@@ -663,6 +702,9 @@
+         selected_year=filters["year"],
+         selected_department_id=filters[
+             "department_id"
++        ],
++        selected_publication_type_id=filters[
++            "publication_type_id"
+         ],
+         selected_quartile_id=filters[
+             "quartile_id"
