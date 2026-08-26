@@ -2,55 +2,415 @@
 <html lang="ru">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1"
+    >
+    <meta name="theme-color" content="#5314CD">
+
     <title>Вход — Мониторинг публикаций</title>
+
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
+        rel="stylesheet"
+    >
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/app.css') }}"
+    >
+
+    <style>
+        .pm-login-page {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            background:
+                radial-gradient(
+                    circle at 10% 10%,
+                    rgba(83, 20, 205, 0.12),
+                    transparent 32%
+                ),
+                radial-gradient(
+                    circle at 90% 90%,
+                    rgba(20, 204, 174, 0.12),
+                    transparent 30%
+                ),
+                var(--pm-bg);
+        }
+
+        .pm-login-shell {
+            width: 100%;
+            max-width: 1040px;
+        }
+
+        .pm-login-card {
+            overflow: hidden;
+            background: #FFFFFF;
+            border: 1px solid var(--pm-border);
+            border-radius: 24px;
+            box-shadow:
+                0 24px 70px rgba(45, 25, 90, 0.12);
+        }
+
+        .pm-login-brand-panel {
+            min-height: 620px;
+            padding: 56px;
+            color: #FFFFFF;
+            background:
+                radial-gradient(
+                    circle at 80% 15%,
+                    rgba(20, 204, 174, 0.32),
+                    transparent 30%
+                ),
+                linear-gradient(
+                    145deg,
+                    #5314CD 0%,
+                    #4210A4 100%
+                );
+        }
+
+        .pm-login-brand-mark {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 54px;
+            height: 54px;
+            margin-bottom: 28px;
+            color: var(--pm-primary);
+            background: #FFFFFF;
+            border-radius: 16px;
+            font-size: 25px;
+            font-weight: 900;
+        }
+
+        .pm-login-brand-title {
+            max-width: 430px;
+            margin-bottom: 18px;
+            font-size: clamp(30px, 4vw, 46px);
+            font-weight: 800;
+            line-height: 1.05;
+        }
+
+        .pm-login-brand-description {
+            max-width: 430px;
+            color: rgba(255, 255, 255, 0.78);
+            font-size: 16px;
+            line-height: 1.7;
+        }
+
+        .pm-login-features {
+            display: grid;
+            gap: 12px;
+            margin-top: 42px;
+        }
+
+        .pm-login-feature {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: rgba(255, 255, 255, 0.92);
+            font-size: 14px;
+        }
+
+        .pm-login-feature-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 34px;
+            height: 34px;
+            flex: 0 0 34px;
+            color: #FFFFFF;
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+        }
+
+        .pm-login-form-panel {
+            display: flex;
+            align-items: center;
+            min-height: 620px;
+            padding: 56px;
+            background: #FFFFFF;
+        }
+
+        .pm-login-form {
+            width: 100%;
+            max-width: 390px;
+            margin: 0 auto;
+        }
+
+        .pm-login-form-title {
+            margin-bottom: 8px;
+            color: var(--pm-text);
+            font-size: 30px;
+            font-weight: 800;
+        }
+
+        .pm-login-form-subtitle {
+            margin-bottom: 30px;
+            color: var(--pm-muted);
+        }
+
+        .pm-login-label {
+            margin-bottom: 8px;
+            color: var(--pm-text);
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .pm-login-input {
+            min-height: 50px;
+            padding-right: 15px;
+            padding-left: 15px;
+            border-color: var(--pm-border);
+            border-radius: 11px;
+        }
+
+        .pm-login-input:focus {
+            border-color: var(--pm-primary);
+            box-shadow: 0 0 0 0.2rem rgba(83, 20, 205, 0.13);
+        }
+
+        .pm-login-submit {
+            width: 100%;
+            min-height: 50px;
+            margin-top: 8px;
+            color: #FFFFFF;
+            background: var(--pm-primary);
+            border-color: var(--pm-primary);
+            border-radius: 11px;
+            font-weight: 750;
+        }
+
+        .pm-login-submit:hover,
+        .pm-login-submit:focus {
+            color: #FFFFFF;
+            background: var(--pm-primary-dark);
+            border-color: var(--pm-primary-dark);
+        }
+
+        .pm-login-alert {
+            border: 0;
+            border-left: 4px solid var(--pm-danger);
+            border-radius: 10px;
+            color: #7D1025;
+            background: var(--pm-danger-light);
+        }
+
+        .pm-login-footer {
+            margin-top: 28px;
+            color: var(--pm-muted);
+            font-size: 12px;
+            text-align: center;
+        }
+
+        @media (max-width: 767.98px) {
+            .pm-login-page {
+                padding: 14px;
+            }
+
+            .pm-login-card {
+                border-radius: 18px;
+            }
+
+            .pm-login-brand-panel {
+                min-height: auto;
+                padding: 32px 26px;
+            }
+
+            .pm-login-brand-mark {
+                width: 46px;
+                height: 46px;
+                margin-bottom: 20px;
+                border-radius: 13px;
+                font-size: 21px;
+            }
+
+            .pm-login-brand-title {
+                margin-bottom: 12px;
+                font-size: 30px;
+            }
+
+            .pm-login-brand-description {
+                font-size: 14px;
+            }
+
+            .pm-login-features {
+                margin-top: 26px;
+            }
+
+            .pm-login-form-panel {
+                min-height: auto;
+                padding: 34px 24px 30px;
+            }
+
+            .pm-login-form-title {
+                font-size: 26px;
+            }
+        }
+    </style>
 </head>
+
 <body>
-    <main>
-        <h1>Мониторинг публикационной активности</h1>
-        <h2>Вход в систему</h2>
+    <main class="pm-login-page">
+        <div class="pm-login-shell">
+            <div class="pm-login-card">
+                <div class="row g-0">
 
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                <section>
-                    {% for category, message in messages %}
-                        <p>{{ message }}</p>
-                    {% endfor %}
-                </section>
-            {% endif %}
-        {% endwith %}
+                    <div class="col-lg-6">
+                        <section class="pm-login-brand-panel h-100">
+                            <div class="pm-login-brand-mark">
+                                P
+                            </div>
 
-        <form method="post">
-            <input
-                type="hidden"
-                name="csrf_token"
-                value="{{ csrf_token() }}"
-            >
+                            <h1 class="pm-login-brand-title">
+                                Мониторинг
+                                публикационной
+                                активности
+                            </h1>
 
-            <div>
-                <label for="username">Логин</label>
-                <input
-                    id="username"
-                    name="username"
-                    type="text"
-                    autocomplete="username"
-                    required
-                >
+                            <p class="pm-login-brand-description mb-0">
+                                Единая система для планирования,
+                                учёта, проверки и анализа
+                                публикационной деятельности.
+                            </p>
+
+                            <div class="pm-login-features">
+                                <div class="pm-login-feature">
+                                    <span class="pm-login-feature-icon">
+                                        ✓
+                                    </span>
+                                    <span>
+                                        Управление публикационными планами
+                                    </span>
+                                </div>
+
+                                <div class="pm-login-feature">
+                                    <span class="pm-login-feature-icon">
+                                        ✓
+                                    </span>
+                                    <span>
+                                        Проверка и учёт публикаций
+                                    </span>
+                                </div>
+
+                                <div class="pm-login-feature">
+                                    <span class="pm-login-feature-icon">
+                                        ✓
+                                    </span>
+                                    <span>
+                                        Отчёты и аналитика
+                                    </span>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+
+                    <div class="col-lg-6">
+                        <section class="pm-login-form-panel">
+                            <div class="pm-login-form">
+
+                                <div class="mb-4">
+                                    <div class="text-body-secondary small mb-2">
+                                        Publication Monitor
+                                    </div>
+
+                                    <h2 class="pm-login-form-title">
+                                        Вход в систему
+                                    </h2>
+
+                                    <p class="pm-login-form-subtitle">
+                                        Введите логин и пароль для продолжения.
+                                    </p>
+                                </div>
+
+                                {% with messages = get_flashed_messages(with_categories=true) %}
+                                    {% if messages %}
+                                        <div class="mb-4">
+                                            {% for category, message in messages %}
+                                                <div
+                                                    class="alert pm-login-alert"
+                                                    role="alert"
+                                                >
+                                                    {{ message }}
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                {% endwith %}
+
+                                <form method="post">
+                                    <input
+                                        type="hidden"
+                                        name="csrf_token"
+                                        value="{{ csrf_token() }}"
+                                    >
+
+                                    <div class="mb-3">
+                                        <label
+                                            class="pm-login-label"
+                                            for="username"
+                                        >
+                                            Логин
+                                        </label>
+
+                                        <input
+                                            id="username"
+                                            name="username"
+                                            type="text"
+                                            class="form-control pm-login-input"
+                                            autocomplete="username"
+                                            placeholder="Введите логин"
+                                            required
+                                            autofocus
+                                        >
+                                    </div>
+
+                                    <div class="mb-4">
+                                        <label
+                                            class="pm-login-label"
+                                            for="password"
+                                        >
+                                            Пароль
+                                        </label>
+
+                                        <input
+                                            id="password"
+                                            name="password"
+                                            type="password"
+                                            class="form-control pm-login-input"
+                                            autocomplete="current-password"
+                                            placeholder="Введите пароль"
+                                            required
+                                        >
+                                    </div>
+
+                                    <button
+                                        type="submit"
+                                        class="btn pm-login-submit"
+                                    >
+                                        Войти
+                                    </button>
+                                </form>
+
+                                <div class="pm-login-footer">
+                                    Защищённая система мониторинга публикационной активности
+                                </div>
+
+                            </div>
+                        </section>
+                    </div>
+
+                </div>
             </div>
-
-            <div>
-                <label for="password">Пароль</label>
-                <input
-                    id="password"
-                    name="password"
-                    type="password"
-                    autocomplete="current-password"
-                    required
-                >
-            </div>
-
-            <button type="submit">Войти</button>
-        </form>
+        </div>
     </main>
+
+    <script
+        src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
+    ></script>
 </body>
 </html>

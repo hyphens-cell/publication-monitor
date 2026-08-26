@@ -1,90 +1,169 @@
-<!doctype html>
-<html lang="ru">
-<head>
-    <meta charset="utf-8">
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1"
-    >
-    <title>План {{ plan.year }}</title>
-</head>
-<body>
-    <header>
-        <a href="{{ url_for('plans.plans') }}">
-            ← К планам
-        </a>
+{% extends "base.html" %}
 
-        <h1>
-            План на {{ plan.year }} год
-        </h1>
+{% block title %}
+    План {{ plan.year }} — Publication Monitor
+{% endblock %}
 
-        <p>
-            Статус:
+{% block page_title %}
+    План на {{ plan.year }} год
+{% endblock %}
 
-            {% if plan.status == "DRAFT" %}
+{% block page_subtitle %}
+
+    <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
+
+        {% if plan.status == "DRAFT" %}
+
+            <span class="badge rounded-pill badge-pm-primary">
                 Черновик
-            {% elif plan.status == "SUBMITTED" %}
+            </span>
+
+        {% elif plan.status == "SUBMITTED" %}
+
+            <span class="badge rounded-pill badge-pm-warning">
                 На рассмотрении
-            {% elif plan.status == "APPROVED" %}
+            </span>
+
+        {% elif plan.status == "APPROVED" %}
+
+            <span class="badge rounded-pill badge-pm-success">
                 Утверждён
-            {% elif plan.status == "RETURNED" %}
+            </span>
+
+        {% elif plan.status == "RETURNED" %}
+
+            <span class="badge rounded-pill badge-pm-danger">
                 На доработке
-            {% else %}
+            </span>
+
+        {% else %}
+
+            <span class="badge rounded-pill badge-pm-primary">
                 {{ plan.status }}
-            {% endif %}
-        </p>
-    </header>
+            </span>
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            <section>
-                {% for category, message in messages %}
-                    <p>{{ message }}</p>
-                {% endfor %}
-            </section>
         {% endif %}
-    {% endwith %}
 
-    <main>
+    </div>
 
-        {% if not monitor and plan.status in ["DRAFT", "RETURNED"] %}
-            <section>
-                <h2>Действия</h2>
+{% endblock %}
 
-                <p>
+{% block page_actions %}
+    <a
+        href="{{ url_for('plans.plans') }}"
+        class="btn btn-light border"
+    >
+        ← К планам
+    </a>
+{% endblock %}
+
+{% block content %}
+
+{% if not monitor and plan.status in ["DRAFT", "RETURNED"] %}
+
+<section class="mb-4">
+
+    <div class="card card-pm border-0">
+
+        <div class="card-body p-4">
+
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+
+                <div class="d-flex align-items-center gap-3">
+
+                    <span class="pm-dashboard-icon pm-dashboard-icon-primary">
+                        +
+                    </span>
+
+                    <div>
+                        <h2 class="h5 fw-bold mb-1">
+                            Действия с планом
+                        </h2>
+
+                        <p class="small text-body-secondary mb-0">
+                            Добавьте публикации и отправьте план на согласование.
+                        </p>
+                    </div>
+
+                </div>
+
+
+                <div class="d-flex flex-wrap gap-2">
+
                     <a
                         href="{{ url_for(
                             'plans.create_plan_item',
                             plan_id=plan.id
                         ) }}"
+                        class="btn btn-pm-primary"
                     >
-                        Добавить публикацию
+                        + Добавить публикацию
                     </a>
-                </p>
 
-                <form
-                    method="post"
-                    action="{{ url_for(
-                        'plans.submit_plan',
-                        plan_id=plan.id
-                    ) }}"
-                >
-                    <input
-                        type="hidden"
-                        name="csrf_token"
-                        value="{{ csrf_token() }}"
+                    <form
+                        method="post"
+                        action="{{ url_for(
+                            'plans.submit_plan',
+                            plan_id=plan.id
+                        ) }}"
                     >
 
-                    <button type="submit">
-                        Отправить на согласование
-                    </button>
-                </form>
-            </section>
-        {% endif %}
+                        <input
+                            type="hidden"
+                            name="csrf_token"
+                            value="{{ csrf_token() }}"
+                        >
 
-        {% if monitor and plan.status == "SUBMITTED" %}
-            <section>
-                <h2>Решение администратора</h2>
+                        <button
+                            type="submit"
+                            class="btn btn-light border"
+                        >
+                            Отправить на согласование
+                        </button>
+
+                    </form>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+{% endif %}
+
+
+{% if monitor and plan.status == "SUBMITTED" %}
+
+<section class="mb-4">
+
+    <div class="card card-pm border-0">
+
+        <div class="card-body p-4 p-lg-5">
+
+            <div class="d-flex align-items-center gap-3 mb-4">
+
+                <span class="pm-dashboard-icon pm-dashboard-icon-primary">
+                    ✓
+                </span>
+
+                <div>
+                    <h2 class="h5 fw-bold mb-1">
+                        Решение администратора
+                    </h2>
+
+                    <p class="small text-body-secondary mb-0">
+                        Рассмотрите план и примите решение.
+                    </p>
+                </div>
+
+            </div>
+
+
+            <div class="d-flex flex-wrap gap-2 mb-4">
 
                 <form
                     method="post"
@@ -93,18 +172,30 @@
                         plan_id=plan.id
                     ) }}"
                 >
+
                     <input
                         type="hidden"
                         name="csrf_token"
                         value="{{ csrf_token() }}"
                     >
 
-                    <button type="submit">
-                        Одобрить план
+                    <button
+                        type="submit"
+                        class="btn btn-pm-success"
+                    >
+                        ✓ Одобрить план
                     </button>
+
                 </form>
 
-                <h3>Вернуть на доработку</h3>
+            </div>
+
+
+            <div class="border-top pt-4">
+
+                <h3 class="h6 fw-bold mb-3">
+                    Вернуть на доработку
+                </h3>
 
                 <form
                     method="post"
@@ -113,226 +204,530 @@
                         plan_id=plan.id
                     ) }}"
                 >
+
                     <input
                         type="hidden"
                         name="csrf_token"
                         value="{{ csrf_token() }}"
                     >
 
-                    <p>
-                        <label for="comment">
+                    <div class="mb-3">
+
+                        <label
+                            for="comment"
+                            class="form-label fw-semibold"
+                        >
                             Замечания
                         </label>
-                    </p>
 
-                    <textarea
-                        id="comment"
-                        name="comment"
-                        rows="6"
-                        cols="60"
-                        required
-                    ></textarea>
+                        <textarea
+                            id="comment"
+                            name="comment"
+                            class="form-control"
+                            rows="5"
+                            required
+                        ></textarea>
 
-                    <p>
-                        <button type="submit">
-                            Вернуть на доработку
-                        </button>
-                    </p>
+                    </div>
+
+                    <button
+                        type="submit"
+                        class="btn btn-pm-danger"
+                    >
+                        Вернуть на доработку
+                    </button>
+
                 </form>
-            </section>
-        {% endif %}
 
-        {% if plan.status == "RETURNED" %}
-            {% set latest_return = versions|selectattr(
-                "status",
-                "equalto",
-                "RETURNED"
-            )|first %}
+            </div>
 
-            {% if latest_return and latest_return.comment %}
-                <section>
-                    <h2>Замечания администратора</h2>
+        </div>
 
-                    <p>
-                        {{ latest_return.comment }}
-                    </p>
-                </section>
-            {% endif %}
-        {% endif %}
+    </div>
 
-        <section>
-            <h2>
-                Запланированные публикации
-            </h2>
+</section>
 
-            {% if plan.items %}
-                <table>
+{% endif %}
+
+
+{% if plan.status == "RETURNED" %}
+
+    {% set latest_return = versions|selectattr(
+        "status",
+        "equalto",
+        "RETURNED"
+    )|first %}
+
+    {% if latest_return and latest_return.comment %}
+
+        <section class="mb-4">
+
+            <div class="card card-pm border-0 pm-returned-card">
+
+                <div class="card-body p-4">
+
+                    <div class="d-flex align-items-start gap-3">
+
+                        <span class="pm-dashboard-icon pm-dashboard-icon-danger">
+                            !
+                        </span>
+
+                        <div>
+
+                            <h2 class="h6 fw-bold mb-2">
+                                Замечания администратора
+                            </h2>
+
+                            <p class="mb-0 text-body-secondary">
+                                {{ latest_return.comment }}
+                            </p>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+    {% endif %}
+
+{% endif %}
+
+
+<section class="mb-4">
+
+    <div class="mb-3">
+
+        <h2 class="h5 fw-bold mb-1">
+            Запланированные публикации
+        </h2>
+
+        <p class="small text-body-secondary mb-0">
+            Публикации, включённые в план на {{ plan.year }} год.
+        </p>
+
+    </div>
+
+
+    <div class="card card-pm border-0">
+
+        {% if plan.items %}
+
+            <div class="table-responsive">
+
+                <table class="table table-pm align-middle mb-0">
+
                     <thead>
                         <tr>
-                            <th>№</th>
-                            <th>Название</th>
-                            <th>Тип</th>
-                            <th>Журнал</th>
-                            <th>Квартиль</th>
-                            <th>Авторы</th>
-                            <th>Дата</th>
+
+                            <th class="ps-4">
+                                №
+                            </th>
+
+                            <th>
+                                Название
+                            </th>
+
+                            <th>
+                                Тип
+                            </th>
+
+                            <th>
+                                Журнал
+                            </th>
+
+                            <th>
+                                Квартиль
+                            </th>
+
+                            <th>
+                                Авторы
+                            </th>
+
+                            <th>
+                                Дата
+                            </th>
 
                             {% if not monitor and plan.status in ["DRAFT", "RETURNED"] %}
-                                <th>Действия</th>
+
+                                <th class="text-end pe-4">
+                                    Действия
+                                </th>
+
                             {% endif %}
+
                         </tr>
                     </thead>
 
+
                     <tbody>
+
                         {% for item in plan.items %}
+
                             <tr>
-                                <td>
-                                    {{ loop.index }}
+
+                                <td class="ps-4">
+                                    <span class="fw-semibold">
+                                        {{ loop.index }}
+                                    </span>
                                 </td>
 
-                                <td>
-                                    {{ item.title }}
-                                </td>
 
                                 <td>
+
+                                    <div
+                                        class="fw-semibold"
+                                        style="min-width: 220px;"
+                                    >
+                                        {{ item.title }}
+                                    </div>
+
+                                </td>
+
+
+                                <td>
+
                                     {% if current_user.language == "kk" %}
                                         {{ item.publication_type.name_kk }}
                                     {% else %}
                                         {{ item.publication_type.name_ru }}
                                     {% endif %}
+
                                 </td>
+
 
                                 <td>
                                     {{ item.journal or "—" }}
                                 </td>
 
+
                                 <td>
+
                                     {% if item.quartile %}
+
                                         {% if current_user.language == "kk" %}
                                             {{ item.quartile.name_kk }}
                                         {% else %}
                                             {{ item.quartile.name_ru }}
                                         {% endif %}
+
                                     {% else %}
+
                                         —
+
                                     {% endif %}
+
                                 </td>
 
+
                                 <td>
+
                                     {% if item.author_links %}
-                                        {% for link in item.author_links %}
-                                            {{ link.employee.full_name }}{% if not loop.last %}, {% endif %}
-                                        {% endfor %}
+
+                                        <div
+                                            style="min-width: 180px;"
+                                        >
+
+                                            {% for link in item.author_links %}
+
+                                                <span class="d-block">
+                                                    {{ link.employee.full_name }}
+                                                </span>
+
+                                            {% endfor %}
+
+                                        </div>
+
                                     {% else %}
+
                                         —
+
                                     {% endif %}
+
                                 </td>
 
-                                <td>
+
+                                <td class="text-nowrap">
                                     {{ item.planned_date or "—" }}
                                 </td>
 
+
                                 {% if not monitor and plan.status in ["DRAFT", "RETURNED"] %}
-                                    <td>
-                                        <p>
-                                            <a
-                                                href="{{ url_for(
-                                                    'plans.edit_plan_item',
-                                                    plan_id=plan.id,
-                                                    item_id=item.id
-                                                ) }}"
-                                            >
-                                                Изменить
-                                            </a>
-                                        </p>
 
-                                        <form
-                                            method="post"
-                                            action="{{ url_for(
-                                                'plans.delete_plan_item',
-                                                plan_id=plan.id,
-                                                item_id=item.id
-                                            ) }}"
-                                        >
-                                            <input
-                                                type="hidden"
-                                                name="csrf_token"
-                                                value="{{ csrf_token() }}"
-                                            >
+                                    <td class="text-end pe-4">
 
-                                            <button type="submit">
-                                                Удалить
+                                        <div class="dropdown">
+
+                                            <button
+                                                class="btn btn-sm btn-light border dropdown-toggle"
+                                                type="button"
+                                                data-bs-toggle="dropdown"
+                                                data-bs-display="static"
+                                                aria-expanded="false"
+                                            >
+                                                Действия
                                             </button>
-                                        </form>
+
+
+                                            <ul class="dropdown-menu dropdown-menu-end">
+
+                                                <li>
+
+                                                    <a
+                                                        class="dropdown-item"
+                                                        href="{{ url_for(
+                                                            'plans.edit_plan_item',
+                                                            plan_id=plan.id,
+                                                            item_id=item.id
+                                                        ) }}"
+                                                    >
+                                                        Изменить
+                                                    </a>
+
+                                                </li>
+
+
+                                                <li>
+                                                    <hr class="dropdown-divider">
+                                                </li>
+
+
+                                                <li>
+
+                                                    <form
+                                                        method="post"
+                                                        action="{{ url_for(
+                                                            'plans.delete_plan_item',
+                                                            plan_id=plan.id,
+                                                            item_id=item.id
+                                                        ) }}"
+                                                    >
+
+                                                        <input
+                                                            type="hidden"
+                                                            name="csrf_token"
+                                                            value="{{ csrf_token() }}"
+                                                        >
+
+                                                        <button
+                                                            type="submit"
+                                                            class="dropdown-item pm-dropdown-danger"
+                                                        >
+                                                            Удалить
+                                                        </button>
+
+                                                    </form>
+
+                                                </li>
+
+                                            </ul>
+
+                                        </div>
+
                                     </td>
+
                                 {% endif %}
+
                             </tr>
+
                         {% endfor %}
+
                     </tbody>
+
                 </table>
-            {% else %}
-                <p>
+
+            </div>
+
+        {% else %}
+
+            <div class="pm-empty-state py-5">
+
+                <div class="pm-empty-icon">
+                    ▣
+                </div>
+
+                <h3 class="h6 fw-bold mb-2">
+                    Публикаций пока нет
+                </h3>
+
+                <p class="text-body-secondary mb-3">
                     В плане пока нет запланированных публикаций.
                 </p>
-            {% endif %}
-        </section>
 
-        <section>
-            <h2>История согласования</h2>
+                {% if not monitor and plan.status in ["DRAFT", "RETURNED"] %}
 
-            {% if versions %}
-                <table>
+                    <a
+                        href="{{ url_for(
+                            'plans.create_plan_item',
+                            plan_id=plan.id
+                        ) }}"
+                        class="btn btn-pm-primary"
+                    >
+                        Добавить публикацию
+                    </a>
+
+                {% endif %}
+
+            </div>
+
+        {% endif %}
+
+    </div>
+
+</section>
+
+
+<section>
+
+    <div class="mb-3">
+
+        <h2 class="h5 fw-bold mb-1">
+            История согласования
+        </h2>
+
+        <p class="small text-body-secondary mb-0">
+            История изменений статуса плана.
+        </p>
+
+    </div>
+
+
+    <div class="card card-pm border-0">
+
+        {% if versions %}
+
+            <div class="table-responsive">
+
+                <table class="table table-pm align-middle mb-0">
+
                     <thead>
                         <tr>
-                            <th>Версия</th>
-                            <th>Статус</th>
-                            <th>Пользователь</th>
-                            <th>Дата</th>
-                            <th>Комментарий</th>
+
+                            <th class="ps-4">
+                                Версия
+                            </th>
+
+                            <th>
+                                Статус
+                            </th>
+
+                            <th>
+                                Пользователь
+                            </th>
+
+                            <th>
+                                Дата
+                            </th>
+
+                            <th class="pe-4">
+                                Комментарий
+                            </th>
+
                         </tr>
                     </thead>
 
+
                     <tbody>
+
                         {% for version in versions %}
+
                             <tr>
-                                <td>
+
+                                <td class="ps-4 fw-semibold">
                                     {{ version.version_number }}
                                 </td>
 
+
                                 <td>
+
                                     {% if version.status == "SUBMITTED" %}
-                                        Отправлен на согласование
+
+                                        <span class="badge rounded-pill badge-pm-warning">
+                                            Отправлен на согласование
+                                        </span>
+
                                     {% elif version.status == "RETURNED" %}
-                                        Возвращён на доработку
+
+                                        <span class="badge rounded-pill badge-pm-danger">
+                                            Возвращён на доработку
+                                        </span>
+
                                     {% elif version.status == "APPROVED" %}
-                                        Одобрен
+
+                                        <span class="badge rounded-pill badge-pm-success">
+                                            Одобрен
+                                        </span>
+
                                     {% else %}
-                                        {{ version.status }}
+
+                                        <span class="badge rounded-pill badge-pm-primary">
+                                            {{ version.status }}
+                                        </span>
+
                                     {% endif %}
+
                                 </td>
+
 
                                 <td>
                                     {{ version.creator.full_name }}
                                 </td>
 
-                                <td>
+
+                                <td class="text-nowrap">
                                     {{ version.created_at }}
                                 </td>
 
-                                <td>
-                                    {{ version.comment or "—" }}
+
+                                <td class="pe-4">
+
+                                    {% if version.comment %}
+
+                                        <span>
+                                            {{ version.comment }}
+                                        </span>
+
+                                    {% else %}
+
+                                        <span class="text-body-secondary">
+                                            —
+                                        </span>
+
+                                    {% endif %}
+
                                 </td>
+
                             </tr>
+
                         {% endfor %}
+
                     </tbody>
+
                 </table>
-            {% else %}
-                <p>
+
+            </div>
+
+        {% else %}
+
+            <div class="pm-empty-state py-5">
+
+                <div class="pm-empty-icon">
+                    ◷
+                </div>
+
+                <p class="text-body-secondary mb-0">
                     История согласования пока пуста.
                 </p>
-            {% endif %}
-        </section>
 
-    </main>
-</body>
-</html>
+            </div>
+
+        {% endif %}
+
+    </div>
+
+</section>
+
+{% endblock %}

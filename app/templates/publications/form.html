@@ -1,251 +1,457 @@
-<!doctype html>
-<html lang="ru">
-<head>
-    <meta charset="utf-8">
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1"
+{% extends "base.html" %}
+
+{% block title %}
+    Редактирование публикации — Publication Monitor
+{% endblock %}
+
+{% block page_title %}
+    Редактирование публикации
+{% endblock %}
+
+{% block page_subtitle %}
+    <p class="text-body-secondary mb-0 mt-2">
+        Изменение библиографических и дополнительных сведений
+    </p>
+{% endblock %}
+
+{% block page_actions %}
+    <a
+        href="{{ url_for(
+            'publications.publication_detail',
+            publication_id=publication.id
+        ) }}"
+        class="btn btn-light border"
     >
-    <title>Редактирование публикации</title>
-</head>
-<body>
-    <header>
-        <p>
-            <a
-                href="{{ url_for(
-                    'publications.publication_detail',
-                    publication_id=publication.id
-                ) }}"
-            >
-                ← К публикации
-            </a>
-        </p>
+        ← К публикации
+    </a>
+{% endblock %}
 
-        <h1>Редактирование публикации</h1>
-    </header>
+{% block content %}
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            <section>
-                {% for category, message in messages %}
-                    <p>{{ message }}</p>
-                {% endfor %}
-            </section>
-        {% endif %}
-    {% endwith %}
+<div class="row justify-content-center">
 
-    <main>
+    <div class="col-12 col-xl-10">
+
         <form method="post">
+
             <input
                 type="hidden"
                 name="csrf_token"
                 value="{{ csrf_token() }}"
             >
 
-            <p>
-                <label for="title">
-                    Название
-                </label>
-                <br>
-                <input
-                    id="title"
-                    name="title"
-                    type="text"
-                    value="{{ publication.title }}"
-                    maxlength="1000"
-                    required
-                >
-            </p>
+            <div class="card card-pm border-0 mb-4">
 
-            <p>
-                <label for="journal">
-                    Журнал / издание
-                </label>
-                <br>
-                <input
-                    id="journal"
-                    name="journal"
-                    type="text"
-                    value="{{ publication.journal or '' }}"
-                    maxlength="500"
-                >
-            </p>
+                <div class="card-body p-4 p-lg-5">
 
-            <p>
-                <label for="publication_year">
-                    Год публикации
-                </label>
-                <br>
-                <input
-                    id="publication_year"
-                    name="publication_year"
-                    type="number"
-                    min="1900"
-                    max="2100"
-                    value="{{ publication.publication_year or '' }}"
-                >
-            </p>
+                    <div class="d-flex align-items-center gap-3 mb-4">
 
-            <p>
-                <label for="volume">
-                    Том
-                </label>
-                <br>
-                <input
-                    id="volume"
-                    name="volume"
-                    type="text"
-                    value="{{ publication.volume or '' }}"
-                    maxlength="100"
-                >
-            </p>
+                        <span class="pm-dashboard-icon pm-dashboard-icon-primary">
+                            ✎
+                        </span>
 
-            <p>
-                <label for="issue">
-                    Выпуск
-                </label>
-                <br>
-                <input
-                    id="issue"
-                    name="issue"
-                    type="text"
-                    value="{{ publication.issue or '' }}"
-                    maxlength="100"
-                >
-            </p>
+                        <div>
+                            <h2 class="h5 fw-bold mb-1">
+                                Основные сведения
+                            </h2>
 
-            <p>
-                <label for="pages">
-                    Страницы
-                </label>
-                <br>
-                <input
-                    id="pages"
-                    name="pages"
-                    type="text"
-                    value="{{ publication.pages or '' }}"
-                    maxlength="100"
-                >
-            </p>
+                            <p class="small text-body-secondary mb-0">
+                                Название, журнал и библиографические данные.
+                            </p>
+                        </div>
 
-            <p>
-                <label for="doi">
-                    DOI
-                </label>
-                <br>
-                <input
-                    id="doi"
-                    name="doi"
-                    type="text"
-                    value="{{ publication.doi or '' }}"
-                    maxlength="500"
-                >
-            </p>
+                    </div>
 
-            <p>
-                <label for="url">
-                    Ссылка
-                </label>
-                <br>
-                <input
-                    id="url"
-                    name="url"
-                    type="url"
-                    value="{{ publication.url or '' }}"
-                    maxlength="1000"
-                >
-            </p>
 
-            <p>
-                <label for="indexing_type_id">
-                    Тип индексации
-                </label>
-                <br>
+                    <div class="row g-4">
 
-                <select
-                    id="indexing_type_id"
-                    name="indexing_type_id"
-                >
-                    <option value="">
-                        Не выбран
-                    </option>
+                        <div class="col-12">
 
-                    {% for indexing_type in indexing_types %}
-                        <option
-                            value="{{ indexing_type.id }}"
-                            {% if publication.indexing_type_id == indexing_type.id %}
-                                selected
-                            {% endif %}
+                            <label
+                                for="title"
+                                class="form-label fw-semibold"
+                            >
+                                Название
+                            </label>
+
+                            <input
+                                id="title"
+                                name="title"
+                                type="text"
+                                class="form-control"
+                                value="{{ publication.title }}"
+                                maxlength="1000"
+                                required
+                            >
+
+                        </div>
+
+
+                        <div class="col-12">
+
+                            <label
+                                for="journal"
+                                class="form-label fw-semibold"
+                            >
+                                Журнал / издание
+                            </label>
+
+                            <input
+                                id="journal"
+                                name="journal"
+                                type="text"
+                                class="form-control"
+                                value="{{ publication.journal or '' }}"
+                                maxlength="500"
+                            >
+
+                        </div>
+
+
+                        <div class="col-12 col-md-4">
+
+                            <label
+                                for="publication_year"
+                                class="form-label fw-semibold"
+                            >
+                                Год публикации
+                            </label>
+
+                            <input
+                                id="publication_year"
+                                name="publication_year"
+                                type="number"
+                                class="form-control"
+                                min="1900"
+                                max="2100"
+                                value="{{ publication.publication_year or '' }}"
+                            >
+
+                        </div>
+
+
+                        <div class="col-12 col-md-4">
+
+                            <label
+                                for="volume"
+                                class="form-label fw-semibold"
+                            >
+                                Том
+                            </label>
+
+                            <input
+                                id="volume"
+                                name="volume"
+                                type="text"
+                                class="form-control"
+                                value="{{ publication.volume or '' }}"
+                                maxlength="100"
+                            >
+
+                        </div>
+
+
+                        <div class="col-12 col-md-4">
+
+                            <label
+                                for="issue"
+                                class="form-label fw-semibold"
+                            >
+                                Выпуск
+                            </label>
+
+                            <input
+                                id="issue"
+                                name="issue"
+                                type="text"
+                                class="form-control"
+                                value="{{ publication.issue or '' }}"
+                                maxlength="100"
+                            >
+
+                        </div>
+
+
+                        <div class="col-12 col-md-6">
+
+                            <label
+                                for="pages"
+                                class="form-label fw-semibold"
+                            >
+                                Страницы
+                            </label>
+
+                            <input
+                                id="pages"
+                                name="pages"
+                                type="text"
+                                class="form-control"
+                                value="{{ publication.pages or '' }}"
+                                maxlength="100"
+                            >
+
+                        </div>
+
+
+                        <div class="col-12 col-md-6">
+
+                            <label
+                                for="doi"
+                                class="form-label fw-semibold"
+                            >
+                                DOI
+                            </label>
+
+                            <input
+                                id="doi"
+                                name="doi"
+                                type="text"
+                                class="form-control"
+                                value="{{ publication.doi or '' }}"
+                                maxlength="500"
+                            >
+
+                        </div>
+
+
+                        <div class="col-12">
+
+                            <label
+                                for="url"
+                                class="form-label fw-semibold"
+                            >
+                                Ссылка
+                            </label>
+
+                            <input
+                                id="url"
+                                name="url"
+                                type="url"
+                                class="form-control"
+                                value="{{ publication.url or '' }}"
+                                maxlength="1000"
+                            >
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <div class="card card-pm border-0 mb-4">
+
+                <div class="card-body p-4 p-lg-5">
+
+                    <div class="d-flex align-items-center gap-3 mb-4">
+
+                        <span class="pm-dashboard-icon pm-dashboard-icon-accent">
+                            ◈
+                        </span>
+
+                        <div>
+                            <h2 class="h5 fw-bold mb-1">
+                                Классификация
+                            </h2>
+
+                            <p class="small text-body-secondary mb-0">
+                                Индексация и квартиль публикации.
+                            </p>
+                        </div>
+
+                    </div>
+
+
+                    <div class="row g-4">
+
+                        <div class="col-12 col-md-6">
+
+                            <label
+                                for="indexing_type_id"
+                                class="form-label fw-semibold"
+                            >
+                                Тип индексации
+                            </label>
+
+                            <select
+                                id="indexing_type_id"
+                                name="indexing_type_id"
+                                class="form-select"
+                            >
+
+                                <option value="">
+                                    Не выбран
+                                </option>
+
+                                {% for indexing_type in indexing_types %}
+
+                                    <option
+                                        value="{{ indexing_type.id }}"
+                                        {% if publication.indexing_type_id == indexing_type.id %}
+                                            selected
+                                        {% endif %}
+                                    >
+                                        {% if current_user.language == "kk" %}
+                                            {{ indexing_type.name_kk }}
+                                        {% else %}
+                                            {{ indexing_type.name_ru }}
+                                        {% endif %}
+                                    </option>
+
+                                {% endfor %}
+
+                            </select>
+
+                        </div>
+
+
+                        <div class="col-12 col-md-6">
+
+                            <label
+                                for="quartile_id"
+                                class="form-label fw-semibold"
+                            >
+                                Квартиль
+                            </label>
+
+                            <select
+                                id="quartile_id"
+                                name="quartile_id"
+                                class="form-select"
+                            >
+
+                                <option value="">
+                                    Не выбран
+                                </option>
+
+                                {% for quartile in quartiles %}
+
+                                    <option
+                                        value="{{ quartile.id }}"
+                                        {% if publication.quartile_id == quartile.id %}
+                                            selected
+                                        {% endif %}
+                                    >
+                                        {% if current_user.language == "kk" %}
+                                            {{ quartile.name_kk }}
+                                        {% else %}
+                                            {{ quartile.name_ru }}
+                                        {% endif %}
+                                    </option>
+
+                                {% endfor %}
+
+                            </select>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <div class="card card-pm border-0 mb-4">
+
+                <div class="card-body p-4 p-lg-5">
+
+                    <div class="d-flex align-items-center gap-3 mb-4">
+
+                        <span class="pm-dashboard-icon pm-dashboard-icon-success">
+                            +
+                        </span>
+
+                        <div>
+                            <h2 class="h5 fw-bold mb-1">
+                                Дополнительная информация
+                            </h2>
+
+                            <p class="small text-body-secondary mb-0">
+                                Аффилиация и примечания.
+                            </p>
+                        </div>
+
+                    </div>
+
+
+                    <div class="mb-4">
+
+                        <label
+                            for="affiliation"
+                            class="form-label fw-semibold"
                         >
-                            {% if current_user.language == "kk" %}
-                                {{ indexing_type.name_kk }}
-                            {% else %}
-                                {{ indexing_type.name_ru }}
-                            {% endif %}
-                        </option>
-                    {% endfor %}
-                </select>
-            </p>
+                            Аффилиация
+                        </label>
 
-            <p>
-                <label for="quartile_id">
-                    Квартиль
-                </label>
-                <br>
+                        <textarea
+                            id="affiliation"
+                            name="affiliation"
+                            class="form-control"
+                            rows="4"
+                        >{{ publication.affiliation or '' }}</textarea>
 
-                <select
-                    id="quartile_id"
-                    name="quartile_id"
-                >
-                    <option value="">
-                        Не выбран
-                    </option>
+                    </div>
 
-                    {% for quartile in quartiles %}
-                        <option
-                            value="{{ quartile.id }}"
-                            {% if publication.quartile_id == quartile.id %}
-                                selected
-                            {% endif %}
+
+                    <div>
+
+                        <label
+                            for="notes"
+                            class="form-label fw-semibold"
                         >
-                            {% if current_user.language == "kk" %}
-                                {{ quartile.name_kk }}
-                            {% else %}
-                                {{ quartile.name_ru }}
-                            {% endif %}
-                        </option>
-                    {% endfor %}
-                </select>
-            </p>
+                            Примечания
+                        </label>
 
-            <p>
-                <label for="affiliation">
-                    Аффилиация
-                </label>
-                <br>
-                <textarea
-                    id="affiliation"
-                    name="affiliation"
-                    rows="4"
-                >{{ publication.affiliation or '' }}</textarea>
-            </p>
+                        <textarea
+                            id="notes"
+                            name="notes"
+                            class="form-control"
+                            rows="6"
+                        >{{ publication.notes or '' }}</textarea>
 
-            <p>
-                <label for="notes">
-                    Примечания
-                </label>
-                <br>
-                <textarea
-                    id="notes"
-                    name="notes"
-                    rows="6"
-                >{{ publication.notes or '' }}</textarea>
-            </p>
+                    </div>
 
-            <button type="submit">
-                Сохранить
-            </button>
+                </div>
+
+            </div>
+
+
+            <div class="card card-pm border-0">
+
+                <div class="card-body p-4">
+
+                    <div class="d-flex flex-column flex-sm-row justify-content-end gap-2">
+
+                        <a
+                            href="{{ url_for(
+                                'publications.publication_detail',
+                                publication_id=publication.id
+                            ) }}"
+                            class="btn btn-light border px-4"
+                        >
+                            Отмена
+                        </a>
+
+                        <button
+                            type="submit"
+                            class="btn btn-pm-primary px-4"
+                        >
+                            Сохранить
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </div>
+
         </form>
-    </main>
-</body>
-</html>
+
+    </div>
+
+</div>
+
+{% endblock %}

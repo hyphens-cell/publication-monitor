@@ -1,212 +1,367 @@
-<!doctype html>
-<html lang="ru">
-<head>
-    <meta charset="utf-8">
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1"
+{% extends "base.html" %}
+
+{% block title %}
+    {% if item %}
+        Изменение пункта — Publication Monitor
+    {% else %}
+        Добавление публикации — Publication Monitor
+    {% endif %}
+{% endblock %}
+
+{% block page_title %}
+    {% if item %}
+        Изменение пункта плана
+    {% else %}
+        Добавление публикации
+    {% endif %}
+{% endblock %}
+
+{% block page_subtitle %}
+    <p class="text-body-secondary mb-0 mt-2">
+        План на {{ plan.year }} год
+    </p>
+{% endblock %}
+
+{% block page_actions %}
+    <a
+        href="{{ url_for(
+            'plans.plan_detail',
+            plan_id=plan.id
+        ) }}"
+        class="btn btn-light border"
     >
-    <title>
-        {% if item %}
-            Изменение пункта
-        {% else %}
-            Добавление публикации
-        {% endif %}
-    </title>
-</head>
-<body>
-    <header>
-        <a
-            href="{{ url_for(
-                'plans.plan_detail',
-                plan_id=plan.id
-            ) }}"
-        >
-            ← К плану
-        </a>
+        ← К плану
+    </a>
+{% endblock %}
 
-        <h1>
-            {% if item %}
-                Изменение пункта плана
-            {% else %}
-                Добавление публикации
-            {% endif %}
-        </h1>
+{% block content %}
 
-        <p>
-            План на {{ plan.year }} год
-        </p>
-    </header>
+<div class="row justify-content-center">
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            <section>
-                {% for category, message in messages %}
-                    <p>{{ message }}</p>
-                {% endfor %}
-            </section>
-        {% endif %}
-    {% endwith %}
+    <div class="col-12 col-xl-9">
 
-    <main>
         <form method="post">
+
             <input
                 type="hidden"
                 name="csrf_token"
                 value="{{ csrf_token() }}"
             >
 
-            <p>
-                <label for="title">
-                    Название статьи
-                </label>
-                <br>
+            <div class="card card-pm border-0 mb-4">
 
-                <input
-                    id="title"
-                    name="title"
-                    type="text"
-                    maxlength="1000"
-                    value="{{ item.title if item else '' }}"
-                    required
-                >
-            </p>
+                <div class="card-body p-4 p-lg-5">
 
-            <p>
-                <label for="publication_type_id">
-                    Тип публикации
-                </label>
-                <br>
+                    <div class="d-flex align-items-center gap-3 mb-4">
 
-                <select
-                    id="publication_type_id"
-                    name="publication_type_id"
-                    required
-                >
-                    <option value="">
-                        Выберите тип
-                    </option>
-
-                    {% for value in publication_types %}
-                        <option
-                            value="{{ value.id }}"
-                            {% if item and item.publication_type_id == value.id %}
-                                selected
-                            {% endif %}
-                        >
-                            {% if current_user.language == "kk" %}
-                                {{ value.name_kk }}
+                        <span class="pm-dashboard-icon pm-dashboard-icon-primary">
+                            {% if item %}
+                                ✎
                             {% else %}
-                                {{ value.name_ru }}
+                                +
                             {% endif %}
-                        </option>
-                    {% endfor %}
-                </select>
-            </p>
+                        </span>
 
-            <p>
-                <label for="journal">
-                    Предполагаемый журнал
-                </label>
-                <br>
-
-                <input
-                    id="journal"
-                    name="journal"
-                    type="text"
-                    maxlength="500"
-                    value="{{ item.journal if item else '' }}"
-                >
-            </p>
-
-            <p>
-                <label for="quartile_id">
-                    Квартиль
-                </label>
-                <br>
-
-                <select
-                    id="quartile_id"
-                    name="quartile_id"
-                >
-                    <option value="">
-                        Не указан
-                    </option>
-
-                    {% for value in quartiles %}
-                        <option
-                            value="{{ value.id }}"
-                            {% if item and item.quartile_id == value.id %}
-                                selected
-                            {% endif %}
-                        >
-                            {% if current_user.language == "kk" %}
-                                {{ value.name_kk }}
-                            {% else %}
-                                {{ value.name_ru }}
-                            {% endif %}
-                        </option>
-                    {% endfor %}
-                </select>
-            </p>
-
-            <p>
-                <label for="planned_date">
-                    Планируемая дата
-                </label>
-                <br>
-
-                <input
-                    id="planned_date"
-                    name="planned_date"
-                    type="date"
-                    value="{% if item and item.planned_date %}{{ item.planned_date.isoformat() }}{% endif %}"
-                >
-            </p>
-
-            <fieldset>
-                <legend>
-                    Предполагаемые авторы
-                </legend>
-
-                {% if employees %}
-                    {% for employee in employees %}
-                        <label>
-                            <input
-                                type="checkbox"
-                                name="author_ids"
-                                value="{{ employee.id }}"
-                                {% if employee.id in selected_author_ids %}
-                                    checked
+                        <div>
+                            <h2 class="h5 fw-bold mb-1">
+                                {% if item %}
+                                    Данные публикации
+                                {% else %}
+                                    Новая публикация
                                 {% endif %}
+                            </h2>
+
+                            <p class="small text-body-secondary mb-0">
+                                Заполните параметры запланированной публикации.
+                            </p>
+                        </div>
+
+                    </div>
+
+
+                    <div class="row g-4">
+
+                        <div class="col-12">
+
+                            <label
+                                for="title"
+                                class="form-label fw-semibold"
+                            >
+                                Название статьи
+                            </label>
+
+                            <input
+                                id="title"
+                                name="title"
+                                type="text"
+                                class="form-control form-control-lg"
+                                maxlength="1000"
+                                value="{{ item.title if item else '' }}"
+                                required
                             >
 
-                            {{ employee.full_name }}
+                        </div>
 
-                            {% if employee.position %}
-                                — {{ employee.position }}
-                            {% endif %}
-                        </label>
 
-                        <br>
-                    {% endfor %}
-                {% else %}
-                    <p>
-                        Активных сотрудников кафедры пока нет.
-                    </p>
-                {% endif %}
-            </fieldset>
+                        <div class="col-12 col-md-6">
 
-            <p>
-                <button type="submit">
-                    {% if item %}
-                        Сохранить изменения
+                            <label
+                                for="publication_type_id"
+                                class="form-label fw-semibold"
+                            >
+                                Тип публикации
+                            </label>
+
+                            <select
+                                id="publication_type_id"
+                                name="publication_type_id"
+                                class="form-select"
+                                required
+                            >
+
+                                <option value="">
+                                    Выберите тип
+                                </option>
+
+                                {% for value in publication_types %}
+
+                                    <option
+                                        value="{{ value.id }}"
+                                        {% if item and item.publication_type_id == value.id %}
+                                            selected
+                                        {% endif %}
+                                    >
+                                        {% if current_user.language == "kk" %}
+                                            {{ value.name_kk }}
+                                        {% else %}
+                                            {{ value.name_ru }}
+                                        {% endif %}
+                                    </option>
+
+                                {% endfor %}
+
+                            </select>
+
+                        </div>
+
+
+                        <div class="col-12 col-md-6">
+
+                            <label
+                                for="quartile_id"
+                                class="form-label fw-semibold"
+                            >
+                                Квартиль
+                            </label>
+
+                            <select
+                                id="quartile_id"
+                                name="quartile_id"
+                                class="form-select"
+                            >
+
+                                <option value="">
+                                    Не указан
+                                </option>
+
+                                {% for value in quartiles %}
+
+                                    <option
+                                        value="{{ value.id }}"
+                                        {% if item and item.quartile_id == value.id %}
+                                            selected
+                                        {% endif %}
+                                    >
+                                        {% if current_user.language == "kk" %}
+                                            {{ value.name_kk }}
+                                        {% else %}
+                                            {{ value.name_ru }}
+                                        {% endif %}
+                                    </option>
+
+                                {% endfor %}
+
+                            </select>
+
+                        </div>
+
+
+                        <div class="col-12">
+
+                            <label
+                                for="journal"
+                                class="form-label fw-semibold"
+                            >
+                                Предполагаемый журнал
+                            </label>
+
+                            <input
+                                id="journal"
+                                name="journal"
+                                type="text"
+                                class="form-control"
+                                maxlength="500"
+                                value="{{ item.journal if item else '' }}"
+                            >
+
+                        </div>
+
+
+                        <div class="col-12 col-md-6">
+
+                            <label
+                                for="planned_date"
+                                class="form-label fw-semibold"
+                            >
+                                Планируемая дата
+                            </label>
+
+                            <input
+                                id="planned_date"
+                                name="planned_date"
+                                type="date"
+                                class="form-control"
+                                value="{% if item and item.planned_date %}{{ item.planned_date.isoformat() }}{% endif %}"
+                            >
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <div class="card card-pm border-0 mb-4">
+
+                <div class="card-body p-4 p-lg-5">
+
+                    <div class="d-flex align-items-center gap-3 mb-4">
+
+                        <span class="pm-dashboard-icon pm-dashboard-icon-accent">
+                            👥
+                        </span>
+
+                        <div>
+                            <h2 class="h5 fw-bold mb-1">
+                                Предполагаемые авторы
+                            </h2>
+
+                            <p class="small text-body-secondary mb-0">
+                                Выберите сотрудников, которые будут указаны авторами.
+                            </p>
+                        </div>
+
+                    </div>
+
+
+                    {% if employees %}
+
+                        <div class="row g-2">
+
+                            {% for employee in employees %}
+
+                                <div class="col-12 col-md-6">
+
+                                    <label
+                                        class="pm-author-option d-flex align-items-center gap-3"
+                                        for="author-{{ employee.id }}"
+                                    >
+
+                                        <input
+                                            id="author-{{ employee.id }}"
+                                            type="checkbox"
+                                            class="form-check-input flex-shrink-0"
+                                            name="author_ids"
+                                            value="{{ employee.id }}"
+                                            {% if employee.id in selected_author_ids %}
+                                                checked
+                                            {% endif %}
+                                        >
+
+                                        <span class="min-w-0">
+
+                                            <span class="d-block fw-semibold">
+                                                {{ employee.full_name }}
+                                            </span>
+
+                                            {% if employee.position %}
+
+                                                <span class="d-block small text-body-secondary">
+                                                    {{ employee.position }}
+                                                </span>
+
+                                            {% endif %}
+
+                                        </span>
+
+                                    </label>
+
+                                </div>
+
+                            {% endfor %}
+
+                        </div>
+
                     {% else %}
-                        Добавить публикацию
+
+                        <div class="pm-empty-state py-4">
+
+                            <div class="pm-empty-icon">
+                                👥
+                            </div>
+
+                            <p class="text-body-secondary mb-0">
+                                Активных сотрудников кафедры пока нет.
+                            </p>
+
+                        </div>
+
                     {% endif %}
-                </button>
-            </p>
+
+                </div>
+
+            </div>
+
+
+            <div class="card card-pm border-0">
+
+                <div class="card-body p-4">
+
+                    <div class="d-flex flex-column flex-sm-row justify-content-end gap-2">
+
+                        <a
+                            href="{{ url_for(
+                                'plans.plan_detail',
+                                plan_id=plan.id
+                            ) }}"
+                            class="btn btn-light border px-4"
+                        >
+                            Отмена
+                        </a>
+
+                        <button
+                            type="submit"
+                            class="btn btn-pm-primary px-4"
+                        >
+                            {% if item %}
+                                Сохранить изменения
+                            {% else %}
+                                Добавить публикацию
+                            {% endif %}
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </div>
+
         </form>
-    </main>
-</body>
-</html>
+
+    </div>
+
+</div>
+
+{% endblock %}

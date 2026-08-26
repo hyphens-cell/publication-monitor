@@ -1,616 +1,674 @@
-<!doctype html>
-<html lang="ru">
-<head>
-    <meta charset="utf-8">
+{% extends "base.html" %}
 
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1"
-    >
+{% block title %}
+    Аналитика — Publication Monitor
+{% endblock %}
 
-    <title>Аналитика</title>
+{% block page_title %}
+    Аналитика
+{% endblock %}
 
-    <script
-        src="https://cdn.jsdelivr.net/npm/chart.js"
-    ></script>
+{% block page_subtitle %}
+    <p class="text-body-secondary mb-0 mt-2">
+        Анализ публикационной деятельности
+    </p>
+{% endblock %}
 
-    <style>
-        * {
-            box-sizing: border-box;
-        }
+{% block page_actions %}
+    <div class="d-flex flex-wrap gap-2">
+        <a
+            href="{{ url_for(
+                'analytics.export_excel',
+                year=selected_year,
+                department_id=selected_department_id,
+                publication_type_id=selected_publication_type_id
+            ) }}"
+            class="btn btn-light border"
+        >
+            ↓ Excel
+        </a>
 
-        body {
-            margin: 0;
-            padding: 24px;
-            font-family:
-                Arial,
-                Helvetica,
-                sans-serif;
-            color: #222;
-            background: #f5f6f8;
-        }
+        <a
+            href="{{ url_for(
+                'analytics.export_pdf',
+                year=selected_year,
+                department_id=selected_department_id,
+                publication_type_id=selected_publication_type_id
+            ) }}"
+            class="btn btn-pm-primary"
+        >
+            ↓ PDF
+        </a>
+    </div>
+{% endblock %}
 
-        header,
-        main {
-            width: min(
-                1400px,
-                100%
-            );
-            margin-left: auto;
-            margin-right: auto;
-        }
+{% block content %}
 
-        header {
-            margin-bottom: 24px;
-        }
+<section class="mb-4">
+    <div class="card card-pm border-0">
 
-        header h1 {
-            margin-top: 0;
-            margin-bottom: 12px;
-        }
+        <div class="card-body p-4">
 
-        section {
-            margin-bottom: 24px;
-            padding: 24px;
-            background: #fff;
-            border: 1px solid #ddd;
-            border-radius: 12px;
-        }
+            <div class="d-flex align-items-center gap-3 mb-4">
 
-        section h2 {
-            margin-top: 0;
-            margin-bottom: 20px;
-        }
+                <span class="pm-dashboard-icon pm-dashboard-icon-primary">
+                    ⚙
+                </span>
 
-        form {
-            display: grid;
-            grid-template-columns:
-                repeat(
-                    3,
-                    minmax(
-                        180px,
-                        1fr
-                    )
-                );
-            gap: 16px;
-        }
+                <div>
+                    <h2 class="h5 fw-bold mb-1">
+                        Фильтры
+                    </h2>
 
-        form p {
-            margin: 0;
-        }
+                    <p class="text-body-secondary small mb-0">
+                        Настройте параметры аналитики.
+                    </p>
+                </div>
 
-        form p:last-child {
-            grid-column: 1 / -1;
-        }
-
-        label {
-            display: inline-block;
-            margin-bottom: 6px;
-            font-weight: 600;
-        }
-
-        select,
-        button {
-            min-height: 40px;
-            width: 100%;
-            padding: 8px 12px;
-            font: inherit;
-        }
-
-        button {
-            width: auto;
-            cursor: pointer;
-        }
-
-        a {
-            color: #2457a6;
-        }
-
-        .filter-actions {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .export-actions {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-        }
-
-        .summary-grid {
-            display: grid;
-            grid-template-columns:
-                repeat(
-                    3,
-                    minmax(
-                        0,
-                        1fr
-                    )
-                );
-            gap: 16px;
-        }
-
-        .summary-card {
-            padding: 20px;
-            border: 1px solid #ddd;
-            border-radius: 10px;
-        }
-
-        .summary-card-label {
-            margin-bottom: 8px;
-            font-size: 14px;
-            font-weight: 600;
-        }
-
-        .summary-card-value {
-            font-size: 30px;
-            font-weight: 700;
-        }
-
-        .charts-grid {
-            display: grid;
-            grid-template-columns:
-                repeat(
-                    2,
-                    minmax(
-                        0,
-                        1fr
-                    )
-                );
-            gap: 24px;
-        }
-
-        .chart-card {
-            min-width: 0;
-            padding: 20px;
-            border: 1px solid #ddd;
-            border-radius: 10px;
-            background: #fff;
-        }
-
-        .chart-card-full {
-            grid-column: 1 / -1;
-        }
-
-        .chart-card h3 {
-            margin-top: 0;
-            margin-bottom: 16px;
-        }
-
-        .chart-container {
-            position: relative;
-            width: 100%;
-            height: 320px;
-        }
-
-        .chart-container-large {
-            height: 420px;
-        }
-
-        .table-wrapper {
-            width: 100%;
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-        }
-
-        table {
-            width: 100%;
-            min-width: 620px;
-            border-collapse: collapse;
-        }
-
-        th,
-        td {
-            padding: 10px 12px;
-            border: 1px solid #ddd;
-            text-align: left;
-            vertical-align: top;
-        }
-
-        th {
-            font-weight: 700;
-            background: #f0f1f3;
-        }
-
-        @media (max-width: 900px) {
-            body {
-                padding: 16px;
-            }
-
-            form {
-                grid-template-columns: 1fr;
-            }
-
-            form p:last-child {
-                grid-column: auto;
-            }
-
-            .summary-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .charts-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .chart-card-full {
-                grid-column: auto;
-            }
-        }
-
-        @media (max-width: 600px) {
-            section {
-                padding: 16px;
-            }
-
-            .chart-container {
-                height: 280px;
-            }
-
-            .chart-container-large {
-                height: 360px;
-            }
-
-            .summary-card-value {
-                font-size: 26px;
-            }
-        }
-    </style>
-</head>
-
-<body>
-    <header>
-        <h1>
-            Аналитика публикационной деятельности
-        </h1>
-
-        <p>
-            <a href="{{ url_for('main.index') }}">
-                ← На главную
-            </a>
-        </p>
-    </header>
-
-    <main>
-        <section>
-            <h2>Фильтры</h2>
+            </div>
 
             <form method="get">
-                <p>
-                    <label for="year">
-                        Год
-                    </label>
-                    <br>
 
-                    <select
-                        id="year"
-                        name="year"
-                    >
-                        <option value="">
-                            Все годы
-                        </option>
+                <div class="row g-3">
 
-                        {% for year in years %}
-                            <option
-                                value="{{ year }}"
-                                {% if selected_year == year %}
-                                    selected
-                                {% endif %}
-                            >
-                                {{ year }}
-                            </option>
-                        {% endfor %}
-                    </select>
-                </p>
+                    <div class="col-12 col-md-4">
 
-                <p>
-                    <label for="department_id">
-                        Кафедра
-                    </label>
-                    <br>
+                        <label
+                            for="year"
+                            class="form-label fw-semibold"
+                        >
+                            Год
+                        </label>
 
-                    <select
-                        id="department_id"
-                        name="department_id"
-                        {% if current_user.role == "DEPARTMENT_HEAD" %}
-                            disabled
-                        {% endif %}
-                    >
-                        {% if current_user.role != "DEPARTMENT_HEAD" %}
+                        <select
+                            id="year"
+                            name="year"
+                            class="form-select"
+                        >
                             <option value="">
-                                Все кафедры
+                                Все годы
                             </option>
-                        {% endif %}
 
-                        {% for department in departments %}
-                            <option
-                                value="{{ department.id }}"
-                                {% if selected_department_id == department.id %}
-                                    selected
-                                {% endif %}
-                            >
-                                {{ department.name }}
-                            </option>
-                        {% endfor %}
-                    </select>
-                </p>
+                            {% for year in years %}
+                                <option
+                                    value="{{ year }}"
+                                    {% if selected_year == year %}
+                                        selected
+                                    {% endif %}
+                                >
+                                    {{ year }}
+                                </option>
+                            {% endfor %}
+                        </select>
 
-                <p>
-                    <label for="publication_type_id">
-                        Тип публикации
-                    </label>
-                    <br>
-
-                    <select
-                        id="publication_type_id"
-                        name="publication_type_id"
-                    >
-                        <option value="">
-                            Все типы
-                        </option>
-
-                        {% for publication_type in publication_types %}
-                            <option
-                                value="{{ publication_type.id }}"
-                                {% if selected_publication_type_id == publication_type.id %}
-                                    selected
-                                {% endif %}
-                            >
-                                {% if current_user.language == "kk" %}
-                                    {{ publication_type.name_kk }}
-                                {% else %}
-                                    {{ publication_type.name_ru }}
-                                {% endif %}
-                            </option>
-                        {% endfor %}
-                    </select>
-                </p>
-
-                <p>
-                    <span class="filter-actions">
-                        <button type="submit">
-                            Применить
-                        </button>
-
-                        <a
-                            href="{{ url_for(
-                                'analytics.dashboard'
-                            ) }}"
-                        >
-                            Сбросить
-                        </a>
-                    </span>
-                </p>
-
-                <p>
-                    <span class="export-actions">
-                        <a
-                            href="{{ url_for(
-                                'analytics.export_excel',
-                                year=selected_year,
-                                department_id=selected_department_id,
-                                publication_type_id=selected_publication_type_id
-                            ) }}"
-                        >
-                            Скачать Excel
-                        </a>
-
-                        <a
-                            href="{{ url_for(
-                                'analytics.export_pdf',
-                                year=selected_year,
-                                department_id=selected_department_id,
-                                publication_type_id=selected_publication_type_id
-                            ) }}"
-                        >
-                            Скачать PDF
-                        </a>
-                    </span>
-                </p>
-            </form>
-        </section>
-
-        <section>
-            <h2>Итог</h2>
-
-            <div class="summary-grid">
-                <article class="summary-card">
-                    <div class="summary-card-label">
-                        План
                     </div>
 
-                    <div class="summary-card-value">
+
+                    <div class="col-12 col-md-4">
+
+                        <label
+                            for="department_id"
+                            class="form-label fw-semibold"
+                        >
+                            Кафедра
+                        </label>
+
+                        <select
+                            id="department_id"
+                            name="department_id"
+                            class="form-select"
+                            {% if current_user.role == "DEPARTMENT_HEAD" %}
+                                disabled
+                            {% endif %}
+                        >
+
+                            {% if current_user.role != "DEPARTMENT_HEAD" %}
+                                <option value="">
+                                    Все кафедры
+                                </option>
+                            {% endif %}
+
+                            {% for department in departments %}
+                                <option
+                                    value="{{ department.id }}"
+                                    {% if selected_department_id == department.id %}
+                                        selected
+                                    {% endif %}
+                                >
+                                    {{ department.name }}
+                                </option>
+                            {% endfor %}
+
+                        </select>
+
+                    </div>
+
+
+                    <div class="col-12 col-md-4">
+
+                        <label
+                            for="publication_type_id"
+                            class="form-label fw-semibold"
+                        >
+                            Тип публикации
+                        </label>
+
+                        <select
+                            id="publication_type_id"
+                            name="publication_type_id"
+                            class="form-select"
+                        >
+
+                            <option value="">
+                                Все типы
+                            </option>
+
+                            {% for publication_type in publication_types %}
+                                <option
+                                    value="{{ publication_type.id }}"
+                                    {% if selected_publication_type_id == publication_type.id %}
+                                        selected
+                                    {% endif %}
+                                >
+                                    {% if current_user.language == "kk" %}
+                                        {{ publication_type.name_kk }}
+                                    {% else %}
+                                        {{ publication_type.name_ru }}
+                                    {% endif %}
+                                </option>
+                            {% endfor %}
+
+                        </select>
+
+                    </div>
+
+
+                    <div class="col-12">
+
+                        <div class="d-flex flex-wrap gap-2 pt-2">
+
+                            <button
+                                type="submit"
+                                class="btn btn-pm-primary"
+                            >
+                                Применить
+                            </button>
+
+                            <a
+                                href="{{ url_for('analytics.dashboard') }}"
+                                class="btn btn-light border"
+                            >
+                                Сбросить
+                            </a>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+</section>
+
+
+<section class="mb-4">
+
+    <div class="mb-3">
+        <h2 class="h5 fw-bold mb-1">
+            Итог
+        </h2>
+
+        <p class="text-body-secondary small mb-0">
+            Сводные показатели по выбранным фильтрам.
+        </p>
+    </div>
+
+
+    <div class="row g-3">
+
+        <div class="col-12 col-md-4">
+
+            <div class="card card-pm border-0 h-100">
+                <div class="card-body p-4">
+
+                    <div class="d-flex justify-content-between align-items-start mb-4">
+
+                        <span class="pm-dashboard-icon pm-dashboard-icon-primary">
+                            ▣
+                        </span>
+
+                        <span class="small text-body-secondary">
+                            План
+                        </span>
+
+                    </div>
+
+                    <div class="display-6 fw-bold">
                         {{ summary.planned_count }}
                     </div>
-                </article>
 
-                <article class="summary-card">
-                    <div class="summary-card-label">
-                        Факт
+                    <div class="small text-body-secondary mt-2">
+                        Запланировано публикаций
                     </div>
 
-                    <div class="summary-card-value">
+                </div>
+            </div>
+
+        </div>
+
+
+        <div class="col-12 col-md-4">
+
+            <div class="card card-pm border-0 h-100">
+                <div class="card-body p-4">
+
+                    <div class="d-flex justify-content-between align-items-start mb-4">
+
+                        <span class="pm-dashboard-icon pm-dashboard-icon-success">
+                            ✓
+                        </span>
+
+                        <span class="small text-body-secondary">
+                            Факт
+                        </span>
+
+                    </div>
+
+                    <div class="display-6 fw-bold">
                         {{ summary.actual_count }}
                     </div>
-                </article>
 
-                <article class="summary-card">
-                    <div class="summary-card-label">
-                        Выполнение
+                    <div class="small text-body-secondary mt-2">
+                        Фактически опубликовано
                     </div>
 
-                    <div class="summary-card-value">
+                </div>
+            </div>
+
+        </div>
+
+
+        <div class="col-12 col-md-4">
+
+            <div class="card card-pm border-0 h-100">
+                <div class="card-body p-4">
+
+                    <div class="d-flex justify-content-between align-items-start mb-4">
+
+                        <span class="pm-dashboard-icon pm-dashboard-icon-accent">
+                            %
+                        </span>
+
+                        <span class="small text-body-secondary">
+                            Выполнение
+                        </span>
+
+                    </div>
+
+                    <div class="display-6 fw-bold">
                         {{ summary.progress }}%
                     </div>
-                </article>
+
+                    <div class="progress mt-3" style="height: 7px;">
+                        <div
+                            class="progress-bar pm-progress-primary"
+                            role="progressbar"
+                            data-progress="{{ summary.progress }}"
+                            aria-valuenow="{{ summary.progress }}"
+                            aria-valuemin="0"
+                            aria-valuemax="100"
+                        ></div>
+                    </div>
+
+                </div>
             </div>
-        </section>
 
-        <section>
-            <h2>Графики</h2>
+        </div>
 
-            <div class="charts-grid">
-                <article class="chart-card">
-                    <h3>
+    </div>
+
+</section>
+
+
+<section class="mb-4">
+
+    <div class="mb-3">
+        <h2 class="h5 fw-bold mb-1">
+            Графики
+        </h2>
+
+        <p class="text-body-secondary small mb-0">
+            Визуальное сравнение плановых и фактических показателей.
+        </p>
+    </div>
+
+
+    <div class="row g-3">
+
+        <div class="col-12 col-xl-6">
+
+            <div class="card card-pm border-0 h-100">
+
+                <div class="card-body p-4">
+
+                    <h3 class="h6 fw-bold mb-1">
                         План и факт
                     </h3>
 
-                    <div class="chart-container">
-                        <canvas
-                            id="analyticsPlanFactChart"
-                        ></canvas>
-                    </div>
-                </article>
+                    <p class="small text-body-secondary mb-4">
+                        Общий показатель публикационной активности.
+                    </p>
 
-                <article class="chart-card">
-                    <h3>
+                    <div class="pm-chart-container">
+                        <canvas id="analyticsPlanFactChart"></canvas>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="col-12 col-xl-6">
+
+            <div class="card card-pm border-0 h-100">
+
+                <div class="card-body p-4">
+
+                    <h3 class="h6 fw-bold mb-1">
                         Выполнение по кафедрам
                     </h3>
 
-                    <div class="chart-container">
-                        <canvas
-                            id="analyticsDepartmentProgressChart"
-                        ></canvas>
-                    </div>
-                </article>
+                    <p class="small text-body-secondary mb-4">
+                        Сравнение плановых и фактических значений.
+                    </p>
 
-                <article class="chart-card chart-card-full">
-                    <h3>
+                    <div class="pm-chart-container">
+                        <canvas id="analyticsDepartmentProgressChart"></canvas>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="col-12">
+
+            <div class="card card-pm border-0">
+
+                <div class="card-body p-4">
+
+                    <h3 class="h6 fw-bold mb-1">
                         План и факт по типам публикаций
                     </h3>
 
-                    <div class="chart-container-large">
-                        <canvas
-                            id="analyticsPublicationTypeChart"
-                        ></canvas>
+                    <p class="small text-body-secondary mb-4">
+                        Распределение публикационной активности по типам.
+                    </p>
+
+                    <div class="pm-chart-container pm-chart-container-large">
+                        <canvas id="analyticsPublicationTypeChart"></canvas>
                     </div>
-                </article>
+
+                </div>
+
             </div>
-        </section>
 
-        <section>
-            <h2>По типам публикаций</h2>
+        </div>
 
-            {% if by_publication_type %}
-                <div class="table-wrapper">
-                    <table>
-                        <thead>
+    </div>
+
+</section>
+
+
+<section class="mb-4">
+
+    <div class="mb-3">
+        <h2 class="h5 fw-bold mb-1">
+            По типам публикаций
+        </h2>
+
+        <p class="text-body-secondary small mb-0">
+            План, факт и процент выполнения по каждому типу.
+        </p>
+    </div>
+
+
+    <div class="card card-pm border-0">
+
+        {% if by_publication_type %}
+
+            <div class="table-responsive">
+
+                <table class="table table-pm align-middle mb-0">
+
+                    <thead>
+                        <tr>
+                            <th class="ps-4">
+                                Тип публикации
+                            </th>
+
+                            <th>
+                                План
+                            </th>
+
+                            <th>
+                                Факт
+                            </th>
+
+                            <th class="pe-4">
+                                Выполнение
+                            </th>
+                        </tr>
+                    </thead>
+
+
+                    <tbody>
+
+                        {% for item in by_publication_type %}
+
                             <tr>
-                                <th>
-                                    Тип публикации
-                                </th>
 
-                                <th>
-                                    План
-                                </th>
+                                <td class="ps-4 fw-semibold">
 
-                                <th>
-                                    Факт
-                                </th>
+                                    {% if current_user.language == "kk" %}
+                                        {{ item.name_kk }}
+                                    {% else %}
+                                        {{ item.name_ru }}
+                                    {% endif %}
 
-                                <th>
-                                    Выполнение
-                                </th>
+                                </td>
+
+                                <td>
+                                    {{ item.planned_count }}
+                                </td>
+
+                                <td>
+                                    {{ item.actual_count }}
+                                </td>
+
+                                <td class="pe-4">
+
+                                    <div class="d-flex align-items-center gap-3">
+
+                                        <span class="fw-semibold">
+                                            {{ item.progress }}%
+                                        </span>
+
+                                        <div
+                                            class="progress flex-grow-1"
+                                            style="height: 6px; min-width: 70px;"
+                                        >
+                                            <div
+                                                class="progress-bar pm-progress-primary"
+                                                data-progress="{{ item.progress }}"
+                                            ></div>
+                                        </div>
+
+                                    </div>
+
+                                </td>
+
                             </tr>
-                        </thead>
 
-                        <tbody>
-                            {% for item in by_publication_type %}
-                                <tr>
-                                    <td>
-                                        {% if current_user.language == "kk" %}
-                                            {{ item.name_kk }}
-                                        {% else %}
-                                            {{ item.name_ru }}
-                                        {% endif %}
-                                    </td>
+                        {% endfor %}
 
-                                    <td>
-                                        {{ item.planned_count }}
-                                    </td>
+                    </tbody>
 
-                                    <td>
-                                        {{ item.actual_count }}
-                                    </td>
+                </table>
 
-                                    <td>
-                                        {{ item.progress }}%
-                                    </td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+            </div>
+
+        {% else %}
+
+            <div class="pm-empty-state py-5">
+
+                <div class="pm-empty-icon">
+                    ▥
                 </div>
-            {% else %}
-                <p>
-                    Данных для выбранных фильтров нет.
+
+                <h3 class="h6 fw-bold mb-2">
+                    Данных нет
+                </h3>
+
+                <p class="text-body-secondary mb-0">
+                    Для выбранных фильтров данные отсутствуют.
                 </p>
-            {% endif %}
-        </section>
 
-        <section>
-            <h2>По кафедрам</h2>
+            </div>
 
-            {% if by_department %}
-                <div class="table-wrapper">
-                    <table>
-                        <thead>
+        {% endif %}
+
+    </div>
+
+</section>
+
+
+<section>
+
+    <div class="mb-3">
+        <h2 class="h5 fw-bold mb-1">
+            По кафедрам
+        </h2>
+
+        <p class="text-body-secondary small mb-0">
+            Показатели публикационной деятельности подразделений.
+        </p>
+    </div>
+
+
+    <div class="card card-pm border-0">
+
+        {% if by_department %}
+
+            <div class="table-responsive">
+
+                <table class="table table-pm align-middle mb-0">
+
+                    <thead>
+                        <tr>
+                            <th class="ps-4">
+                                Кафедра
+                            </th>
+
+                            <th>
+                                План
+                            </th>
+
+                            <th>
+                                Факт
+                            </th>
+
+                            <th class="pe-4">
+                                Выполнение
+                            </th>
+                        </tr>
+                    </thead>
+
+
+                    <tbody>
+
+                        {% for item in by_department %}
+
                             <tr>
-                                <th>
-                                    Кафедра
-                                </th>
 
-                                <th>
-                                    План
-                                </th>
+                                <td class="ps-4 fw-semibold">
+                                    {{ item.name }}
+                                </td>
 
-                                <th>
-                                    Факт
-                                </th>
+                                <td>
+                                    {{ item.planned_count }}
+                                </td>
 
-                                <th>
-                                    Выполнение
-                                </th>
+                                <td>
+                                    {{ item.actual_count }}
+                                </td>
+
+                                <td class="pe-4">
+
+                                    <div class="d-flex align-items-center gap-3">
+
+                                        <span class="fw-semibold">
+                                            {{ item.progress }}%
+                                        </span>
+
+                                        <div
+                                            class="progress flex-grow-1"
+                                            style="height: 6px; min-width: 70px;"
+                                        >
+                                            <div
+                                                class="progress-bar pm-progress-accent"
+                                                data-progress="{{ item.progress }}"
+                                            ></div>
+                                        </div>
+
+                                    </div>
+
+                                </td>
+
                             </tr>
-                        </thead>
 
-                        <tbody>
-                            {% for item in by_department %}
-                                <tr>
-                                    <td>
-                                        {{ item.name }}
-                                    </td>
+                        {% endfor %}
 
-                                    <td>
-                                        {{ item.planned_count }}
-                                    </td>
+                    </tbody>
 
-                                    <td>
-                                        {{ item.actual_count }}
-                                    </td>
+                </table>
 
-                                    <td>
-                                        {{ item.progress }}%
-                                    </td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+            </div>
+
+        {% else %}
+
+            <div class="pm-empty-state py-5">
+
+                <div class="pm-empty-icon">
+                    ⌂
                 </div>
-            {% else %}
-                <p>
-                    Данных для выбранных фильтров нет.
-                </p>
-            {% endif %}
-        </section>
-    </main>
 
-    <script
-        id="analytics-data"
-        type="application/json"
-    >
+                <h3 class="h6 fw-bold mb-2">
+                    Данных нет
+                </h3>
+
+                <p class="text-body-secondary mb-0">
+                    Для выбранных фильтров данные отсутствуют.
+                </p>
+
+            </div>
+
+        {% endif %}
+
+    </div>
+
+</section>
+
+
+
+<script id="analytics-data" type="application/json">
 {
     "language": {{ current_user.language | tojson }},
     "summary": {
@@ -621,211 +679,6 @@
     "departments": {{ by_department | tojson }},
     "publicationTypes": {{ by_publication_type | tojson }}
 }
-    </script>
+</script>
 
-    <script>
-        const analyticsDataElement =
-            document.getElementById(
-                "analytics-data"
-            );
-
-        const analyticsData = JSON.parse(
-            analyticsDataElement.textContent
-        );
-
-        const planFactCanvas =
-            document.getElementById(
-                "analyticsPlanFactChart"
-            );
-
-        if (planFactCanvas) {
-            new Chart(
-                planFactCanvas,
-                {
-                    type: "bar",
-
-                    data: {
-                        labels: [
-                            "План",
-                            "Факт"
-                        ],
-
-                        datasets: [
-                            {
-                                label: "Количество",
-
-                                data: [
-                                    analyticsData.summary.planned,
-                                    analyticsData.summary.actual
-                                ]
-                            }
-                        ]
-                    },
-
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-
-                        plugins: {
-                            legend: {
-                                display: false
-                            }
-                        },
-
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-
-                                ticks: {
-                                    precision: 0
-                                }
-                            }
-                        }
-                    }
-                }
-            );
-        }
-
-        const departmentCanvas =
-            document.getElementById(
-                "analyticsDepartmentProgressChart"
-            );
-
-        if (
-            departmentCanvas
-            && analyticsData.departments.length > 0
-        ) {
-            new Chart(
-                departmentCanvas,
-                {
-                    type: "bar",
-
-                    data: {
-                        labels:
-                            analyticsData.departments.map(
-                                item => item.name
-                            ),
-
-                        datasets: [
-                            {
-                                label: "План",
-
-                                data:
-                                    analyticsData.departments.map(
-                                        item =>
-                                            item.planned_count
-                                    )
-                            },
-
-                            {
-                                label: "Факт",
-
-                                data:
-                                    analyticsData.departments.map(
-                                        item =>
-                                            item.actual_count
-                                    )
-                            }
-                        ]
-                    },
-
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-
-                        indexAxis: "y",
-
-                        scales: {
-                            x: {
-                                beginAtZero: true,
-
-                                ticks: {
-                                    precision: 0
-                                }
-                            }
-                        }
-                    }
-                }
-            );
-        }
-
-        const publicationTypeCanvas =
-            document.getElementById(
-                "analyticsPublicationTypeChart"
-            );
-
-        if (
-            publicationTypeCanvas
-            && analyticsData.publicationTypes.length > 0
-        ) {
-            new Chart(
-                publicationTypeCanvas,
-                {
-                    type: "bar",
-
-                    data: {
-                        labels:
-                            analyticsData.publicationTypes.map(
-                                item => {
-                                    if (
-                                        analyticsData.language
-                                        === "kk"
-                                    ) {
-                                        return (
-                                            item.name_kk
-                                            || item.name_ru
-                                            || "Без названия"
-                                        );
-                                    }
-
-                                    return (
-                                        item.name_ru
-                                        || item.name_kk
-                                        || "Без названия"
-                                    );
-                                }
-                            ),
-
-                        datasets: [
-                            {
-                                label: "План",
-
-                                data:
-                                    analyticsData.publicationTypes.map(
-                                        item =>
-                                            item.planned_count
-                                    )
-                            },
-
-                            {
-                                label: "Факт",
-
-                                data:
-                                    analyticsData.publicationTypes.map(
-                                        item =>
-                                            item.actual_count
-                                    )
-                            }
-                        ]
-                    },
-
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-
-                                ticks: {
-                                    precision: 0
-                                }
-                            }
-                        }
-                    }
-                }
-            );
-        }
-    </script>
-</body>
-</html>
+{% endblock %}

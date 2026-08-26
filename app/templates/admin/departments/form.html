@@ -1,91 +1,167 @@
-<!doctype html>
-<html lang="ru">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>
+{% extends "base.html" %}
+
+{% block title %}
+    {% if department %}
+        Изменение кафедры — Publication Monitor
+    {% else %}
+        Создание кафедры — Publication Monitor
+    {% endif %}
+{% endblock %}
+
+{% block page_title %}
+    {% if department %}
+        Изменение кафедры
+    {% else %}
+        Создание кафедры
+    {% endif %}
+{% endblock %}
+
+{% block page_subtitle %}
+    <p class="text-body-secondary mb-0 mt-2">
         {% if department %}
-            Изменение кафедры
+            Изменение данных подразделения
         {% else %}
-            Создание кафедры
+            Добавление нового подразделения организации
         {% endif %}
-    </title>
-</head>
-<body>
-    <header>
-        <a href="{{ url_for('admin.departments') }}">
-            ← К кафедрам
-        </a>
+    </p>
+{% endblock %}
 
-        <h1>
-            {% if department %}
-                Изменение кафедры
-            {% else %}
-                Создание кафедры
-            {% endif %}
-        </h1>
-    </header>
+{% block page_actions %}
+    <a
+        href="{{ url_for('admin.departments') }}"
+        class="btn btn-light border"
+    >
+        ← К кафедрам
+    </a>
+{% endblock %}
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            <section>
-                {% for category, message in messages %}
-                    <p>{{ message }}</p>
-                {% endfor %}
-            </section>
-        {% endif %}
-    {% endwith %}
+{% block content %}
 
-    <main>
+<div class="row justify-content-center">
+    <div class="col-12 col-xl-8">
+
         <form method="post">
+
             <input
                 type="hidden"
                 name="csrf_token"
                 value="{{ csrf_token() }}"
             >
 
-            <p>
-                <label for="name">
-                    Название кафедры
-                </label>
+            <div class="card card-pm border-0 mb-4">
+                <div class="card-body p-4 p-lg-5">
 
-                <br>
+                    <div class="d-flex align-items-center gap-3 mb-4">
+                        <span class="pm-dashboard-icon pm-dashboard-icon-accent">
+                            {% if department %}
+                                ✎
+                            {% else %}
+                                +
+                            {% endif %}
+                        </span>
 
-                <input
-                    id="name"
-                    name="name"
-                    type="text"
-                    maxlength="255"
-                    value="{{ department.name if department else '' }}"
-                    required
-                >
-            </p>
+                        <div>
+                            <h2 class="h5 fw-bold mb-1">
+                                Данные кафедры
+                            </h2>
 
-            <p>
-                <label for="code">
-                    Код кафедры
-                </label>
+                            <p class="text-body-secondary small mb-0">
+                                Укажите название и уникальный код подразделения.
+                            </p>
+                        </div>
+                    </div>
 
-                <br>
+                    <div class="row g-4">
 
-                <input
-                    id="code"
-                    name="code"
-                    type="text"
-                    maxlength="50"
-                    value="{{ department.code if department else '' }}"
-                    required
-                >
-            </p>
+                        <div class="col-12">
 
-            <button type="submit">
-                {% if department %}
-                    Сохранить
-                {% else %}
-                    Создать кафедру
-                {% endif %}
-            </button>
+                            <label
+                                for="name"
+                                class="form-label fw-semibold"
+                            >
+                                Название кафедры
+                            </label>
+
+                            <input
+                                id="name"
+                                name="name"
+                                type="text"
+                                class="form-control form-control-lg"
+                                maxlength="255"
+                                value="{{ department.name if department else '' }}"
+                                autocomplete="organization"
+                                required
+                            >
+
+                            <div class="form-text">
+                                Максимум 255 символов.
+                            </div>
+
+                        </div>
+
+
+                        <div class="col-12">
+
+                            <label
+                                for="code"
+                                class="form-label fw-semibold"
+                            >
+                                Код кафедры
+                            </label>
+
+                            <input
+                                id="code"
+                                name="code"
+                                type="text"
+                                class="form-control form-control-lg"
+                                maxlength="50"
+                                value="{{ department.code if department else '' }}"
+                                required
+                            >
+
+                            <div class="form-text">
+                                Код используется для идентификации подразделения.
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+            </div>
+
+
+            <div class="card card-pm border-0">
+                <div class="card-body p-4">
+
+                    <div class="d-flex flex-column flex-sm-row justify-content-end gap-2">
+
+                        <a
+                            href="{{ url_for('admin.departments') }}"
+                            class="btn btn-light border px-4"
+                        >
+                            Отмена
+                        </a>
+
+                        <button
+                            type="submit"
+                            class="btn btn-pm-primary px-4"
+                        >
+                            {% if department %}
+                                Сохранить изменения
+                            {% else %}
+                                Создать кафедру
+                            {% endif %}
+                        </button>
+
+                    </div>
+
+                </div>
+            </div>
+
         </form>
-    </main>
-</body>
-</html>
+
+    </div>
+</div>
+
+{% endblock %}

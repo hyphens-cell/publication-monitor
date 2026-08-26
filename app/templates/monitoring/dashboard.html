@@ -1,306 +1,873 @@
-<!doctype html>
-<html lang="ru">
-<head>
-    <meta charset="utf-8">
+{% extends "base.html" %}
 
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1"
+{% block title %}
+    Мониторинг — Publication Monitor
+{% endblock %}
+
+{% block page_title %}
+    Мониторинг
+{% endblock %}
+
+{% block page_subtitle %}
+    <p class="text-body-secondary mb-0 mt-2">
+        Мониторинг публикационной деятельности
+    </p>
+{% endblock %}
+
+{% block page_actions %}
+    <a
+        href="{{ url_for('publications.publications') }}"
+        class="btn btn-pm-primary"
     >
+        Публикации
+    </a>
+{% endblock %}
 
-    <title>Мониторинг</title>
-</head>
+{% block content %}
 
-<body>
-    <header>
-        <h1>Мониторинг публикационной деятельности</h1>
+<section class="mb-4">
+    <div class="card card-pm border-0">
+        <div class="card-body p-4">
 
-        <p>
-            <a href="{{ url_for('main.index') }}">
-                ← На главную
-            </a>
-        </p>
-    </header>
+            <div class="d-flex align-items-center gap-3 mb-4">
+                <span class="pm-dashboard-icon pm-dashboard-icon-primary">
+                    ⚙
+                </span>
 
-    <main>
-        <section>
-            <h2>Фильтры</h2>
+                <div>
+                    <h2 class="h5 fw-bold mb-1">
+                        Фильтры
+                    </h2>
+
+                    <p class="text-body-secondary small mb-0">
+                        Настройте период и подразделение.
+                    </p>
+                </div>
+            </div>
 
             <form
                 method="get"
                 action="{{ url_for('monitoring.dashboard') }}"
             >
-                <p>
-                    <label for="year">
-                        Год
-                    </label>
-                    <br>
+                <div class="row g-3">
 
-                    <select
-                        id="year"
-                        name="year"
-                    >
-                        <option value="">
-                            Все годы
-                        </option>
+                    <div class="col-12 col-md-5">
+                        <label
+                            for="year"
+                            class="form-label fw-semibold"
+                        >
+                            Год
+                        </label>
 
-                        {% for year in years %}
-                            <option
-                                value="{{ year }}"
-                                {% if selected_year == year %}
-                                    selected
-                                {% endif %}
-                            >
-                                {{ year }}
+                        <select
+                            id="year"
+                            name="year"
+                            class="form-select"
+                        >
+                            <option value="">
+                                Все годы
                             </option>
-                        {% endfor %}
-                    </select>
-                </p>
 
-                <p>
-                    <label for="department_id">
-                        Кафедра
-                    </label>
-                    <br>
+                            {% for year in years %}
+                                <option
+                                    value="{{ year }}"
+                                    {% if selected_year == year %}
+                                        selected
+                                    {% endif %}
+                                >
+                                    {{ year }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
 
-                    <select
-                        id="department_id"
-                        name="department_id"
-                    >
-                        <option value="">
-                            Все кафедры
-                        </option>
 
-                        {% for department in departments %}
-                            <option
-                                value="{{ department.id }}"
-                                {% if selected_department_id == department.id %}
-                                    selected
-                                {% endif %}
-                            >
-                                {{ department.name }}
+                    <div class="col-12 col-md-5">
+                        <label
+                            for="department_id"
+                            class="form-label fw-semibold"
+                        >
+                            Кафедра
+                        </label>
+
+                        <select
+                            id="department_id"
+                            name="department_id"
+                            class="form-select"
+                        >
+                            <option value="">
+                                Все кафедры
                             </option>
-                        {% endfor %}
-                    </select>
-                </p>
 
-                <button type="submit">
-                    Применить
-                </button>
+                            {% for department in departments %}
+                                <option
+                                    value="{{ department.id }}"
+                                    {% if selected_department_id == department.id %}
+                                        selected
+                                    {% endif %}
+                                >
+                                    {{ department.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
 
-                <a href="{{ url_for('monitoring.dashboard') }}">
-                    Сбросить
-                </a>
+
+                    <div class="col-12 col-md-2 d-flex align-items-end">
+                        <div class="d-flex gap-2 w-100">
+
+                            <button
+                                type="submit"
+                                class="btn btn-pm-primary flex-grow-1"
+                            >
+                                Применить
+                            </button>
+
+                        </div>
+                    </div>
+
+
+                    <div class="col-12">
+                        <a
+                            href="{{ url_for('monitoring.dashboard') }}"
+                            class="btn btn-light border"
+                        >
+                            Сбросить фильтры
+                        </a>
+                    </div>
+
+                </div>
             </form>
-        </section>
 
-        <section>
-            <h2>Общая информация</h2>
+        </div>
+    </div>
+</section>
 
-            <p>
-                <strong>Планов:</strong>
-                {{ summary.plans_count }}
-            </p>
 
-            <p>
-                <strong>Утверждённых планов:</strong>
-                {{ summary.approved_plans_count }}
-            </p>
+<section class="mb-4">
 
-            <p>
-                <strong>Публикаций:</strong>
-                {{ summary.publications_count }}
-            </p>
+    <div class="mb-3">
+        <h2 class="h5 fw-bold mb-1">
+            Общая информация
+        </h2>
 
-            <p>
-                <strong>Ожидают проверки:</strong>
+        <p class="text-body-secondary small mb-0">
+            Текущее состояние публикационной деятельности.
+        </p>
+    </div>
 
-                <a
-                    href="{{ url_for(
-                        'publications.publications',
-                        verification_status='PENDING',
-                        department_id=selected_department_id,
-                        plan_year=selected_year
-                    ) }}"
-                >
-                    {{ summary.pending_publications_count }}
-                </a>
-            </p>
 
-            <p>
-                <strong>Проверено:</strong>
+    <div class="row g-3">
 
-                <a
-                    href="{{ url_for(
-                        'publications.publications',
-                        verification_status='APPROVED',
-                        department_id=selected_department_id,
-                        plan_year=selected_year
-                    ) }}"
-                >
-                    {{ summary.approved_publications_count }}
-                </a>
-            </p>
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card card-pm border-0 h-100">
+                <div class="card-body p-4">
 
-            <p>
-                <strong>Возвращено:</strong>
+                    <div class="d-flex justify-content-between align-items-start mb-4">
+                        <span class="pm-dashboard-icon pm-dashboard-icon-primary">
+                            ▣
+                        </span>
 
-                <a
-                    href="{{ url_for(
-                        'publications.publications',
-                        verification_status='RETURNED',
-                        department_id=selected_department_id,
-                        plan_year=selected_year
-                    ) }}"
-                >
-                    {{ summary.returned_publications_count }}
-                </a>
-            </p>
+                        <span class="small text-body-secondary">
+                            Планы
+                        </span>
+                    </div>
 
-            <p>
-                <strong>Дубликатов:</strong>
+                    <div class="display-6 fw-bold">
+                        {{ summary.plans_count }}
+                    </div>
 
-                <a
-                    href="{{ url_for(
-                        'publications.publications',
-                        verification_status='DUPLICATE',
-                        department_id=selected_department_id,
-                        plan_year=selected_year
-                    ) }}"
-                >
-                    {{ summary.duplicate_publications_count }}
-                </a>
-            </p>
-        </section>
-        <section>
-            <h2>Требует внимания</h2>
+                    <div class="small text-body-secondary mt-2">
+                        Всего планов
+                    </div>
 
-            <h3>
-                Ожидают проверки
-            </h3>
+                </div>
+            </div>
+        </div>
 
-            {% if attention.pending %}
-                <ul>
-                    {% for publication in attention.pending %}
-                        <li>
-                            <a
-                                href="{{ url_for(
-                                    'publications.publication_detail',
-                                    publication_id=publication.id
-                                ) }}"
-                            >
-                                {{ publication.title }}
-                            </a>
 
-                            —
-                            {{ publication.department.name }}
-                        </li>
-                    {% endfor %}
-                </ul>
-            {% else %}
-                <p>
-                    Публикаций, ожидающих проверки, нет.
-                </p>
-            {% endif %}
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card card-pm border-0 h-100">
+                <div class="card-body p-4">
 
-            <h3>
-                Возвращено
-            </h3>
+                    <div class="d-flex justify-content-between align-items-start mb-4">
+                        <span class="pm-dashboard-icon pm-dashboard-icon-success">
+                            ✓
+                        </span>
 
-            {% if attention.returned %}
-                <ul>
-                    {% for publication in attention.returned %}
-                        <li>
-                            <a
-                                href="{{ url_for(
-                                    'publications.publication_detail',
-                                    publication_id=publication.id
-                                ) }}"
-                            >
-                                {{ publication.title }}
-                            </a>
+                        <span class="small text-body-secondary">
+                            Утверждено
+                        </span>
+                    </div>
 
-                            —
-                            {{ publication.department.name }}
-                        </li>
-                    {% endfor %}
-                </ul>
-            {% else %}
-                <p>
-                    Возвращённых публикаций нет.
-                </p>
-            {% endif %}
+                    <div class="display-6 fw-bold">
+                        {{ summary.approved_plans_count }}
+                    </div>
 
-            <h3>
-                Дубликаты
-            </h3>
+                    <div class="small text-body-secondary mt-2">
+                        Утверждённых планов
+                    </div>
 
-            {% if attention.duplicate %}
-                <ul>
-                    {% for publication in attention.duplicate %}
-                        <li>
-                            <a
-                                href="{{ url_for(
-                                    'publications.publication_detail',
-                                    publication_id=publication.id
-                                ) }}"
-                            >
-                                {{ publication.title }}
-                            </a>
+                </div>
+            </div>
+        </div>
 
-                            —
-                            {{ publication.department.name }}
-                        </li>
-                    {% endfor %}
-                </ul>
-            {% else %}
-                <p>
-                    Дубликатов нет.
-                </p>
-            {% endif %}
-        </section>
-        <section>
-            <h2>Общее выполнение</h2>
 
-            <p>
-                <strong>Запланировано:</strong>
-                {{ summary.planned_count }}
-            </p>
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card card-pm border-0 h-100">
+                <div class="card-body p-4">
 
-            <p>
-                <strong>Выполнено:</strong>
-                {{ summary.actual_count }}
-            </p>
+                    <div class="d-flex justify-content-between align-items-start mb-4">
+                        <span class="pm-dashboard-icon pm-dashboard-icon-accent">
+                            ◉
+                        </span>
 
-            <p>
-                <strong>Процент выполнения:</strong>
-                {{ summary.overall_progress }}%
-            </p>
-        </section>
+                        <span class="small text-body-secondary">
+                            Публикации
+                        </span>
+                    </div>
 
-        <section>
-            <h2>Выполнение по кафедрам</h2>
+                    <div class="display-6 fw-bold">
+                        {{ summary.publications_count }}
+                    </div>
 
-            {% if summary.department_progress %}
-                <table>
+                    <div class="small text-body-secondary mt-2">
+                        Всего публикаций
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card card-pm border-0 h-100">
+                <div class="card-body p-4">
+
+                    <div class="d-flex justify-content-between align-items-start mb-4">
+                        <span class="pm-dashboard-icon pm-dashboard-icon-danger">
+                            !
+                        </span>
+
+                        <span class="small text-body-secondary">
+                            Проверка
+                        </span>
+                    </div>
+
+                    <div class="display-6 fw-bold">
+                        {{ summary.pending_publications_count }}
+                    </div>
+
+                    <div class="small text-body-secondary mt-2">
+                        Ожидают проверки
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</section>
+
+
+<section class="mb-4">
+
+    <div class="mb-3">
+        <h2 class="h5 fw-bold mb-1">
+            Статусы публикаций
+        </h2>
+
+        <p class="text-body-secondary small mb-0">
+            Быстрый переход к публикациям по статусу проверки.
+        </p>
+    </div>
+
+
+    <div class="row g-3">
+
+        <div class="col-12 col-sm-6 col-xl-3">
+
+            <a
+                href="{{ url_for(
+                    'publications.publications',
+                    verification_status='PENDING',
+                    department_id=selected_department_id,
+                    plan_year=selected_year
+                ) }}"
+                class="text-decoration-none"
+            >
+
+                <div class="card card-pm border-0 h-100 pm-status-card">
+
+                    <div class="card-body p-4">
+
+                        <div class="d-flex justify-content-between align-items-center">
+
+                            <div>
+                                <div class="small text-body-secondary mb-2">
+                                    Ожидают проверки
+                                </div>
+
+                                <div class="h3 fw-bold mb-0">
+                                    {{ summary.pending_publications_count }}
+                                </div>
+                            </div>
+
+                            <span class="pm-dashboard-icon pm-dashboard-icon-primary">
+                                ?
+                            </span>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </a>
+
+        </div>
+
+
+        <div class="col-12 col-sm-6 col-xl-3">
+
+            <a
+                href="{{ url_for(
+                    'publications.publications',
+                    verification_status='APPROVED',
+                    department_id=selected_department_id,
+                    plan_year=selected_year
+                ) }}"
+                class="text-decoration-none"
+            >
+
+                <div class="card card-pm border-0 h-100 pm-status-card">
+
+                    <div class="card-body p-4">
+
+                        <div class="d-flex justify-content-between align-items-center">
+
+                            <div>
+                                <div class="small text-body-secondary mb-2">
+                                    Проверено
+                                </div>
+
+                                <div class="h3 fw-bold mb-0">
+                                    {{ summary.approved_publications_count }}
+                                </div>
+                            </div>
+
+                            <span class="pm-dashboard-icon pm-dashboard-icon-success">
+                                ✓
+                            </span>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </a>
+
+        </div>
+
+
+        <div class="col-12 col-sm-6 col-xl-3">
+
+            <a
+                href="{{ url_for(
+                    'publications.publications',
+                    verification_status='RETURNED',
+                    department_id=selected_department_id,
+                    plan_year=selected_year
+                ) }}"
+                class="text-decoration-none"
+            >
+
+                <div class="card card-pm border-0 h-100 pm-status-card">
+
+                    <div class="card-body p-4">
+
+                        <div class="d-flex justify-content-between align-items-center">
+
+                            <div>
+                                <div class="small text-body-secondary mb-2">
+                                    Возвращено
+                                </div>
+
+                                <div class="h3 fw-bold mb-0">
+                                    {{ summary.returned_publications_count }}
+                                </div>
+                            </div>
+
+                            <span class="pm-dashboard-icon pm-dashboard-icon-danger">
+                                ↩
+                            </span>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </a>
+
+        </div>
+
+
+        <div class="col-12 col-sm-6 col-xl-3">
+
+            <a
+                href="{{ url_for(
+                    'publications.publications',
+                    verification_status='DUPLICATE',
+                    department_id=selected_department_id,
+                    plan_year=selected_year
+                ) }}"
+                class="text-decoration-none"
+            >
+
+                <div class="card card-pm border-0 h-100 pm-status-card">
+
+                    <div class="card-body p-4">
+
+                        <div class="d-flex justify-content-between align-items-center">
+
+                            <div>
+                                <div class="small text-body-secondary mb-2">
+                                    Дубликаты
+                                </div>
+
+                                <div class="h3 fw-bold mb-0">
+                                    {{ summary.duplicate_publications_count }}
+                                </div>
+                            </div>
+
+                            <span class="pm-dashboard-icon pm-dashboard-icon-primary">
+                                ≈
+                            </span>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </a>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<section class="mb-4">
+
+    <div class="mb-3">
+        <h2 class="h5 fw-bold mb-1">
+            Требует внимания
+        </h2>
+
+        <p class="text-body-secondary small mb-0">
+            Публикации, требующие дальнейших действий.
+        </p>
+    </div>
+
+
+    <div class="row g-3">
+
+        <div class="col-12 col-lg-4">
+
+            <div class="card card-pm border-0 h-100">
+
+                <div class="card-body p-4">
+
+                    <div class="d-flex align-items-center gap-3 mb-4">
+
+                        <span class="pm-dashboard-icon pm-dashboard-icon-primary">
+                            ?
+                        </span>
+
+                        <div>
+                            <h3 class="h6 fw-bold mb-1">
+                                Ожидают проверки
+                            </h3>
+
+                            <p class="small text-body-secondary mb-0">
+                                Требуют проверки
+                            </p>
+                        </div>
+
+                    </div>
+
+
+                    {% if attention.pending %}
+
+                        <div class="d-flex flex-column gap-3">
+
+                            {% for publication in attention.pending %}
+
+                                <a
+                                    href="{{ url_for(
+                                        'publications.publication_detail',
+                                        publication_id=publication.id
+                                    ) }}"
+                                    class="pm-monitoring-item text-decoration-none"
+                                >
+
+                                    <div class="fw-semibold text-truncate">
+                                        {{ publication.title }}
+                                    </div>
+
+                                    <div class="small text-body-secondary mt-1">
+                                        {{ publication.department.name }}
+                                    </div>
+
+                                </a>
+
+                            {% endfor %}
+
+                        </div>
+
+                    {% else %}
+
+                        <div class="pm-empty-state py-4">
+
+                            <div class="pm-empty-icon">
+                                ✓
+                            </div>
+
+                            <p class="text-body-secondary mb-0">
+                                Публикаций, ожидающих проверки, нет.
+                            </p>
+
+                        </div>
+
+                    {% endif %}
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="col-12 col-lg-4">
+
+            <div class="card card-pm border-0 h-100">
+
+                <div class="card-body p-4">
+
+                    <div class="d-flex align-items-center gap-3 mb-4">
+
+                        <span class="pm-dashboard-icon pm-dashboard-icon-danger">
+                            ↩
+                        </span>
+
+                        <div>
+                            <h3 class="h6 fw-bold mb-1">
+                                Возвращено
+                            </h3>
+
+                            <p class="small text-body-secondary mb-0">
+                                Требуют доработки
+                            </p>
+                        </div>
+
+                    </div>
+
+
+                    {% if attention.returned %}
+
+                        <div class="d-flex flex-column gap-3">
+
+                            {% for publication in attention.returned %}
+
+                                <a
+                                    href="{{ url_for(
+                                        'publications.publication_detail',
+                                        publication_id=publication.id
+                                    ) }}"
+                                    class="pm-monitoring-item text-decoration-none"
+                                >
+
+                                    <div class="fw-semibold text-truncate">
+                                        {{ publication.title }}
+                                    </div>
+
+                                    <div class="small text-body-secondary mt-1">
+                                        {{ publication.department.name }}
+                                    </div>
+
+                                </a>
+
+                            {% endfor %}
+
+                        </div>
+
+                    {% else %}
+
+                        <div class="pm-empty-state py-4">
+
+                            <div class="pm-empty-icon">
+                                ✓
+                            </div>
+
+                            <p class="text-body-secondary mb-0">
+                                Возвращённых публикаций нет.
+                            </p>
+
+                        </div>
+
+                    {% endif %}
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="col-12 col-lg-4">
+
+            <div class="card card-pm border-0 h-100">
+
+                <div class="card-body p-4">
+
+                    <div class="d-flex align-items-center gap-3 mb-4">
+
+                        <span class="pm-dashboard-icon pm-dashboard-icon-primary">
+                            ≈
+                        </span>
+
+                        <div>
+                            <h3 class="h6 fw-bold mb-1">
+                                Дубликаты
+                            </h3>
+
+                            <p class="small text-body-secondary mb-0">
+                                Требуют проверки
+                            </p>
+                        </div>
+
+                    </div>
+
+
+                    {% if attention.duplicate %}
+
+                        <div class="d-flex flex-column gap-3">
+
+                            {% for publication in attention.duplicate %}
+
+                                <a
+                                    href="{{ url_for(
+                                        'publications.publication_detail',
+                                        publication_id=publication.id
+                                    ) }}"
+                                    class="pm-monitoring-item text-decoration-none"
+                                >
+
+                                    <div class="fw-semibold text-truncate">
+                                        {{ publication.title }}
+                                    </div>
+
+                                    <div class="small text-body-secondary mt-1">
+                                        {{ publication.department.name }}
+                                    </div>
+
+                                </a>
+
+                            {% endfor %}
+
+                        </div>
+
+                    {% else %}
+
+                        <div class="pm-empty-state py-4">
+
+                            <div class="pm-empty-icon">
+                                ✓
+                            </div>
+
+                            <p class="text-body-secondary mb-0">
+                                Дубликатов нет.
+                            </p>
+
+                        </div>
+
+                    {% endif %}
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<section class="mb-4">
+
+    <div class="mb-3">
+        <h2 class="h5 fw-bold mb-1">
+            Общее выполнение
+        </h2>
+
+        <p class="text-body-secondary small mb-0">
+            Сводное выполнение публикационных планов.
+        </p>
+    </div>
+
+
+    <div class="card card-pm border-0">
+
+        <div class="card-body p-4">
+
+            <div class="row g-4 align-items-center">
+
+                <div class="col-12 col-md-4">
+
+                    <div class="small text-body-secondary mb-2">
+                        Запланировано
+                    </div>
+
+                    <div class="display-6 fw-bold">
+                        {{ summary.planned_count }}
+                    </div>
+
+                </div>
+
+
+                <div class="col-12 col-md-4">
+
+                    <div class="small text-body-secondary mb-2">
+                        Выполнено
+                    </div>
+
+                    <div class="display-6 fw-bold">
+                        {{ summary.actual_count }}
+                    </div>
+
+                </div>
+
+
+                <div class="col-12 col-md-4">
+
+                    <div class="small text-body-secondary mb-2">
+                        Процент выполнения
+                    </div>
+
+                    <div class="d-flex align-items-center gap-3">
+
+                        <div class="display-6 fw-bold">
+                            {{ summary.overall_progress }}%
+                        </div>
+
+                        <span class="badge rounded-pill badge-pm-primary">
+                            {{ summary.overall_progress }}%
+                        </span>
+
+                    </div>
+
+                    <div
+                        class="progress mt-3"
+                        style="height: 8px;"
+                    >
+                        <div
+                            class="progress-bar pm-progress-primary"
+                            data-progress="{{ summary.overall_progress }}"
+                            role="progressbar"
+                            aria-valuenow="{{ summary.overall_progress }}"
+                            aria-valuemin="0"
+                            aria-valuemax="100"
+                        ></div>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<section class="mb-4">
+
+    <div class="mb-3">
+        <h2 class="h5 fw-bold mb-1">
+            Выполнение по кафедрам
+        </h2>
+
+        <p class="text-body-secondary small mb-0">
+            Сводные показатели подразделений.
+        </p>
+    </div>
+
+
+    <div class="card card-pm border-0">
+
+        {% if summary.department_progress %}
+
+            <div class="table-responsive">
+
+                <table class="table table-pm align-middle mb-0">
+
                     <thead>
                         <tr>
-                            <th>Кафедра</th>
-                            <th>Планов</th>
-                            <th>Запланировано</th>
-                            <th>Создано</th>
-                            <th>Проверено</th>
-                            <th>На проверке</th>
-                            <th>Возвращено</th>
-                            <th>Дубликаты</th>
-                            <th>Выполнение</th>
+
+                            <th class="ps-4">
+                                Кафедра
+                            </th>
+
+                            <th>
+                                Планов
+                            </th>
+
+                            <th>
+                                Запланировано
+                            </th>
+
+                            <th>
+                                Создано
+                            </th>
+
+                            <th>
+                                Проверено
+                            </th>
+
+                            <th>
+                                На проверке
+                            </th>
+
+                            <th>
+                                Возвращено
+                            </th>
+
+                            <th>
+                                Дубликаты
+                            </th>
+
+                            <th class="pe-4">
+                                Выполнение
+                            </th>
+
                         </tr>
                     </thead>
 
+
                     <tbody>
+
                         {% for item in summary.department_progress %}
+
                             <tr>
-                                <td>
+
+                                <td class="ps-4 fw-semibold">
                                     {{ item.department.name }}
                                 </td>
 
@@ -332,99 +899,246 @@
                                     {{ item.duplicate_count }}
                                 </td>
 
-                                <td>
-                                    {{ item.progress }}%
+                                <td class="pe-4">
+
+                                    <div class="d-flex align-items-center gap-2">
+
+                                        <strong class="text-nowrap">
+                                            {{ item.progress }}%
+                                        </strong>
+
+                                        <div
+                                            class="progress flex-grow-1"
+                                            style="height: 6px; min-width: 65px;"
+                                        >
+                                            <div
+                                                class="progress-bar pm-progress-primary"
+                                                data-progress="{{ item.progress }}"
+                                            ></div>
+                                        </div>
+
+                                    </div>
+
                                 </td>
+
                             </tr>
+
                         {% endfor %}
+
                     </tbody>
+
                 </table>
-            {% else %}
-                <p>
+
+            </div>
+
+        {% else %}
+
+            <div class="pm-empty-state py-5">
+
+                <div class="pm-empty-icon">
+                    ⌂
+                </div>
+
+                <h3 class="h6 fw-bold mb-2">
+                    Нет данных
+                </h3>
+
+                <p class="text-body-secondary mb-0">
                     Активные кафедры отсутствуют.
                 </p>
-            {% endif %}
-        </section>
 
-        <section>
-            <h2>Выполнение планов</h2>
+            </div>
 
-            {% if summary.plan_progress %}
-                <table>
+        {% endif %}
+
+    </div>
+
+</section>
+
+
+<section>
+
+    <div class="mb-3">
+        <h2 class="h5 fw-bold mb-1">
+            Выполнение планов
+        </h2>
+
+        <p class="text-body-secondary small mb-0">
+            Детальные показатели утверждённых планов.
+        </p>
+    </div>
+
+
+    <div class="card card-pm border-0">
+
+        {% if summary.plan_progress %}
+
+            <div class="table-responsive">
+
+                <table class="table table-pm align-middle mb-0">
+
                     <thead>
                         <tr>
-                            <th>Год</th>
-                            <th>Кафедра</th>
-                            <th>План</th>
-                            <th>Запланировано</th>
-                            <th>Создано</th>
-                            <th>Проверено</th>
-                            <th>На проверке</th>
-                            <th>Возвращено</th>
-                            <th>Дубликаты</th>
-                            <th>Выполнение</th>
+
+                            <th class="ps-4">
+                                Год
+                            </th>
+
+                            <th>
+                                Кафедра
+                            </th>
+
+                            <th>
+                                План
+                            </th>
+
+                            <th>
+                                Запланировано
+                            </th>
+
+                            <th>
+                                Создано
+                            </th>
+
+                            <th>
+                                Проверено
+                            </th>
+
+                            <th>
+                                На проверке
+                            </th>
+
+                            <th>
+                                Возвращено
+                            </th>
+
+                            <th>
+                                Дубликаты
+                            </th>
+
+                            <th class="pe-4">
+                                Выполнение
+                            </th>
+
                         </tr>
                     </thead>
 
+
                     <tbody>
+
                         {% for item in summary.plan_progress %}
+
                             <tr>
-                                <td>
+
+                                <td class="ps-4 fw-semibold">
                                     {{ item.plan.year }}
                                 </td>
+
 
                                 <td>
                                     {{ item.plan.department.name }}
                                 </td>
 
+
                                 <td>
+
                                     <a
                                         href="{{ url_for(
                                             'plans.plan_detail',
                                             plan_id=item.plan.id
                                         ) }}"
+                                        class="pm-link fw-semibold"
                                     >
                                         №{{ item.plan.id }}
                                     </a>
+
                                 </td>
+
 
                                 <td>
                                     {{ item.planned_count }}
                                 </td>
 
+
                                 <td>
                                     {{ item.created_count }}
                                 </td>
+
 
                                 <td>
                                     {{ item.actual_count }}
                                 </td>
 
+
                                 <td>
                                     {{ item.pending_count }}
                                 </td>
+
 
                                 <td>
                                     {{ item.returned_count }}
                                 </td>
 
+
                                 <td>
                                     {{ item.duplicate_count }}
                                 </td>
 
-                                <td>
-                                    {{ item.progress }}%
+
+                                <td class="pe-4">
+
+                                    <div class="d-flex align-items-center gap-2">
+
+                                        <strong class="text-nowrap">
+                                            {{ item.progress }}%
+                                        </strong>
+
+                                        <div
+                                            class="progress flex-grow-1"
+                                            style="height: 6px; min-width: 65px;"
+                                        >
+                                            <div
+                                                class="progress-bar pm-progress-accent"
+                                                data-progress="{{ item.progress }}"
+                                            ></div>
+                                        </div>
+
+                                    </div>
+
                                 </td>
+
                             </tr>
+
                         {% endfor %}
+
                     </tbody>
+
                 </table>
-            {% else %}
-                <p>
+
+            </div>
+
+        {% else %}
+
+            <div class="pm-empty-state py-5">
+
+                <div class="pm-empty-icon">
+                    ▣
+                </div>
+
+                <h3 class="h6 fw-bold mb-2">
+                    Нет утверждённых планов
+                </h3>
+
+                <p class="text-body-secondary mb-0">
                     Утверждённых планов нет.
                 </p>
-            {% endif %}
-        </section>
-    </main>
-</body>
-</html>
+
+            </div>
+
+        {% endif %}
+
+    </div>
+
+</section>
+
+{% endblock %}

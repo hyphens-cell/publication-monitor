@@ -1,103 +1,188 @@
-<!doctype html>
-<html lang="ru">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>
+{% extends "base.html" %}
+
+{% block title %}
+    {% if employee %}
+        Изменение сотрудника — Publication Monitor
+    {% else %}
+        Добавление сотрудника — Publication Monitor
+    {% endif %}
+{% endblock %}
+
+{% block page_title %}
+    {% if employee %}
+        Изменение сотрудника
+    {% else %}
+        Добавление сотрудника
+    {% endif %}
+{% endblock %}
+
+{% block page_subtitle %}
+    <p class="text-body-secondary mb-0 mt-2">
         {% if employee %}
-            Изменение сотрудника
+            Изменение данных сотрудника кафедры
         {% else %}
-            Добавление сотрудника
+            Добавление нового сотрудника кафедры
         {% endif %}
-    </title>
-</head>
-<body>
-    <header>
-        <a href="{{ url_for('employees.employees') }}">
-            ← К сотрудникам
-        </a>
+    </p>
+{% endblock %}
 
-        <h1>
-            {% if employee %}
-                Изменение сотрудника
-            {% else %}
-                Добавление сотрудника
-            {% endif %}
-        </h1>
-    </header>
+{% block page_actions %}
+    <a
+        href="{{ url_for('employees.employees') }}"
+        class="btn btn-light border"
+    >
+        ← К сотрудникам
+    </a>
+{% endblock %}
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            <section>
-                {% for category, message in messages %}
-                    <p>{{ message }}</p>
-                {% endfor %}
-            </section>
-        {% endif %}
-    {% endwith %}
+{% block content %}
 
-    <main>
+<div class="row justify-content-center">
+    <div class="col-12 col-xl-8">
+
         <form method="post">
+
             <input
                 type="hidden"
                 name="csrf_token"
                 value="{{ csrf_token() }}"
             >
 
-            <p>
-                <label for="full_name">
-                    ФИО
-                </label>
-                <br>
+            <div class="card card-pm border-0 mb-4">
 
-                <input
-                    id="full_name"
-                    name="full_name"
-                    type="text"
-                    maxlength="255"
-                    value="{{ employee.full_name if employee else '' }}"
-                    required
-                >
-            </p>
+                <div class="card-body p-4 p-lg-5">
 
-            <p>
-                <label for="position">
-                    Должность
-                </label>
-                <br>
+                    <div class="d-flex align-items-center gap-3 mb-4">
 
-                <input
-                    id="position"
-                    name="position"
-                    type="text"
-                    maxlength="255"
-                    value="{{ employee.position if employee else '' }}"
-                >
-            </p>
+                        <span class="pm-dashboard-icon pm-dashboard-icon-accent">
+                            {% if employee %}
+                                ✎
+                            {% else %}
+                                +
+                            {% endif %}
+                        </span>
 
-            <p>
-                <label for="email">
-                    Email
-                </label>
-                <br>
+                        <div>
+                            <h2 class="h5 fw-bold mb-1">
+                                Данные сотрудника
+                            </h2>
 
-                <input
-                    id="email"
-                    name="email"
-                    type="email"
-                    maxlength="255"
-                    value="{{ employee.email if employee else '' }}"
-                >
-            </p>
+                            <p class="text-body-secondary small mb-0">
+                                Заполните основные данные сотрудника.
+                            </p>
+                        </div>
 
-            <button type="submit">
-                {% if employee %}
-                    Сохранить
-                {% else %}
-                    Добавить сотрудника
-                {% endif %}
-            </button>
+                    </div>
+
+
+                    <div class="row g-4">
+
+                        <div class="col-12">
+
+                            <label
+                                for="full_name"
+                                class="form-label fw-semibold"
+                            >
+                                ФИО
+                            </label>
+
+                            <input
+                                id="full_name"
+                                name="full_name"
+                                type="text"
+                                class="form-control form-control-lg"
+                                maxlength="255"
+                                value="{{ employee.full_name if employee else '' }}"
+                                autocomplete="name"
+                                required
+                            >
+
+                        </div>
+
+
+                        <div class="col-12 col-md-6">
+
+                            <label
+                                for="position"
+                                class="form-label fw-semibold"
+                            >
+                                Должность
+                            </label>
+
+                            <input
+                                id="position"
+                                name="position"
+                                type="text"
+                                class="form-control"
+                                maxlength="255"
+                                value="{{ employee.position if employee else '' }}"
+                                autocomplete="organization-title"
+                            >
+
+                        </div>
+
+
+                        <div class="col-12 col-md-6">
+
+                            <label
+                                for="email"
+                                class="form-label fw-semibold"
+                            >
+                                Email
+                            </label>
+
+                            <input
+                                id="email"
+                                name="email"
+                                type="email"
+                                class="form-control"
+                                maxlength="255"
+                                value="{{ employee.email if employee else '' }}"
+                                autocomplete="email"
+                            >
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <div class="card card-pm border-0">
+
+                <div class="card-body p-4">
+
+                    <div class="d-flex flex-column flex-sm-row justify-content-end gap-2">
+
+                        <a
+                            href="{{ url_for('employees.employees') }}"
+                            class="btn btn-light border px-4"
+                        >
+                            Отмена
+                        </a>
+
+                        <button
+                            type="submit"
+                            class="btn btn-pm-primary px-4"
+                        >
+                            {% if employee %}
+                                Сохранить изменения
+                            {% else %}
+                                Добавить сотрудника
+                            {% endif %}
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </div>
+
         </form>
-    </main>
-</body>
-</html>
+
+    </div>
+</div>
+
+{% endblock %}

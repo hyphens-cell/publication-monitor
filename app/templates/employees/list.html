@@ -1,148 +1,330 @@
-<!doctype html>
-<html lang="ru">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Сотрудники</title>
-</head>
-<body>
-    <header>
-        <h1>Сотрудники кафедры</h1>
+{% extends "base.html" %}
 
-        <p>
-            Заведующий:
-            <strong>{{ current_user.full_name }}</strong>
-        </p>
+{% block title %}
+    Сотрудники — Publication Monitor
+{% endblock %}
 
-        <nav>
-            <a href="{{ url_for('main.index') }}">
-                Главная
-            </a>
+{% block page_title %}
+    Сотрудники кафедры
+{% endblock %}
 
-            |
+{% block page_subtitle %}
+    <p class="text-body-secondary mb-0 mt-2">
+        Управление сотрудниками кафедры
+    </p>
+{% endblock %}
 
-            <a href="{{ url_for('employees.create_employee') }}">
-                Добавить сотрудника
-            </a>
-        </nav>
+{% block page_actions %}
+    <a
+        href="{{ url_for('employees.create_employee') }}"
+        class="btn btn-pm-primary"
+    >
+        <span class="me-1">+</span>
+        Добавить сотрудника
+    </a>
+{% endblock %}
 
-        <form
-            method="post"
-            action="{{ url_for('auth.logout') }}"
-        >
-            <input
-                type="hidden"
-                name="csrf_token"
-                value="{{ csrf_token() }}"
-            >
+{% block content %}
 
-            <button type="submit">
-                Выйти
-            </button>
-        </form>
-    </header>
+<section>
+    <div class="card card-pm border-0">
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            <section>
-                {% for category, message in messages %}
-                    <p>{{ message }}</p>
-                {% endfor %}
-            </section>
+        <div class="card-body border-bottom">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+
+                <div class="d-flex align-items-center gap-3">
+
+                    <span class="pm-dashboard-icon pm-dashboard-icon-accent">
+                        👥
+                    </span>
+
+                    <div>
+                        <h2 class="h5 fw-bold mb-1">
+                            Сотрудники
+                        </h2>
+
+                        <p class="text-body-secondary small mb-0">
+                            Заведующий:
+                            <strong>
+                                {{ current_user.full_name }}
+                            </strong>
+                        </p>
+                    </div>
+
+                </div>
+
+                <span class="badge rounded-pill badge-pm-primary px-3 py-2">
+                    {{ employees | length }}
+                </span>
+
+            </div>
+        </div>
+
+
+        {% if employees %}
+
+            <div class="table-responsive">
+
+                <table class="table table-pm align-middle mb-0">
+
+                    <thead>
+                        <tr>
+
+                            <th class="ps-4">
+                                Сотрудник
+                            </th>
+
+                            <th>
+                                Должность
+                            </th>
+
+                            <th>
+                                Email
+                            </th>
+
+                            <th>
+                                Статус
+                            </th>
+
+                            <th class="text-end pe-4">
+                                Действия
+                            </th>
+
+                        </tr>
+                    </thead>
+
+
+                    <tbody>
+
+                        {% for employee in employees %}
+
+                            <tr>
+
+                                <td class="ps-4">
+
+                                    <div class="d-flex align-items-center gap-3">
+
+                                        <span class="pm-avatar pm-employee-avatar">
+                                            {{ employee.full_name[0] | upper }}
+                                        </span>
+
+                                        <div class="min-w-0">
+
+                                            <div class="fw-semibold">
+                                                {{ employee.full_name }}
+                                            </div>
+
+                                            <div class="small text-body-secondary">
+                                                ID: {{ employee.id }}
+                                            </div>
+
+                                        </div>
+
+                                    </div>
+
+                                </td>
+
+
+                                <td>
+
+                                    {% if employee.position %}
+
+                                        <span>
+                                            {{ employee.position }}
+                                        </span>
+
+                                    {% else %}
+
+                                        <span class="text-body-secondary">
+                                            —
+                                        </span>
+
+                                    {% endif %}
+
+                                </td>
+
+
+                                <td>
+
+                                    {% if employee.email %}
+
+                                        <a
+                                            href="mailto:{{ employee.email }}"
+                                            class="pm-link"
+                                        >
+                                            {{ employee.email }}
+                                        </a>
+
+                                    {% else %}
+
+                                        <span class="text-body-secondary">
+                                            —
+                                        </span>
+
+                                    {% endif %}
+
+                                </td>
+
+
+                                <td>
+
+                                    {% if employee.is_active %}
+
+                                        <span class="badge rounded-pill badge-pm-success">
+                                            Активен
+                                        </span>
+
+                                    {% else %}
+
+                                        <span class="badge rounded-pill badge-pm-danger">
+                                            Архивирован
+                                        </span>
+
+                                    {% endif %}
+
+                                </td>
+
+
+                                <td class="text-end pe-4">
+
+                                    <div class="dropdown">
+
+                                        <button
+                                            class="btn btn-sm btn-light border dropdown-toggle"
+                                            type="button"
+                                            data-bs-toggle="dropdown"
+                                            aria-expanded="false"
+                                        >
+                                            Действия
+                                        </button>
+
+
+                                        <ul class="dropdown-menu dropdown-menu-end">
+
+                                            <li>
+
+                                                <a
+                                                    class="dropdown-item"
+                                                    href="{{ url_for(
+                                                        'employees.edit_employee',
+                                                        employee_id=employee.id
+                                                    ) }}"
+                                                >
+                                                    Изменить
+                                                </a>
+
+                                            </li>
+
+
+                                            <li>
+                                                <hr class="dropdown-divider">
+                                            </li>
+
+
+                                            {% if employee.is_active %}
+
+                                                <li>
+
+                                                    <form
+                                                        method="post"
+                                                        action="{{ url_for(
+                                                            'employees.archive_employee',
+                                                            employee_id=employee.id
+                                                        ) }}"
+                                                    >
+
+                                                        <input
+                                                            type="hidden"
+                                                            name="csrf_token"
+                                                            value="{{ csrf_token() }}"
+                                                        >
+
+                                                        <button
+                                                            type="submit"
+                                                            class="dropdown-item pm-dropdown-danger"
+                                                        >
+                                                            Архивировать
+                                                        </button>
+
+                                                    </form>
+
+                                                </li>
+
+                                            {% else %}
+
+                                                <li>
+
+                                                    <form
+                                                        method="post"
+                                                        action="{{ url_for(
+                                                            'employees.restore_employee',
+                                                            employee_id=employee.id
+                                                        ) }}"
+                                                    >
+
+                                                        <input
+                                                            type="hidden"
+                                                            name="csrf_token"
+                                                            value="{{ csrf_token() }}"
+                                                        >
+
+                                                        <button
+                                                            type="submit"
+                                                            class="dropdown-item pm-dropdown-success"
+                                                        >
+                                                            Восстановить
+                                                        </button>
+
+                                                    </form>
+
+                                                </li>
+
+                                            {% endif %}
+
+                                        </ul>
+
+                                    </div>
+
+                                </td>
+
+                            </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        {% else %}
+
+            <div class="pm-empty-state py-5">
+
+                <div class="pm-empty-icon">
+                    👥
+                </div>
+
+                <h3 class="h5 fw-bold mb-2">
+                    Сотрудников пока нет
+                </h3>
+
+                <p class="text-body-secondary mb-3">
+                    Добавьте первого сотрудника кафедры.
+                </p>
+
+                <a
+                    href="{{ url_for('employees.create_employee') }}"
+                    class="btn btn-pm-primary"
+                >
+                    Добавить сотрудника
+                </a>
+
+            </div>
+
         {% endif %}
-    {% endwith %}
 
-    <main>
-        <table>
-            <thead>
-                <tr>
-                    <th>ФИО</th>
-                    <th>Должность</th>
-                    <th>Email</th>
-                    <th>Статус</th>
-                    <th>Действия</th>
-                </tr>
-            </thead>
+    </div>
+</section>
 
-            <tbody>
-                {% for employee in employees %}
-                    <tr>
-                        <td>{{ employee.full_name }}</td>
-
-                        <td>
-                            {{ employee.position or "—" }}
-                        </td>
-
-                        <td>
-                            {{ employee.email or "—" }}
-                        </td>
-
-                        <td>
-                            {% if employee.is_active %}
-                                Активен
-                            {% else %}
-                                Архивирован
-                            {% endif %}
-                        </td>
-
-                        <td>
-                            <a
-                                href="{{ url_for(
-                                    'employees.edit_employee',
-                                    employee_id=employee.id
-                                ) }}"
-                            >
-                                Изменить
-                            </a>
-
-                            {% if employee.is_active %}
-                                <form
-                                    method="post"
-                                    action="{{ url_for(
-                                        'employees.archive_employee',
-                                        employee_id=employee.id
-                                    ) }}"
-                                >
-                                    <input
-                                        type="hidden"
-                                        name="csrf_token"
-                                        value="{{ csrf_token() }}"
-                                    >
-
-                                    <button type="submit">
-                                        Архивировать
-                                    </button>
-                                </form>
-                            {% else %}
-                                <form
-                                    method="post"
-                                    action="{{ url_for(
-                                        'employees.restore_employee',
-                                        employee_id=employee.id
-                                    ) }}"
-                                >
-                                    <input
-                                        type="hidden"
-                                        name="csrf_token"
-                                        value="{{ csrf_token() }}"
-                                    >
-
-                                    <button type="submit">
-                                        Восстановить
-                                    </button>
-                                </form>
-                            {% endif %}
-                        </td>
-                    </tr>
-                {% else %}
-                    <tr>
-                        <td colspan="5">
-                            Сотрудников пока нет.
-                        </td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </main>
-</body>
-</html>
+{% endblock %}

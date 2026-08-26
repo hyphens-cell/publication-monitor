@@ -1,114 +1,194 @@
-<!doctype html>
-<html lang="ru">
-<head>
-    <meta charset="utf-8">
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1"
+{% extends "base.html" %}
+
+{% block title %}
+    Планы — Publication Monitor
+{% endblock %}
+
+{% block page_title %}
+    Планы кафедры
+{% endblock %}
+
+{% block page_subtitle %}
+    <p class="text-body-secondary mb-0 mt-2">
+        Управление планами публикационной деятельности
+    </p>
+{% endblock %}
+
+{% block page_actions %}
+    <a
+        href="{{ url_for('plans.create_plan') }}"
+        class="btn btn-pm-primary"
     >
-    <title>Мои планы</title>
-</head>
-<body>
-    <header>
-        <h1>Планы кафедры</h1>
+        + Создать план
+    </a>
+{% endblock %}
 
-        <p>
-            Заведующий:
-            <strong>{{ current_user.full_name }}</strong>
-        </p>
+{% block content %}
 
-        <p>
-            <a href="{{ url_for('main.index') }}">
-                Главная
-            </a>
-        </p>
+<section>
+    <div class="card card-pm border-0">
 
-        <form
-            method="post"
-            action="{{ url_for('auth.logout') }}"
-        >
-            <input
-                type="hidden"
-                name="csrf_token"
-                value="{{ csrf_token() }}"
-            >
+        <div class="card-body border-bottom">
+            <div class="d-flex flex-wrap align-items-center gap-3">
 
-            <button type="submit">
-                Выйти
-            </button>
-        </form>
-    </header>
+                <span class="pm-dashboard-icon pm-dashboard-icon-primary">
+                    ▣
+                </span>
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            <section>
-                {% for category, message in messages %}
-                    <p>{{ message }}</p>
-                {% endfor %}
-            </section>
-        {% endif %}
-    {% endwith %}
+                <div>
+                    <h2 class="h5 fw-bold mb-1">
+                        Планы кафедры
+                    </h2>
 
-    <main>
-        <p>
-            <a href="{{ url_for('plans.create_plan') }}">
-                Создать план на следующий год
-            </a>
-        </p>
+                    <p class="small text-body-secondary mb-0">
+                        Заведующий:
+                        <strong>{{ current_user.full_name }}</strong>
+                    </p>
+                </div>
+
+            </div>
+        </div>
+
 
         {% if plans %}
-            <table>
-                <thead>
-                    <tr>
-                        <th>Год</th>
-                        <th>Статус</th>
-                        <th>Пунктов</th>
-                        <th>Действия</th>
-                    </tr>
-                </thead>
 
-                <tbody>
-                    {% for plan in plans %}
+            <div class="table-responsive">
+
+                <table class="table table-pm align-middle mb-0">
+
+                    <thead>
                         <tr>
-                            <td>{{ plan.year }}</td>
+                            <th class="ps-4">
+                                Год
+                            </th>
 
-                            <td>
-                                {% if plan.status == "DRAFT" %}
-                                    Черновик
-                                {% elif plan.status == "SUBMITTED" %}
-                                    На рассмотрении
-                                {% elif plan.status == "APPROVED" %}
-                                    Утверждён
-                                {% elif plan.status == "RETURNED" %}
-                                    На доработке
-                                {% else %}
-                                    {{ plan.status }}
-                                {% endif %}
-                            </td>
+                            <th>
+                                Статус
+                            </th>
 
-                            <td>
-                                {{ plan.items|length }}
-                            </td>
+                            <th>
+                                Пунктов
+                            </th>
 
-                            <td>
-                                <a
-                                    href="{{ url_for(
-                                        'plans.plan_detail',
-                                        plan_id=plan.id
-                                    ) }}"
-                                >
-                                    Открыть
-                                </a>
-                            </td>
+                            <th class="text-end pe-4">
+                                Действия
+                            </th>
                         </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+                    </thead>
+
+                    <tbody>
+
+                        {% for plan in plans %}
+
+                            <tr>
+
+                                <td class="ps-4">
+                                    <span class="fw-bold">
+                                        {{ plan.year }}
+                                    </span>
+                                </td>
+
+
+                                <td>
+
+                                    {% if plan.status == "DRAFT" %}
+
+                                        <span class="badge rounded-pill badge-pm-primary">
+                                            Черновик
+                                        </span>
+
+                                    {% elif plan.status == "SUBMITTED" %}
+
+                                        <span class="badge rounded-pill badge-pm-warning">
+                                            На рассмотрении
+                                        </span>
+
+                                    {% elif plan.status == "APPROVED" %}
+
+                                        <span class="badge rounded-pill badge-pm-success">
+                                            Утверждён
+                                        </span>
+
+                                    {% elif plan.status == "RETURNED" %}
+
+                                        <span class="badge rounded-pill badge-pm-danger">
+                                            На доработке
+                                        </span>
+
+                                    {% else %}
+
+                                        <span class="badge rounded-pill badge-pm-primary">
+                                            {{ plan.status }}
+                                        </span>
+
+                                    {% endif %}
+
+                                </td>
+
+
+                                <td>
+                                    <span class="fw-semibold">
+                                        {{ plan.items|length }}
+                                    </span>
+
+                                    <span class="small text-body-secondary">
+                                        публикаций
+                                    </span>
+                                </td>
+
+
+                                <td class="text-end pe-4">
+
+                                    <a
+                                        href="{{ url_for(
+                                            'plans.plan_detail',
+                                            plan_id=plan.id
+                                        ) }}"
+                                        class="btn btn-sm btn-light border"
+                                    >
+                                        Открыть
+                                    </a>
+
+                                </td>
+
+                            </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
         {% else %}
-            <p>
-                Планов пока нет.
-            </p>
+
+            <div class="pm-empty-state py-5">
+
+                <div class="pm-empty-icon">
+                    ▣
+                </div>
+
+                <h3 class="h6 fw-bold mb-2">
+                    Планов пока нет
+                </h3>
+
+                <p class="text-body-secondary mb-3">
+                    Создайте план на следующий календарный год.
+                </p>
+
+                <a
+                    href="{{ url_for('plans.create_plan') }}"
+                    class="btn btn-pm-primary"
+                >
+                    Создать план
+                </a>
+
+            </div>
+
         {% endif %}
-    </main>
-</body>
-</html>
+
+    </div>
+</section>
+
+{% endblock %}

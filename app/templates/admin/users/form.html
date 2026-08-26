@@ -1,214 +1,399 @@
-<!doctype html>
-<html lang="ru">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>
+{% extends "base.html" %}
+
+{% block title %}
+    {% if user %}
+        Изменение пользователя — Publication Monitor
+    {% else %}
+        Создание пользователя — Publication Monitor
+    {% endif %}
+{% endblock %}
+
+{% block page_title %}
+    {% if user %}
+        Изменение пользователя
+    {% else %}
+        Создание пользователя
+    {% endif %}
+{% endblock %}
+
+{% block page_subtitle %}
+    <p class="text-body-secondary mb-0 mt-2">
         {% if user %}
-            Изменение пользователя
+            Изменение данных и параметров доступа пользователя
         {% else %}
-            Создание пользователя
+            Создание нового пользователя системы
         {% endif %}
-    </title>
-</head>
-<body>
-    <header>
-        <a href="{{ url_for('admin.users') }}">← К пользователям</a>
+    </p>
+{% endblock %}
 
-        <h1>
-            {% if user %}
-                Изменение пользователя
-            {% else %}
-                Создание пользователя
-            {% endif %}
-        </h1>
-    </header>
+{% block page_actions %}
+    <a
+        href="{{ url_for('admin.users') }}"
+        class="btn btn-light border"
+    >
+        ← К пользователям
+    </a>
+{% endblock %}
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            <section>
-                {% for category, message in messages %}
-                    <p>{{ message }}</p>
-                {% endfor %}
-            </section>
-        {% endif %}
-    {% endwith %}
+{% block content %}
 
-    <main>
+<div class="row justify-content-center">
+    <div class="col-12 col-xl-9">
+
         <form method="post">
+
             <input
                 type="hidden"
                 name="csrf_token"
                 value="{{ csrf_token() }}"
             >
 
-            <p>
-                <label for="full_name">ФИО</label><br>
-                <input
-                    id="full_name"
-                    name="full_name"
-                    type="text"
-                    value="{{ user.full_name if user else '' }}"
-                    required
-                >
-            </p>
+            <div class="card card-pm border-0 mb-4">
+                <div class="card-body p-4 p-lg-5">
 
-            <p>
-                <label for="username">Логин</label><br>
-                <input
-                    id="username"
-                    name="username"
-                    type="text"
-                    value="{{ user.username if user else '' }}"
-                    required
-                >
-            </p>
-
-            <p>
-                <label for="email">Email</label><br>
-                <input
-                    id="email"
-                    name="email"
-                    type="email"
-                    value="{{ user.email if user else '' }}"
-                    required
-                >
-            </p>
-
-            <p>
-                <label for="role">Роль</label><br>
-
-                <select
-                    id="role"
-                    name="role"
-                    required
-                >
-                    {% for value, label in roles %}
-                        <option
-                            value="{{ value }}"
-                            {% if user and user.role == value %}
-                                selected
+                    <div class="d-flex align-items-center gap-3 mb-4">
+                        <span class="pm-dashboard-icon pm-dashboard-icon-primary">
+                            {% if user %}
+                                ✎
+                            {% else %}
+                                +
                             {% endif %}
-                        >
-                            {{ label }}
-                        </option>
-                    {% endfor %}
-                </select>
-            </p>
+                        </span>
 
-            <p>
-                <label for="department_id">
-                    Кафедра
-                </label>
-                <br>
+                        <div>
+                            <h2 class="h5 fw-bold mb-1">
+                                Основные данные
+                            </h2>
 
-                <select
-                    id="department_id"
-                    name="department_id"
-                >
-                    <option value="">
-                        Не выбрана
-                    </option>
+                            <p class="text-body-secondary small mb-0">
+                                Информация для идентификации пользователя.
+                            </p>
+                        </div>
+                    </div>
 
-                    {% for department in departments %}
-                        <option
-                            value="{{ department.id }}"
-                            {% if user and user.department_id == department.id %}
-                                selected
+                    <div class="row g-4">
+
+                        <div class="col-12">
+                            <label
+                                for="full_name"
+                                class="form-label fw-semibold"
+                            >
+                                ФИО
+                            </label>
+
+                            <input
+                                id="full_name"
+                                name="full_name"
+                                type="text"
+                                class="form-control form-control-lg"
+                                value="{{ user.full_name if user else '' }}"
+                                autocomplete="name"
+                                required
+                            >
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label
+                                for="username"
+                                class="form-label fw-semibold"
+                            >
+                                Логин
+                            </label>
+
+                            <input
+                                id="username"
+                                name="username"
+                                type="text"
+                                class="form-control form-control-lg"
+                                value="{{ user.username if user else '' }}"
+                                autocomplete="username"
+                                required
+                            >
+
+                            <div class="form-text">
+                                Используется для входа в систему.
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label
+                                for="email"
+                                class="form-label fw-semibold"
+                            >
+                                Email
+                            </label>
+
+                            <input
+                                id="email"
+                                name="email"
+                                type="email"
+                                class="form-control form-control-lg"
+                                value="{{ user.email if user else '' }}"
+                                autocomplete="email"
+                                required
+                            >
+                        </div>
+
+                    </div>
+
+                </div>
+            </div>
+
+
+            <div class="card card-pm border-0 mb-4">
+                <div class="card-body p-4 p-lg-5">
+
+                    <div class="d-flex align-items-center gap-3 mb-4">
+                        <span class="pm-dashboard-icon pm-dashboard-icon-accent">
+                            ♚
+                        </span>
+
+                        <div>
+                            <h2 class="h5 fw-bold mb-1">
+                                Права и принадлежность
+                            </h2>
+
+                            <p class="text-body-secondary small mb-0">
+                                Определите роль и кафедру пользователя.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="row g-4">
+
+                        <div class="col-12 col-md-6">
+                            <label
+                                for="role"
+                                class="form-label fw-semibold"
+                            >
+                                Роль
+                            </label>
+
+                            <select
+                                id="role"
+                                name="role"
+                                class="form-select form-select-lg"
+                                required
+                            >
+                                {% for value, label in roles %}
+                                    <option
+                                        value="{{ value }}"
+                                        {% if user and user.role == value %}
+                                            selected
+                                        {% endif %}
+                                    >
+                                        {{ label }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label
+                                for="department_id"
+                                class="form-label fw-semibold"
+                            >
+                                Кафедра
+                            </label>
+
+                            <select
+                                id="department_id"
+                                name="department_id"
+                                class="form-select form-select-lg"
+                            >
+                                <option value="">
+                                    Не выбрана
+                                </option>
+
+                                {% for department in departments %}
+                                    <option
+                                        value="{{ department.id }}"
+                                        {% if user and user.department_id == department.id %}
+                                            selected
+                                        {% endif %}
+                                    >
+                                        {{ department.name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label
+                                for="language"
+                                class="form-label fw-semibold"
+                            >
+                                Язык интерфейса
+                            </label>
+
+                            <select
+                                id="language"
+                                name="language"
+                                class="form-select form-select-lg"
+                                required
+                            >
+                                {% for value, label in languages %}
+                                    <option
+                                        value="{{ value }}"
+                                        {% if user and user.language == value %}
+                                            selected
+                                        {% endif %}
+                                    >
+                                        {{ label }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                    </div>
+
+                </div>
+            </div>
+
+
+            <div class="card card-pm border-0 mb-4">
+                <div class="card-body p-4 p-lg-5">
+
+                    <div class="d-flex align-items-center gap-3 mb-4">
+                        <span class="pm-dashboard-icon pm-dashboard-icon-danger">
+                            🔒
+                        </span>
+
+                        <div>
+                            <h2 class="h5 fw-bold mb-1">
+                                Безопасность
+                            </h2>
+
+                            <p class="text-body-secondary small mb-0">
+                                {% if user %}
+                                    При необходимости задайте новый пароль.
+                                {% else %}
+                                    Задайте пароль для нового пользователя.
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="row g-4">
+
+                        <div class="col-12 col-md-6">
+                            <label
+                                for="password"
+                                class="form-label fw-semibold"
+                            >
+                                {% if user %}
+                                    Новый пароль
+                                {% else %}
+                                    Пароль
+                                {% endif %}
+                            </label>
+
+                            <input
+                                id="password"
+                                name="password"
+                                type="password"
+                                class="form-control form-control-lg"
+                                {% if not user %}
+                                    required
+                                {% endif %}
+                                autocomplete="new-password"
+                            >
+
+                            {% if user %}
+                                <div class="form-text">
+                                    Оставьте поле пустым, чтобы сохранить текущий пароль.
+                                </div>
                             {% endif %}
-                        >
-                            {{ department.name }}
-                        </option>
-                    {% endfor %}
-                </select>
-            </p>
+                        </div>
 
-            <p>
-                <label for="language">
-                    Язык
-                </label>
-                <br>
+                        <div class="col-12 col-md-6">
+                            <label
+                                for="password_confirmation"
+                                class="form-label fw-semibold"
+                            >
+                                Подтверждение пароля
+                            </label>
 
-                <select
-                    id="language"
-                    name="language"
-                    required
-                >
-                    {% for value, label in languages %}
-                        <option
-                            value="{{ value }}"
-                            {% if user and user.language == value %}
-                                selected
-                            {% endif %}
-                        >
-                            {{ label }}
-                        </option>
-                    {% endfor %}
-                </select>
-            </p>
+                            <input
+                                id="password_confirmation"
+                                name="password_confirmation"
+                                type="password"
+                                class="form-control form-control-lg"
+                                {% if not user %}
+                                    required
+                                {% endif %}
+                                autocomplete="new-password"
+                            >
+                        </div>
 
-            <p>
-                <label for="password">
+                    </div>
+
                     {% if user %}
-                        Новый пароль
-                    {% else %}
-                        Пароль
+                        <div class="mt-4 pt-4 border-top">
+
+                            <div class="form-check form-switch">
+                                <input
+                                    id="is_active"
+                                    type="checkbox"
+                                    name="is_active"
+                                    class="form-check-input"
+                                    role="switch"
+                                    {% if user.is_active %}
+                                        checked
+                                    {% endif %}
+                                >
+
+                                <label
+                                    for="is_active"
+                                    class="form-check-label fw-semibold"
+                                >
+                                    Активная учетная запись
+                                </label>
+                            </div>
+
+                            <div class="form-text">
+                                Неактивный пользователь не сможет использовать
+                                учетную запись для входа.
+                            </div>
+
+                        </div>
                     {% endif %}
-                </label>
-                <br>
 
-                <input
-                    id="password"
-                    name="password"
-                    type="password"
-                    {% if not user %}
-                        required
-                    {% endif %}
-                    autocomplete="new-password"
-                >
-            </p>
+                </div>
+            </div>
 
-            <p>
-                <label for="password_confirmation">
-                    Подтверждение пароля
-                </label>
-                <br>
 
-                <input
-                    id="password_confirmation"
-                    name="password_confirmation"
-                    type="password"
-                    {% if not user %}
-                        required
-                    {% endif %}
-                    autocomplete="new-password"
-                >
-            </p>
+            <div class="card card-pm border-0">
+                <div class="card-body p-4">
 
-            {% if user %}
-                <p>
-                    <label>
-                        <input
-                            type="checkbox"
-                            name="is_active"
-                            {% if user.is_active %}
-                                checked
-                            {% endif %}
+                    <div class="d-flex flex-column flex-sm-row justify-content-end gap-2">
+
+                        <a
+                            href="{{ url_for('admin.users') }}"
+                            class="btn btn-light border px-4"
                         >
+                            Отмена
+                        </a>
 
-                        Активная учетная запись
-                    </label>
-                </p>
-            {% endif %}
+                        <button
+                            type="submit"
+                            class="btn btn-pm-primary px-4"
+                        >
+                            {% if user %}
+                                Сохранить изменения
+                            {% else %}
+                                Создать пользователя
+                            {% endif %}
+                        </button>
 
-            <button type="submit">
-                {% if user %}
-                    Сохранить
-                {% else %}
-                    Создать пользователя
-                {% endif %}
-            </button>
+                    </div>
+
+                </div>
+            </div>
+
         </form>
-    </main>
-</body>
-</html>
+
+    </div>
+</div>
+
+{% endblock %}

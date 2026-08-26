@@ -1,128 +1,226 @@
-<!doctype html>
-<html lang="ru">
-<head>
-    <meta charset="utf-8">
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1"
-    >
-    <title>Публикации</title>
-</head>
-<body>
-    <header>
-        <p>
-            <a href="{{ url_for('main.index') }}">
-                ← Главная
-            </a>
-        </p>
+{% extends "base.html" %}
 
-        <h1>Публикации</h1>
+{% block title %}
+    Публикации — Publication Monitor
+{% endblock %}
 
-        <p>
-            Вы вошли как:
-            <strong>{{ current_user.full_name }}</strong>
-        </p>
-    </header>
+{% block page_title %}
+    Публикации
+{% endblock %}
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            <section>
-                {% for category, message in messages %}
-                    <p>{{ message }}</p>
-                {% endfor %}
-            </section>
-        {% endif %}
-    {% endwith %}
+{% block page_subtitle %}
+    <p class="text-body-secondary mb-0 mt-2">
+        Публикационная деятельность сотрудников
+    </p>
+{% endblock %}
 
-    <main>
+{% block content %}
+
+<section>
+
+    <div class="card card-pm border-0">
+
         {% if publications %}
-            <table>
-                <thead>
-                    <tr>
-                        <th>Название</th>
-                        <th>Журнал</th>
-                        <th>Квартиль</th>
-                        <th>Статус</th>
-                        <th>Кафедра</th>
-                        <th>Дата создания</th>
-                        <th>Действие</th>
-                    </tr>
-                </thead>
 
-                <tbody>
-                    {% for publication in publications %}
+            <div class="table-responsive">
+
+                <table class="table table-pm align-middle mb-0">
+
+                    <thead>
                         <tr>
-                            <td>
-                                {{ publication.title }}
-                            </td>
+                            <th class="ps-4">
+                                Название
+                            </th>
 
-                            <td>
-                                {{ publication.journal or "—" }}
-                            </td>
+                            <th>
+                                Журнал
+                            </th>
 
-                            <td>
-                                {% if publication.quartile %}
-                                    {% if current_user.language == "kk" %}
-                                        {{ publication.quartile.name_kk }}
-                                    {% else %}
-                                        {{ publication.quartile.name_ru }}
-                                    {% endif %}
-                                {% else %}
-                                    —
-                                {% endif %}
-                            </td>
+                            <th>
+                                Квартиль
+                            </th>
 
-                            <td>
-                                {% if publication.status == "PREPARATION" %}
-                                    Подготовка статьи
-                                {% elif publication.status == "SUBMITTED_TO_JOURNAL" %}
-                                    Отправлена в журнал
-                                {% elif publication.status == "UNDER_REVIEW" %}
-                                    На рецензировании
-                                {% elif publication.status == "REVISION_REQUIRED" %}
-                                    Требуется доработка
-                                {% elif publication.status == "ACCEPTED" %}
-                                    Принята к публикации
-                                {% elif publication.status == "PUBLISHED" %}
-                                    Опубликована
-                                {% elif publication.status == "REJECTED" %}
-                                    Отклонена
-                                {% else %}
-                                    {{ publication.status }}
-                                {% endif %}
-                            </td>
+                            <th>
+                                Статус
+                            </th>
 
-                            <td>
-                                {% if publication.department %}
-                                    {{ publication.department.name }}
-                                {% else %}
-                                    —
-                                {% endif %}
-                            </td>
+                            <th>
+                                Кафедра
+                            </th>
 
-                            <td>
-                                {{ publication.created_at.strftime("%d.%m.%Y") }}
-                            </td>
+                            <th>
+                                Дата
+                            </th>
 
-                            <td>
-                                <a
-                                    href="{{ url_for(
-                                        'publications.publication_detail',
-                                        publication_id=publication.id
-                                    ) }}"
-                                >
-                                    Открыть
-                                </a>
-                            </td>
+                            <th class="text-end pe-4">
+                                Действия
+                            </th>
                         </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+                    </thead>
+
+                    <tbody>
+
+                        {% for publication in publications %}
+
+                            <tr>
+
+                                <td class="ps-4">
+
+                                    <div
+                                        class="fw-semibold"
+                                        style="min-width: 240px;"
+                                    >
+                                        {{ publication.title }}
+                                    </div>
+
+                                </td>
+
+
+                                <td>
+                                    {{ publication.journal or "—" }}
+                                </td>
+
+
+                                <td>
+
+                                    {% if publication.quartile %}
+
+                                        {% if current_user.language == "kk" %}
+                                            {{ publication.quartile.name_kk }}
+                                        {% else %}
+                                            {{ publication.quartile.name_ru }}
+                                        {% endif %}
+
+                                    {% else %}
+
+                                        —
+
+                                    {% endif %}
+
+                                </td>
+
+
+                                <td>
+
+                                    {% if publication.status == "PREPARATION" %}
+
+                                        <span class="badge rounded-pill badge-pm-primary">
+                                            Подготовка статьи
+                                        </span>
+
+                                    {% elif publication.status == "SUBMITTED_TO_JOURNAL" %}
+
+                                        <span class="badge rounded-pill badge-pm-warning">
+                                            Отправлена в журнал
+                                        </span>
+
+                                    {% elif publication.status == "UNDER_REVIEW" %}
+
+                                        <span class="badge rounded-pill badge-pm-warning">
+                                            На рецензировании
+                                        </span>
+
+                                    {% elif publication.status == "REVISION_REQUIRED" %}
+
+                                        <span class="badge rounded-pill badge-pm-danger">
+                                            Требуется доработка
+                                        </span>
+
+                                    {% elif publication.status == "ACCEPTED" %}
+
+                                        <span class="badge rounded-pill badge-pm-success">
+                                            Принята к публикации
+                                        </span>
+
+                                    {% elif publication.status == "PUBLISHED" %}
+
+                                        <span class="badge rounded-pill badge-pm-success">
+                                            Опубликована
+                                        </span>
+
+                                    {% elif publication.status == "REJECTED" %}
+
+                                        <span class="badge rounded-pill badge-pm-danger">
+                                            Отклонена
+                                        </span>
+
+                                    {% else %}
+
+                                        <span class="badge rounded-pill badge-pm-primary">
+                                            {{ publication.status }}
+                                        </span>
+
+                                    {% endif %}
+
+                                </td>
+
+
+                                <td>
+
+                                    {% if publication.department %}
+                                        {{ publication.department.name }}
+                                    {% else %}
+                                        —
+                                    {% endif %}
+
+                                </td>
+
+
+                                <td class="text-nowrap">
+
+                                    {{ publication.created_at.strftime(
+                                        "%d.%m.%Y"
+                                    ) }}
+
+                                </td>
+
+
+                                <td class="text-end pe-4">
+
+                                    <a
+                                        href="{{ url_for(
+                                            'publications.publication_detail',
+                                            publication_id=publication.id
+                                        ) }}"
+                                        class="btn btn-sm btn-light border"
+                                    >
+                                        Открыть
+                                    </a>
+
+                                </td>
+
+                            </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
         {% else %}
-            <p>
-                Публикаций пока нет.
-            </p>
+
+            <div class="pm-empty-state py-5">
+
+                <div class="pm-empty-icon">
+                    ▤
+                </div>
+
+                <h2 class="h6 fw-bold mb-2">
+                    Публикаций пока нет
+                </h2>
+
+                <p class="text-body-secondary mb-0">
+                    В системе пока отсутствуют публикации.
+                </p>
+
+            </div>
+
         {% endif %}
-    </main>
-</body>
-</html>
+
+    </div>
+
+</section>
+
+{% endblock %}

@@ -1,562 +1,1335 @@
-<!doctype html>
-<html lang="ru">
-<head>
-    <meta charset="utf-8">
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1"
-    >
-    <title>{{ publication.title }}</title>
-</head>
-<body>
-    <header>
-        <p>
-            <a href="{{ url_for('publications.publications') }}">
-                ← К публикациям
-            </a>
-        </p>
+{% extends "base.html" %}
 
-        <h1>{{ publication.title }}</h1>
+{% block title %}
+    {{ publication.title }} — Publication Monitor
+{% endblock %}
 
-        <p>
-            <strong>Статус:</strong>
+{% block page_title %}
+    Публикация
+{% endblock %}
+
+{% block page_subtitle %}
+    <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
+
+        <span class="badge rounded-pill badge-pm-primary">
             {{ publication_statuses.get(
                 publication.status,
                 publication.status
             ) }}
-        </p>
+        </span>
 
-        <p>
-            <strong>Проверка:</strong>
-
-            {% if publication.verification_status == "PENDING" %}
+        {% if publication.verification_status == "PENDING" %}
+            <span class="badge rounded-pill badge-pm-warning">
                 На проверке
-            {% elif publication.verification_status == "APPROVED" %}
+            </span>
+        {% elif publication.verification_status == "APPROVED" %}
+            <span class="badge rounded-pill badge-pm-success">
                 Проверена
-            {% elif publication.verification_status == "RETURNED" %}
+            </span>
+        {% elif publication.verification_status == "RETURNED" %}
+            <span class="badge rounded-pill badge-pm-danger">
                 Возвращена на доработку
-            {% else %}
+            </span>
+        {% else %}
+            <span class="badge rounded-pill badge-pm-primary">
                 {{ publication.verification_status }}
-            {% endif %}
-        </p>
-
-        <p>
-            <a
-                href="{{ url_for(
-                    'publications.edit_publication',
-                    publication_id=publication.id
-                ) }}"
-            >
-                Изменить публикацию
-            </a>
-        </p>
-    </header>
-
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            <section>
-                {% for category, message in messages %}
-                    <p>{{ message }}</p>
-                {% endfor %}
-            </section>
+            </span>
         {% endif %}
-    {% endwith %}
 
-    <main>
-        <section>
-            <h2>Основные сведения</h2>
+    </div>
+{% endblock %}
 
-            <p>
-                <strong>Название:</strong>
-                {{ publication.title }}
-            </p>
+{% block page_actions %}
+    <div class="d-flex flex-wrap gap-2">
 
-            <p>
-                <strong>Журнал:</strong>
-                {{ publication.journal or "—" }}
-            </p>
+        <a
+            href="{{ url_for('publications.publications') }}"
+            class="btn btn-light border"
+        >
+            ← К публикациям
+        </a>
 
-            <p>
-                <strong>Кафедра:</strong>
-                {{ publication.department.name }}
-            </p>
+        <a
+            href="{{ url_for(
+                'publications.edit_publication',
+                publication_id=publication.id
+            ) }}"
+            class="btn btn-pm-primary"
+        >
+            ✎ Изменить
+        </a>
 
-            <p>
-                <strong>Квартиль:</strong>
+    </div>
+{% endblock %}
 
-                {% if publication.quartile %}
-                    {% if current_user.language == "kk" %}
-                        {{ publication.quartile.name_kk }}
-                    {% else %}
-                        {{ publication.quartile.name_ru }}
-                    {% endif %}
-                {% else %}
-                    —
-                {% endif %}
-            </p>
-        </section>
+{% block content %}
 
-        {% if current_user.role == "ADMIN" and doi_conflicts %}
-            <section>
-                <h2>Конфликт DOI</h2>
+<section class="mb-4">
 
-                <p>
-                    Обнаружены публикации с одинаковым DOI.
-                    Монитор должен определить, какая публикация является корректной.
-                </p>
+    <div class="card card-pm border-0">
 
-                <p>
-                    <strong>DOI:</strong>
-                    {{ publication.doi }}
-                </p>
+        <div class="card-body p-4 p-lg-5">
+
+            <div class="d-flex align-items-start gap-3 mb-4">
+
+                <span class="pm-dashboard-icon pm-dashboard-icon-primary flex-shrink-0">
+                    ▤
+                </span>
+
+                <div class="min-w-0">
+
+                    <h2 class="h4 fw-bold mb-2">
+                        {{ publication.title }}
+                    </h2>
+
+                    <p class="text-body-secondary mb-0">
+                        Публикация №{{ publication.id }}
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <div class="row g-4">
+
+                <div class="col-12 col-md-6">
+
+                    <div class="pm-detail-field">
+                        <div class="small text-body-secondary mb-1">
+                            Журнал
+                        </div>
+
+                        <div class="fw-semibold">
+                            {{ publication.journal or "—" }}
+                        </div>
+                    </div>
+
+                </div>
+
+
+                <div class="col-12 col-md-6">
+
+                    <div class="pm-detail-field">
+                        <div class="small text-body-secondary mb-1">
+                            Кафедра
+                        </div>
+
+                        <div class="fw-semibold">
+                            {{ publication.department.name }}
+                        </div>
+                    </div>
+
+                </div>
+
+
+                <div class="col-12 col-md-6">
+
+                    <div class="pm-detail-field">
+                        <div class="small text-body-secondary mb-1">
+                            Квартиль
+                        </div>
+
+                        <div class="fw-semibold">
+
+                            {% if publication.quartile %}
+
+                                {% if current_user.language == "kk" %}
+                                    {{ publication.quartile.name_kk }}
+                                {% else %}
+                                    {{ publication.quartile.name_ru }}
+                                {% endif %}
+
+                            {% else %}
+                                —
+                            {% endif %}
+
+                        </div>
+                    </div>
+
+                </div>
+
+
+                <div class="col-12 col-md-6">
+
+                    <div class="pm-detail-field">
+                        <div class="small text-body-secondary mb-1">
+                            Проверка
+                        </div>
+
+                        <div class="fw-semibold">
+
+                            {% if publication.verification_status == "PENDING" %}
+                                На проверке
+                            {% elif publication.verification_status == "APPROVED" %}
+                                Проверена
+                            {% elif publication.verification_status == "RETURNED" %}
+                                Возвращена на доработку
+                            {% else %}
+                                {{ publication.verification_status }}
+                            {% endif %}
+
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+{% if current_user.role == "ADMIN" and doi_conflicts %}
+
+<section class="mb-4">
+
+    <div class="card card-pm border-0 pm-returned-card">
+
+        <div class="card-body p-4">
+
+            <div class="d-flex align-items-start gap-3 mb-4">
+
+                <span class="pm-dashboard-icon pm-dashboard-icon-danger">
+                    !
+                </span>
+
+                <div>
+                    <h2 class="h5 fw-bold mb-1">
+                        Конфликт DOI
+                    </h2>
+
+                    <p class="small text-body-secondary mb-0">
+                        Обнаружены публикации с одинаковым DOI.
+                    </p>
+                </div>
+
+            </div>
+
+
+            <div class="alert alert-light border mb-4">
+                <strong>DOI:</strong>
+                {{ publication.doi }}
+            </div>
+
+
+            <div class="row g-3">
 
                 {% for conflict in doi_conflicts %}
-                    <article>
-                        <h3>
-                            Публикация №{{ conflict.id }}
-                        </h3>
 
-                        <p>
-                            <strong>Название:</strong>
-                            {{ conflict.title }}
-                        </p>
+                    <div class="col-12 col-lg-6">
 
-                        <p>
-                            <strong>Журнал:</strong>
-                            {{ conflict.journal or "—" }}
-                        </p>
+                        <article class="pm-conflict-card h-100">
 
-                        <p>
-                            <strong>Год:</strong>
-                            {{ conflict.publication_year or "—" }}
-                        </p>
+                            <div class="d-flex justify-content-between gap-3 mb-3">
 
-                        <p>
-                            <strong>Статус проверки:</strong>
-                            {{ publication_verification_statuses.get(
-                                conflict.verification_status,
-                                conflict.verification_status
-                            ) }}
-                        </p>
+                                <h3 class="h6 fw-bold mb-0">
+                                    Публикация №{{ conflict.id }}
+                                </h3>
 
-                        <form
-                            method="post"
-                            action="{{ url_for(
-                                'publications.resolve_doi_conflict',
-                                publication_id=publication.id
-                            ) }}"
-                        >
-                            <input
-                                type="hidden"
-                                name="csrf_token"
-                                value="{{ csrf_token() }}"
-                            >
+                            </div>
 
-                            <input
-                                type="hidden"
-                                name="conflict_id"
-                                value="{{ conflict.id }}"
-                            >
 
-                            <button
-                                type="submit"
-                                name="action"
-                                value="keep_current"
-                            >
-                                Оставить текущую публикацию
-                            </button>
+                            <dl class="mb-4">
 
-                            <button
-                                type="submit"
-                                name="action"
-                                value="keep_conflict"
-                            >
-                                Оставить публикацию №{{ conflict.id }}
-                            </button>
-                        </form>
-                    </article>
-                {% endfor %}
-            </section>
-        {% endif %}
+                                <div class="mb-3">
+                                    <dt class="small text-body-secondary">
+                                        Название
+                                    </dt>
 
-        <section>
-            <h2>Авторы</h2>
+                                    <dd class="mb-0 fw-semibold">
+                                        {{ conflict.title }}
+                                    </dd>
+                                </div>
 
-            {% if publication.author_links %}
-                <ol>
-                    {% for link in publication.author_links %}
-                        <li>
-                            {{ link.employee.full_name }}
 
-                            {% if link.employee.position %}
-                                — {{ link.employee.position }}
-                            {% endif %}
-                        </li>
-                    {% endfor %}
-                </ol>
-            {% else %}
-                <p>Авторы не указаны.</p>
-            {% endif %}
-        </section>
+                                <div class="mb-3">
+                                    <dt class="small text-body-secondary">
+                                        Журнал
+                                    </dt>
 
-        <section>
-            <h2>Библиографические сведения</h2>
+                                    <dd class="mb-0">
+                                        {{ conflict.journal or "—" }}
+                                    </dd>
+                                </div>
 
-            <p>
-                <strong>Год:</strong>
-                {{ publication.publication_year or "—" }}
-            </p>
 
-            <p>
-                <strong>Том:</strong>
-                {{ publication.volume or "—" }}
-            </p>
+                                <div class="mb-3">
+                                    <dt class="small text-body-secondary">
+                                        Год
+                                    </dt>
 
-            <p>
-                <strong>Выпуск:</strong>
-                {{ publication.issue or "—" }}
-            </p>
+                                    <dd class="mb-0">
+                                        {{ conflict.publication_year or "—" }}
+                                    </dd>
+                                </div>
 
-            <p>
-                <strong>Страницы:</strong>
-                {{ publication.pages or "—" }}
-            </p>
-        </section>
 
-        <section>
-            <h2>Идентификаторы</h2>
+                                <div>
+                                    <dt class="small text-body-secondary">
+                                        Статус проверки
+                                    </dt>
 
-            <p>
-                <strong>DOI:</strong>
-                {{ publication.doi or "—" }}
-            </p>
-
-            <p>
-                <strong>Ссылка:</strong>
-
-                {% if publication.url %}
-                    <a
-                        href="{{ publication.url }}"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                    >
-                        {{ publication.url }}
-                    </a>
-                {% else %}
-                    —
-                {% endif %}
-            </p>
-        </section>
-
-        <section>
-            <h2>Индексация</h2>
-
-            <p>
-                <strong>Тип индексации:</strong>
-
-                {% if publication.indexing_type %}
-                    {% if current_user.language == "kk" %}
-                        {{ publication.indexing_type.name_kk }}
-                    {% else %}
-                        {{ publication.indexing_type.name_ru }}
-                    {% endif %}
-                {% else %}
-                    —
-                {% endif %}
-            </p>
-        </section>
-
-        <section>
-            <h2>Аффилиация</h2>
-
-            <p>{{ publication.affiliation or "—" }}</p>
-        </section>
-
-        <section>
-            <h2>Примечания</h2>
-
-            <p>{{ publication.notes or "—" }}</p>
-        </section>
-
-        <section>
-            <h2>Подтверждающие файлы</h2>
-
-            {% if publication.attachments %}
-                <ul>
-                    {% for attachment in publication.attachments %}
-                        <li>
-                            <strong>
-                                {{ attachment.original_filename }}
-                            </strong>
-
-                            {% if attachment.file_size %}
-                                — {{ attachment.file_size }} байт
-                            {% endif %}
-
-                            <p>
-                                <strong>Проверка файла:</strong>
-
-                                {% if attachment.review_status == "PENDING" %}
-                                    На проверке
-                                {% elif attachment.review_status == "APPROVED" %}
-                                    Принят
-                                {% elif attachment.review_status == "REJECTED" %}
-                                    Отклонён
-                                {% else %}
-                                    {{ attachment.review_status }}
-                                {% endif %}
-                            </p>
-
-                            {% if attachment.review_comment %}
-                                <p>
-                                    <strong>Причина отклонения:</strong>
-                                    {{ attachment.review_comment }}
-                                </p>
-                            {% endif %}
-
-                            <p>
-                                <a
-                                    href="{{ url_for(
-                                        'publications.download_publication_attachment',
-                                        publication_id=publication.id,
-                                        attachment_id=attachment.id
-                                    ) }}"
-                                >
-                                    Скачать
-                                </a>
-                            </p>
-
-                            {% if current_user.role == "DEPARTMENT_HEAD" %}
-                                {% if attachment.uploaded_by == current_user.id %}
-                                    <form
-                                        method="post"
-                                        action="{{ url_for(
-                                            'publications.delete_publication_attachment',
-                                            publication_id=publication.id,
-                                            attachment_id=attachment.id
-                                        ) }}"
-                                    >
-                                        <input
-                                            type="hidden"
-                                            name="csrf_token"
-                                            value="{{ csrf_token() }}"
-                                        >
-
-                                        <button type="submit">
-                                            Удалить файл
-                                        </button>
-                                    </form>
-                                {% endif %}
-                            {% endif %}
-
-                            {% if current_user.role == "ADMIN" %}
-                                {% if attachment.review_status != "APPROVED" %}
-                                    <form
-                                        method="post"
-                                        action="{{ url_for(
-                                            'publications.approve_publication_attachment',
-                                            publication_id=publication.id,
-                                            attachment_id=attachment.id
-                                        ) }}"
-                                    >
-                                        <input
-                                            type="hidden"
-                                            name="csrf_token"
-                                            value="{{ csrf_token() }}"
-                                        >
-
-                                        <button type="submit">
-                                            Принять файл
-                                        </button>
-                                    </form>
-                                {% endif %}
-
-                                {% if attachment.review_status != "REJECTED" %}
-                                    <form
-                                        method="post"
-                                        action="{{ url_for(
-                                            'publications.reject_publication_attachment',
-                                            publication_id=publication.id,
-                                            attachment_id=attachment.id
-                                        ) }}"
-                                    >
-                                        <input
-                                            type="hidden"
-                                            name="csrf_token"
-                                            value="{{ csrf_token() }}"
-                                        >
-
-                                        <label
-                                            for="comment-{{ attachment.id }}"
-                                        >
-                                            Причина отклонения
-                                        </label>
-
-                                        <br>
-
-                                        <textarea
-                                            id="comment-{{ attachment.id }}"
-                                            name="comment"
-                                            rows="4"
-                                            required
-                                        ></textarea>
-
-                                        <br>
-
-                                        <button type="submit">
-                                            Отклонить файл
-                                        </button>
-                                    </form>
-                                {% endif %}
-
-                                {% if attachment.reviewer %}
-                                    <p>
-                                        Проверил:
-                                        {{ attachment.reviewer.full_name }}
-                                    </p>
-                                {% endif %}
-
-                                {% if attachment.reviewed_at %}
-                                    <p>
-                                        Проверено:
-                                        {{ attachment.reviewed_at.strftime(
-                                            "%d.%m.%Y %H:%M"
+                                    <dd class="mb-0">
+                                        {{ publication_verification_statuses.get(
+                                            conflict.verification_status,
+                                            conflict.verification_status
                                         ) }}
-                                    </p>
-                                {% endif %}
-                            {% endif %}
-                        </li>
-                    {% endfor %}
-                </ul>
-            {% else %}
-                <p>
-                    Подтверждающие файлы не загружены.
-                </p>
-            {% endif %}
+                                    </dd>
+                                </div>
 
-            {% if current_user.role == "DEPARTMENT_HEAD" %}
-                <form
-                    method="post"
-                    action="{{ url_for(
-                        'publications.upload_publication_attachment',
-                        publication_id=publication.id
-                    ) }}"
-                    enctype="multipart/form-data"
-                >
-                    <input
-                        type="hidden"
-                        name="csrf_token"
-                        value="{{ csrf_token() }}"
-                    >
+                            </dl>
 
-                    <p>
-                        <label for="file">
-                            Загрузить оттиск
-                        </label>
-                        <br>
 
-                        <input
-                            id="file"
-                            name="file"
-                            type="file"
-                            accept=".pdf,.doc,.docx,.jpg,.jpeg,.zip,.rar"
-                            required
-                        >
-                    </p>
+                            <form
+                                method="post"
+                                action="{{ url_for(
+                                    'publications.resolve_doi_conflict',
+                                    publication_id=publication.id
+                                ) }}"
+                                class="d-flex flex-column flex-sm-row gap-2"
+                            >
 
-                    <button type="submit">
-                        Загрузить файл
-                    </button>
-                </form>
-            {% endif %}
-        </section>
+                                <input
+                                    type="hidden"
+                                    name="csrf_token"
+                                    value="{{ csrf_token() }}"
+                                >
 
-        {% if current_user.role == "DEPARTMENT_HEAD" and allowed_statuses %}
-            <section>
-                <h2>Изменить статус публикации</h2>
+                                <input
+                                    type="hidden"
+                                    name="conflict_id"
+                                    value="{{ conflict.id }}"
+                                >
 
-                <form
-                    method="post"
-                    action="{{ url_for(
-                        'publications.change_publication_status',
-                        publication_id=publication.id
-                    ) }}"
-                >
-                    <input
-                        type="hidden"
-                        name="csrf_token"
-                        value="{{ csrf_token() }}"
-                    >
+                                <button
+                                    type="submit"
+                                    name="action"
+                                    value="keep_current"
+                                    class="btn btn-pm-primary flex-grow-1"
+                                >
+                                    Оставить текущую
+                                </button>
 
-                    <p>
-                        <label for="status">
-                            Новый статус
-                        </label>
-                        <br>
+                                <button
+                                    type="submit"
+                                    name="action"
+                                    value="keep_conflict"
+                                    class="btn btn-light border flex-grow-1"
+                                >
+                                    Оставить №{{ conflict.id }}
+                                </button>
 
-                        <select
-                            id="status"
-                            name="status"
-                            required
-                        >
-                            <option value="">
-                                Выберите статус
-                            </option>
+                            </form>
 
-                            {% for status in allowed_statuses %}
-                                <option value="{{ status }}">
-                                    {{ publication_statuses[status] }}
-                                </option>
+                        </article>
+
+                    </div>
+
+                {% endfor %}
+
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+{% endif %}
+
+
+<section class="mb-4">
+
+    <div class="row g-3">
+
+        <div class="col-12 col-xl-6">
+
+            <div class="card card-pm border-0 h-100">
+
+                <div class="card-body p-4">
+
+                    <div class="d-flex align-items-center gap-3 mb-4">
+
+                        <span class="pm-dashboard-icon pm-dashboard-icon-primary">
+                            👥
+                        </span>
+
+                        <div>
+                            <h2 class="h5 fw-bold mb-1">
+                                Авторы
+                            </h2>
+
+                            <p class="small text-body-secondary mb-0">
+                                Авторы публикации
+                            </p>
+                        </div>
+
+                    </div>
+
+
+                    {% if publication.author_links %}
+
+                        <div class="d-flex flex-column gap-2">
+
+                            {% for link in publication.author_links %}
+
+                                <div class="pm-author-row">
+
+                                    <div class="fw-semibold">
+                                        {{ link.employee.full_name }}
+                                    </div>
+
+                                    {% if link.employee.position %}
+
+                                        <div class="small text-body-secondary">
+                                            {{ link.employee.position }}
+                                        </div>
+
+                                    {% endif %}
+
+                                </div>
+
                             {% endfor %}
-                        </select>
+
+                        </div>
+
+                    {% else %}
+
+                        <div class="pm-empty-state py-4">
+
+                            <p class="text-body-secondary mb-0">
+                                Авторы не указаны.
+                            </p>
+
+                        </div>
+
+                    {% endif %}
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="col-12 col-xl-6">
+
+            <div class="card card-pm border-0 h-100">
+
+                <div class="card-body p-4">
+
+                    <div class="d-flex align-items-center gap-3 mb-4">
+
+                        <span class="pm-dashboard-icon pm-dashboard-icon-accent">
+                            ◈
+                        </span>
+
+                        <div>
+                            <h2 class="h5 fw-bold mb-1">
+                                Библиографические сведения
+                            </h2>
+
+                            <p class="small text-body-secondary mb-0">
+                                Основные данные издания
+                            </p>
+                        </div>
+
+                    </div>
+
+
+                    <div class="row g-3">
+
+                        <div class="col-6">
+                            <div class="small text-body-secondary">
+                                Год
+                            </div>
+
+                            <div class="fw-semibold mt-1">
+                                {{ publication.publication_year or "—" }}
+                            </div>
+                        </div>
+
+
+                        <div class="col-6">
+                            <div class="small text-body-secondary">
+                                Том
+                            </div>
+
+                            <div class="fw-semibold mt-1">
+                                {{ publication.volume or "—" }}
+                            </div>
+                        </div>
+
+
+                        <div class="col-6">
+                            <div class="small text-body-secondary">
+                                Выпуск
+                            </div>
+
+                            <div class="fw-semibold mt-1">
+                                {{ publication.issue or "—" }}
+                            </div>
+                        </div>
+
+
+                        <div class="col-6">
+                            <div class="small text-body-secondary">
+                                Страницы
+                            </div>
+
+                            <div class="fw-semibold mt-1">
+                                {{ publication.pages or "—" }}
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<section class="mb-4">
+
+    <div class="card card-pm border-0">
+
+        <div class="card-body p-4">
+
+            <div class="d-flex align-items-center gap-3 mb-4">
+
+                <span class="pm-dashboard-icon pm-dashboard-icon-primary">
+                    #
+                </span>
+
+                <div>
+                    <h2 class="h5 fw-bold mb-1">
+                        Идентификаторы
+                    </h2>
+
+                    <p class="small text-body-secondary mb-0">
+                        DOI и внешняя ссылка
+                    </p>
+                </div>
+
+            </div>
+
+
+            <div class="row g-4">
+
+                <div class="col-12 col-md-6">
+
+                    <div class="small text-body-secondary mb-1">
+                        DOI
+                    </div>
+
+                    <div class="fw-semibold text-break">
+                        {{ publication.doi or "—" }}
+                    </div>
+
+                </div>
+
+
+                <div class="col-12 col-md-6">
+
+                    <div class="small text-body-secondary mb-1">
+                        Ссылка
+                    </div>
+
+                    {% if publication.url %}
+
+                        <a
+                            href="{{ publication.url }}"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="pm-link text-break"
+                        >
+                            {{ publication.url }}
+                        </a>
+
+                    {% else %}
+
+                        <div class="fw-semibold">
+                            —
+                        </div>
+
+                    {% endif %}
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<section class="mb-4">
+
+    <div class="row g-3">
+
+        <div class="col-12 col-lg-6">
+
+            <div class="card card-pm border-0 h-100">
+
+                <div class="card-body p-4">
+
+                    <div class="d-flex align-items-center gap-3 mb-4">
+
+                        <span class="pm-dashboard-icon pm-dashboard-icon-primary">
+                            ◉
+                        </span>
+
+                        <div>
+                            <h2 class="h5 fw-bold mb-1">
+                                Индексация
+                            </h2>
+
+                            <p class="small text-body-secondary mb-0">
+                                Тип индексации
+                            </p>
+                        </div>
+
+                    </div>
+
+
+                    {% if publication.indexing_type %}
+
+                        <div class="fw-semibold">
+
+                            {% if current_user.language == "kk" %}
+                                {{ publication.indexing_type.name_kk }}
+                            {% else %}
+                                {{ publication.indexing_type.name_ru }}
+                            {% endif %}
+
+                        </div>
+
+                    {% else %}
+
+                        <div class="text-body-secondary">
+                            —
+                        </div>
+
+                    {% endif %}
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="col-12 col-lg-6">
+
+            <div class="card card-pm border-0 h-100">
+
+                <div class="card-body p-4">
+
+                    <div class="d-flex align-items-center gap-3 mb-4">
+
+                        <span class="pm-dashboard-icon pm-dashboard-icon-accent">
+                            ≈
+                        </span>
+
+                        <div>
+                            <h2 class="h5 fw-bold mb-1">
+                                Аффилиация
+                            </h2>
+
+                            <p class="small text-body-secondary mb-0">
+                                Организация автора
+                            </p>
+                        </div>
+
+                    </div>
+
+
+                    <p class="mb-0 text-body-secondary text-break">
+                        {{ publication.affiliation or "—" }}
                     </p>
 
-                    <button type="submit">
-                        Изменить статус
-                    </button>
-                </form>
-            </section>
-        {% endif %}
+                </div>
 
-        {% if current_user.role == "ADMIN" %}
-            <section>
-                <h2>Проверка публикации</h2>
+            </div>
 
-                {% if not publication.attachments %}
-                    <p>
-                        Нельзя принять публикацию:
-                        нет подтверждающих файлов.
+        </div>
+
+    </div>
+
+</section>
+
+
+<section class="mb-4">
+
+    <div class="card card-pm border-0">
+
+        <div class="card-body p-4">
+
+            <div class="d-flex align-items-center gap-3 mb-4">
+
+                <span class="pm-dashboard-icon pm-dashboard-icon-primary">
+                    ≡
+                </span>
+
+                <div>
+                    <h2 class="h5 fw-bold mb-1">
+                        Примечания
+                    </h2>
+
+                    <p class="small text-body-secondary mb-0">
+                        Дополнительная информация
                     </p>
-                {% elif publication.attachments|selectattr(
-                    "review_status",
-                    "equalto",
-                    "APPROVED"
-                )|list|length != publication.attachments|length %}
-                    <p>
-                        Нельзя принять публикацию:
-                        не все файлы приняты.
-                    </p>
-                {% else %}
+                </div>
+
+            </div>
+
+
+            <p class="mb-0 text-body-secondary">
+                {{ publication.notes or "—" }}
+            </p>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<section class="mb-4">
+
+    <div class="card card-pm border-0">
+
+        <div class="card-body p-4">
+
+            <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-4">
+
+                <div class="d-flex align-items-center gap-3">
+
+                    <span class="pm-dashboard-icon pm-dashboard-icon-accent">
+                        ↗
+                    </span>
+
+                    <div>
+                        <h2 class="h5 fw-bold mb-1">
+                            Подтверждающие файлы
+                        </h2>
+
+                        <p class="small text-body-secondary mb-0">
+                            Документы, подтверждающие публикацию
+                        </p>
+                    </div>
+
+                </div>
+
+
+                {% if current_user.role == "DEPARTMENT_HEAD" %}
+
                     <form
                         method="post"
                         action="{{ url_for(
-                            'publications.verify_publication',
+                            'publications.upload_publication_attachment',
                             publication_id=publication.id
                         ) }}"
+                        enctype="multipart/form-data"
                     >
+
                         <input
                             type="hidden"
                             name="csrf_token"
                             value="{{ csrf_token() }}"
                         >
 
-                        <button type="submit">
-                            Подтвердить публикацию
-                        </button>
+                        <div class="d-flex flex-column flex-sm-row gap-2">
+
+                            <input
+                                id="file"
+                                name="file"
+                                type="file"
+                                class="form-control"
+                                accept=".pdf,.doc,.docx,.jpg,.jpeg,.zip,.rar"
+                                required
+                            >
+
+                            <button
+                                type="submit"
+                                class="btn btn-pm-primary text-nowrap"
+                            >
+                                Загрузить
+                            </button>
+
+                        </div>
+
                     </form>
+
                 {% endif %}
 
-                <h3>Вернуть публикацию на доработку</h3>
+            </div>
+
+
+            {% if publication.attachments %}
+
+                <div class="d-flex flex-column gap-3">
+
+                    {% for attachment in publication.attachments %}
+
+                        <article class="pm-attachment-card">
+
+                            <div class="d-flex flex-column flex-lg-row justify-content-between gap-3">
+
+                                <div class="min-w-0">
+
+                                    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+
+                                        <strong class="text-break">
+                                            {{ attachment.original_filename }}
+                                        </strong>
+
+
+                                        {% if attachment.review_status == "PENDING" %}
+
+                                            <span class="badge rounded-pill badge-pm-warning">
+                                                На проверке
+                                            </span>
+
+                                        {% elif attachment.review_status == "APPROVED" %}
+
+                                            <span class="badge rounded-pill badge-pm-success">
+                                                Принят
+                                            </span>
+
+                                        {% elif attachment.review_status == "REJECTED" %}
+
+                                            <span class="badge rounded-pill badge-pm-danger">
+                                                Отклонён
+                                            </span>
+
+                                        {% else %}
+
+                                            <span class="badge rounded-pill badge-pm-primary">
+                                                {{ attachment.review_status }}
+                                            </span>
+
+                                        {% endif %}
+
+                                    </div>
+
+
+                                    {% if attachment.file_size %}
+
+                                        <div class="small text-body-secondary mb-2">
+                                            {{ attachment.file_size }} байт
+                                        </div>
+
+                                    {% endif %}
+
+
+                                    {% if attachment.review_comment %}
+
+                                        <div class="alert alert-light border small mb-0">
+
+                                            <strong>
+                                                Причина отклонения:
+                                            </strong>
+
+                                            {{ attachment.review_comment }}
+
+                                        </div>
+
+                                    {% endif %}
+
+                                </div>
+
+
+                                <div class="dropdown flex-shrink-0">
+
+                                    <button
+                                        class="btn btn-sm btn-light border dropdown-toggle"
+                                        type="button"
+                                        data-bs-toggle="dropdown"
+                                        data-bs-display="static"
+                                        aria-expanded="false"
+                                    >
+                                        Действия
+                                    </button>
+
+
+                                    <ul class="dropdown-menu dropdown-menu-end">
+
+                                        <li>
+
+                                            <a
+                                                class="dropdown-item"
+                                                href="{{ url_for(
+                                                    'publications.download_publication_attachment',
+                                                    publication_id=publication.id,
+                                                    attachment_id=attachment.id
+                                                ) }}"
+                                            >
+                                                Скачать
+                                            </a>
+
+                                        </li>
+
+
+                                        {% if current_user.role == "DEPARTMENT_HEAD" %}
+
+                                            {% if attachment.uploaded_by == current_user.id %}
+
+                                                <li>
+                                                    <hr class="dropdown-divider">
+                                                </li>
+
+                                                <li>
+
+                                                    <form
+                                                        method="post"
+                                                        action="{{ url_for(
+                                                            'publications.delete_publication_attachment',
+                                                            publication_id=publication.id,
+                                                            attachment_id=attachment.id
+                                                        ) }}"
+                                                    >
+
+                                                        <input
+                                                            type="hidden"
+                                                            name="csrf_token"
+                                                            value="{{ csrf_token() }}"
+                                                        >
+
+                                                        <button
+                                                            type="submit"
+                                                            class="dropdown-item pm-dropdown-danger"
+                                                        >
+                                                            Удалить файл
+                                                        </button>
+
+                                                    </form>
+
+                                                </li>
+
+                                            {% endif %}
+
+                                        {% endif %}
+
+
+                                        {% if current_user.role == "ADMIN" %}
+
+                                            <li>
+                                                <hr class="dropdown-divider">
+                                            </li>
+
+
+                                            {% if attachment.review_status != "APPROVED" %}
+
+                                                <li>
+
+                                                    <form
+                                                        method="post"
+                                                        action="{{ url_for(
+                                                            'publications.approve_publication_attachment',
+                                                            publication_id=publication.id,
+                                                            attachment_id=attachment.id
+                                                        ) }}"
+                                                    >
+
+                                                        <input
+                                                            type="hidden"
+                                                            name="csrf_token"
+                                                            value="{{ csrf_token() }}"
+                                                        >
+
+                                                        <button
+                                                            type="submit"
+                                                            class="dropdown-item"
+                                                        >
+                                                            Принять файл
+                                                        </button>
+
+                                                    </form>
+
+                                                </li>
+
+                                            {% endif %}
+
+
+                                            {% if attachment.review_status != "REJECTED" %}
+
+                                                <li>
+
+                                                    <button
+                                                        type="button"
+                                                        class="dropdown-item pm-dropdown-danger"
+                                                        data-bs-toggle="modal"
+                                                        data-bs-target="#rejectAttachmentModal{{ attachment.id }}"
+                                                    >
+                                                        Отклонить файл
+                                                    </button>
+
+                                                </li>
+
+                                            {% endif %}
+
+                                        {% endif %}
+
+                                    </ul>
+
+                                </div>
+
+                            </div>
+
+
+                            {% if current_user.role == "ADMIN" %}
+
+                                {% if attachment.reviewer or attachment.reviewed_at %}
+
+                                    <div class="border-top mt-3 pt-3 small text-body-secondary">
+
+                                        {% if attachment.reviewer %}
+                                            Проверил:
+                                            {{ attachment.reviewer.full_name }}
+                                        {% endif %}
+
+                                        {% if attachment.reviewer and attachment.reviewed_at %}
+                                            ·
+                                        {% endif %}
+
+                                        {% if attachment.reviewed_at %}
+                                            Проверено:
+                                            {{ attachment.reviewed_at.strftime(
+                                                "%d.%m.%Y %H:%M"
+                                            ) }}
+                                        {% endif %}
+
+                                    </div>
+
+                                {% endif %}
+
+                            {% endif %}
+
+                        </article>
+
+
+                        {% if current_user.role == "ADMIN" %}
+
+                            {% if attachment.review_status != "REJECTED" %}
+
+                                <div
+                                    class="modal fade"
+                                    id="rejectAttachmentModal{{ attachment.id }}"
+                                    tabindex="-1"
+                                    aria-hidden="true"
+                                >
+
+                                    <div class="modal-dialog modal-dialog-centered">
+
+                                        <div class="modal-content">
+
+                                            <div class="modal-header">
+
+                                                <h2 class="modal-title h5 fw-bold">
+                                                    Отклонить файл
+                                                </h2>
+
+                                                <button
+                                                    type="button"
+                                                    class="btn-close"
+                                                    data-bs-dismiss="modal"
+                                                    aria-label="Закрыть"
+                                                ></button>
+
+                                            </div>
+
+
+                                            <form
+                                                method="post"
+                                                action="{{ url_for(
+                                                    'publications.reject_publication_attachment',
+                                                    publication_id=publication.id,
+                                                    attachment_id=attachment.id
+                                                ) }}"
+                                            >
+
+                                                <div class="modal-body">
+
+                                                    <input
+                                                        type="hidden"
+                                                        name="csrf_token"
+                                                        value="{{ csrf_token() }}"
+                                                    >
+
+                                                    <p class="small text-body-secondary">
+                                                        {{ attachment.original_filename }}
+                                                    </p>
+
+                                                    <label
+                                                        for="comment-{{ attachment.id }}"
+                                                        class="form-label fw-semibold"
+                                                    >
+                                                        Причина отклонения
+                                                    </label>
+
+                                                    <textarea
+                                                        id="comment-{{ attachment.id }}"
+                                                        name="comment"
+                                                        class="form-control"
+                                                        rows="5"
+                                                        required
+                                                    ></textarea>
+
+                                                </div>
+
+
+                                                <div class="modal-footer">
+
+                                                    <button
+                                                        type="button"
+                                                        class="btn btn-light border"
+                                                        data-bs-dismiss="modal"
+                                                    >
+                                                        Отмена
+                                                    </button>
+
+                                                    <button
+                                                        type="submit"
+                                                        class="btn btn-pm-danger"
+                                                    >
+                                                        Отклонить файл
+                                                    </button>
+
+                                                </div>
+
+                                            </form>
+
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                            {% endif %}
+
+                        {% endif %}
+
+                    {% endfor %}
+
+                </div>
+
+            {% else %}
+
+                <div class="pm-empty-state py-5">
+
+                    <div class="pm-empty-icon">
+                        ↗
+                    </div>
+
+                    <h3 class="h6 fw-bold mb-2">
+                        Файлов пока нет
+                    </h3>
+
+                    <p class="text-body-secondary mb-0">
+                        Подтверждающие файлы не загружены.
+                    </p>
+
+                </div>
+
+            {% endif %}
+
+        </div>
+
+    </div>
+
+</section>
+
+
+{% if current_user.role == "DEPARTMENT_HEAD" and allowed_statuses %}
+
+<section class="mb-4">
+
+    <div class="card card-pm border-0">
+
+        <div class="card-body p-4">
+
+            <div class="d-flex align-items-center gap-3 mb-4">
+
+                <span class="pm-dashboard-icon pm-dashboard-icon-primary">
+                    ↻
+                </span>
+
+                <div>
+                    <h2 class="h5 fw-bold mb-1">
+                        Изменить статус публикации
+                    </h2>
+
+                    <p class="small text-body-secondary mb-0">
+                        Выберите следующий статус публикации.
+                    </p>
+                </div>
+
+            </div>
+
+
+            <form
+                method="post"
+                action="{{ url_for(
+                    'publications.change_publication_status',
+                    publication_id=publication.id
+                ) }}"
+            >
+
+                <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="{{ csrf_token() }}"
+                >
+
+                <div class="row g-3 align-items-end">
+
+                    <div class="col-12 col-md-8">
+
+                        <label
+                            for="status"
+                            class="form-label fw-semibold"
+                        >
+                            Новый статус
+                        </label>
+
+                        <select
+                            id="status"
+                            name="status"
+                            class="form-select"
+                            required
+                        >
+
+                            <option value="">
+                                Выберите статус
+                            </option>
+
+                            {% for status in allowed_statuses %}
+
+                                <option value="{{ status }}">
+                                    {{ publication_statuses[status] }}
+                                </option>
+
+                            {% endfor %}
+
+                        </select>
+
+                    </div>
+
+
+                    <div class="col-12 col-md-4">
+
+                        <button
+                            type="submit"
+                            class="btn btn-pm-primary w-100"
+                        >
+                            Изменить статус
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</section>
+
+{% endif %}
+
+
+{% if current_user.role == "ADMIN" %}
+
+<section class="mb-4">
+
+    <div class="card card-pm border-0">
+
+        <div class="card-body p-4">
+
+            <div class="d-flex align-items-center gap-3 mb-4">
+
+                <span class="pm-dashboard-icon pm-dashboard-icon-primary">
+                    ✓
+                </span>
+
+                <div>
+                    <h2 class="h5 fw-bold mb-1">
+                        Проверка публикации
+                    </h2>
+
+                    <p class="small text-body-secondary mb-0">
+                        Решение администратора по публикации.
+                    </p>
+                </div>
+
+            </div>
+
+
+            {% if not publication.attachments %}
+
+                <div class="alert alert-light border mb-0">
+                    Нельзя принять публикацию: нет подтверждающих файлов.
+                </div>
+
+            {% elif publication.attachments|selectattr(
+                "review_status",
+                "equalto",
+                "APPROVED"
+            )|list|length != publication.attachments|length %}
+
+                <div class="alert alert-light border mb-4">
+                    Нельзя принять публикацию: не все файлы приняты.
+                </div>
+
+            {% else %}
+
+                <form
+                    method="post"
+                    action="{{ url_for(
+                        'publications.verify_publication',
+                        publication_id=publication.id
+                    ) }}"
+                    class="mb-4"
+                >
+
+                    <input
+                        type="hidden"
+                        name="csrf_token"
+                        value="{{ csrf_token() }}"
+                    >
+
+                    <button
+                        type="submit"
+                        class="btn btn-pm-success"
+                    >
+                        ✓ Подтвердить публикацию
+                    </button>
+
+                </form>
+
+            {% endif %}
+
+
+            <div class="border-top pt-4">
+
+                <h3 class="h6 fw-bold mb-3">
+                    Вернуть публикацию на доработку
+                </h3>
 
                 <form
                     method="post"
@@ -565,88 +1338,173 @@
                         publication_id=publication.id
                     ) }}"
                 >
+
                     <input
                         type="hidden"
                         name="csrf_token"
                         value="{{ csrf_token() }}"
                     >
 
-                    <label for="publication-comment">
-                        Замечание
-                    </label>
+                    <div class="mb-3">
 
-                    <br>
+                        <label
+                            for="publication-comment"
+                            class="form-label fw-semibold"
+                        >
+                            Замечание
+                        </label>
 
-                    <textarea
-                        id="publication-comment"
-                        name="comment"
-                        rows="6"
-                        required
-                    ></textarea>
+                        <textarea
+                            id="publication-comment"
+                            name="comment"
+                            class="form-control"
+                            rows="5"
+                            required
+                        ></textarea>
 
-                    <br>
+                    </div>
 
-                    <button type="submit">
+                    <button
+                        type="submit"
+                        class="btn btn-pm-danger"
+                    >
                         Вернуть публикацию
                     </button>
+
                 </form>
-            </section>
-        {% endif %}
 
-        <section>
-            <h2>История статусов</h2>
+            </div>
 
-            {% if publication.history %}
-                <table>
+        </div>
+
+    </div>
+
+</section>
+
+{% endif %}
+
+
+<section>
+
+    <div class="mb-3">
+
+        <h2 class="h5 fw-bold mb-1">
+            История статусов
+        </h2>
+
+        <p class="small text-body-secondary mb-0">
+            История изменений состояния публикации.
+        </p>
+
+    </div>
+
+
+    <div class="card card-pm border-0">
+
+        {% if publication.history %}
+
+            <div class="table-responsive">
+
+                <table class="table table-pm align-middle mb-0">
+
                     <thead>
                         <tr>
-                            <th>Дата</th>
-                            <th>Пользователь</th>
-                            <th>Предыдущий статус</th>
-                            <th>Новый статус</th>
+
+                            <th class="ps-4">
+                                Дата
+                            </th>
+
+                            <th>
+                                Пользователь
+                            </th>
+
+                            <th>
+                                Предыдущий статус
+                            </th>
+
+                            <th class="pe-4">
+                                Новый статус
+                            </th>
+
                         </tr>
                     </thead>
 
+
                     <tbody>
+
                         {% for history in publication.history %}
+
                             <tr>
-                                <td>
+
+                                <td class="ps-4 text-nowrap">
                                     {{ history.changed_at.strftime(
                                         "%d.%m.%Y %H:%M"
                                     ) }}
                                 </td>
 
-                                <td>
+
+                                <td class="fw-semibold">
                                     {{ history.user.full_name }}
                                 </td>
 
+
                                 <td>
+
                                     {% if history.old_status %}
+
                                         {{ publication_statuses.get(
                                             history.old_status,
                                             history.old_status
                                         ) }}
+
                                     {% else %}
-                                        —
+
+                                        <span class="text-body-secondary">
+                                            —
+                                        </span>
+
                                     {% endif %}
+
                                 </td>
 
-                                <td>
+
+                                <td class="pe-4 fw-semibold">
+
                                     {{ publication_statuses.get(
                                         history.new_status,
                                         history.new_status
                                     ) }}
+
                                 </td>
+
                             </tr>
+
                         {% endfor %}
+
                     </tbody>
+
                 </table>
-            {% else %}
-                <p>
+
+            </div>
+
+        {% else %}
+
+            <div class="pm-empty-state py-5">
+
+                <div class="pm-empty-icon">
+                    ◷
+                </div>
+
+                <p class="text-body-secondary mb-0">
                     История изменений отсутствует.
                 </p>
-            {% endif %}
-        </section>
-    </main>
-</body>
-</html>
+
+            </div>
+
+        {% endif %}
+
+    </div>
+
+</section>
+
+{% endblock %}

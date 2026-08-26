@@ -1,136 +1,299 @@
-<!doctype html>
-<html lang="ru">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Кафедры</title>
-</head>
-<body>
-    <header>
-        <h1>Кафедры</h1>
+{% extends "base.html" %}
 
-        <p>
-            <strong>{{ current_user.full_name }}</strong>
-        </p>
+{% block title %}
+    Кафедры — Publication Monitor
+{% endblock %}
 
-        <nav>
-            <a href="{{ url_for('main.index') }}">Главная</a>
-            |
-            <a href="{{ url_for('admin.create_department') }}">
-                Создать кафедру
-            </a>
-            |
-            <a href="{{ url_for('admin.users') }}">
-                Пользователи
-            </a>
-        </nav>
+{% block page_title %}
+    Кафедры
+{% endblock %}
 
-        <form method="post" action="{{ url_for('auth.logout') }}">
-            <input
-                type="hidden"
-                name="csrf_token"
-                value="{{ csrf_token() }}"
-            >
+{% block page_subtitle %}
+    <p class="text-body-secondary mb-0 mt-2">
+        Управление структурой организации
+    </p>
+{% endblock %}
 
-            <button type="submit">
-                Выйти
-            </button>
-        </form>
-    </header>
+{% block page_actions %}
+    <a
+        href="{{ url_for('admin.create_department') }}"
+        class="btn btn-pm-primary"
+    >
+        <span class="me-1">+</span>
+        Создать кафедру
+    </a>
+{% endblock %}
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            <section>
-                {% for category, message in messages %}
-                    <p>{{ message }}</p>
-                {% endfor %}
-            </section>
-        {% endif %}
-    {% endwith %}
+{% block content %}
 
-    <main>
-        <table>
-            <thead>
-                <tr>
-                    <th>Название</th>
-                    <th>Код</th>
-                    <th>Статус</th>
-                    <th>Действия</th>
-                </tr>
-            </thead>
+<section>
+    <div class="card card-pm border-0">
 
-            <tbody>
-                {% for department in departments %}
+        <div class="card-body border-bottom">
+            <div class="row align-items-center g-3">
+
+                <div class="col">
+                    <div class="d-flex align-items-center gap-3">
+                        <span class="pm-dashboard-icon pm-dashboard-icon-accent">
+                            ⌂
+                        </span>
+
+                        <div>
+                            <h2 class="h5 fw-bold mb-1">
+                                Все кафедры
+                            </h2>
+
+                            <p class="text-body-secondary small mb-0">
+                                Активные и архивированные подразделения.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-auto">
+                    <span class="badge rounded-pill badge-pm-primary px-3 py-2">
+                        {{ departments | length }}
+                    </span>
+                </div>
+
+            </div>
+        </div>
+
+
+        <div class="table-responsive">
+
+            <table class="table table-pm mb-0 align-middle">
+
+                <thead>
                     <tr>
-                        <td>{{ department.name }}</td>
-                        <td>{{ department.code }}</td>
+                        <th class="ps-4">
+                            Кафедра
+                        </th>
 
-                        <td>
-                            {% if department.is_active %}
-                                Активна
-                            {% else %}
-                                Архивирована
-                            {% endif %}
-                        </td>
+                        <th>
+                            Код
+                        </th>
 
-                        <td>
-                            <a
-                                href="{{ url_for(
-                                    'admin.edit_department',
-                                    department_id=department.id
-                                ) }}"
+                        <th>
+                            Статус
+                        </th>
+
+                        <th class="text-end pe-4">
+                            Действия
+                        </th>
+                    </tr>
+                </thead>
+
+
+                <tbody>
+
+                    {% for department in departments %}
+
+                        <tr>
+
+                            <td class="ps-4">
+
+                                <div class="d-flex align-items-center gap-3">
+
+                                    <span class="pm-avatar pm-department-avatar">
+                                        {{ department.name[0] | upper }}
+                                    </span>
+
+                                    <div class="min-w-0">
+
+                                        <div class="fw-semibold">
+                                            {{ department.name }}
+                                        </div>
+
+                                        <div class="small text-body-secondary">
+                                            ID: {{ department.id }}
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                            </td>
+
+
+                            <td>
+
+                                <code class="pm-code">
+                                    {{ department.code }}
+                                </code>
+
+                            </td>
+
+
+                            <td>
+
+                                {% if department.is_active %}
+
+                                    <span class="badge rounded-pill badge-pm-success">
+                                        Активна
+                                    </span>
+
+                                {% else %}
+
+                                    <span class="badge rounded-pill badge-pm-danger">
+                                        Архивирована
+                                    </span>
+
+                                {% endif %}
+
+                            </td>
+
+
+                            <td class="text-end pe-4">
+
+                                <div class="dropdown">
+
+                                    <button
+                                        class="btn btn-sm btn-light border dropdown-toggle"
+                                        type="button"
+                                        data-bs-toggle="dropdown"
+                                        aria-expanded="false"
+                                    >
+                                        Действия
+                                    </button>
+
+
+                                    <ul class="dropdown-menu dropdown-menu-end">
+
+                                        <li>
+
+                                            <a
+                                                class="dropdown-item"
+                                                href="{{ url_for(
+                                                    'admin.edit_department',
+                                                    department_id=department.id
+                                                ) }}"
+                                            >
+                                                Изменить
+                                            </a>
+
+                                        </li>
+
+
+                                        <li>
+                                            <hr class="dropdown-divider">
+                                        </li>
+
+
+                                        {% if department.is_active %}
+
+                                            <li>
+
+                                                <form
+                                                    method="post"
+                                                    action="{{ url_for(
+                                                        'admin.archive_department',
+                                                        department_id=department.id
+                                                    ) }}"
+                                                >
+
+                                                    <input
+                                                        type="hidden"
+                                                        name="csrf_token"
+                                                        value="{{ csrf_token() }}"
+                                                    >
+
+                                                    <button
+                                                        type="submit"
+                                                        class="dropdown-item pm-dropdown-danger"
+                                                    >
+                                                        Архивировать
+                                                    </button>
+
+                                                </form>
+
+                                            </li>
+
+                                        {% else %}
+
+                                            <li>
+
+                                                <form
+                                                    method="post"
+                                                    action="{{ url_for(
+                                                        'admin.restore_department',
+                                                        department_id=department.id
+                                                    ) }}"
+                                                >
+
+                                                    <input
+                                                        type="hidden"
+                                                        name="csrf_token"
+                                                        value="{{ csrf_token() }}"
+                                                    >
+
+                                                    <button
+                                                        type="submit"
+                                                        class="dropdown-item pm-dropdown-success"
+                                                    >
+                                                        Восстановить
+                                                    </button>
+
+                                                </form>
+
+                                            </li>
+
+                                        {% endif %}
+
+                                    </ul>
+
+                                </div>
+
+                            </td>
+
+                        </tr>
+
+
+                    {% else %}
+
+                        <tr>
+
+                            <td
+                                colspan="4"
+                                class="py-5 text-center"
                             >
-                                Изменить
-                            </a>
 
-                            {% if department.is_active %}
-                                <form
-                                    method="post"
-                                    action="{{ url_for(
-                                        'admin.archive_department',
-                                        department_id=department.id
-                                    ) }}"
-                                >
-                                    <input
-                                        type="hidden"
-                                        name="csrf_token"
-                                        value="{{ csrf_token() }}"
+                                <div class="pm-empty-state">
+
+                                    <div class="pm-empty-icon">
+                                        ⌂
+                                    </div>
+
+                                    <h3 class="h5 fw-bold mb-2">
+                                        Кафедр пока нет
+                                    </h3>
+
+                                    <p class="text-body-secondary mb-3">
+                                        Создайте первое подразделение организации.
+                                    </p>
+
+                                    <a
+                                        href="{{ url_for('admin.create_department') }}"
+                                        class="btn btn-pm-primary"
                                     >
+                                        Создать кафедру
+                                    </a>
 
-                                    <button type="submit">
-                                        Архивировать
-                                    </button>
-                                </form>
-                            {% else %}
-                                <form
-                                    method="post"
-                                    action="{{ url_for(
-                                        'admin.restore_department',
-                                        department_id=department.id
-                                    ) }}"
-                                >
-                                    <input
-                                        type="hidden"
-                                        name="csrf_token"
-                                        value="{{ csrf_token() }}"
-                                    >
+                                </div>
 
-                                    <button type="submit">
-                                        Восстановить
-                                    </button>
-                                </form>
-                            {% endif %}
-                        </td>
-                    </tr>
-                {% else %}
-                    <tr>
-                        <td colspan="4">
-                            Кафедр пока нет.
-                        </td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </main>
-</body>
-</html>
+                            </td>
+
+                        </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+</section>
+
+{% endblock %}

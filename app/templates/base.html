@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="{{ current_user.language if current_user.is_authenticated else 'ru' }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#5314CD">
+
+    <title>{% block title %}Publication Monitor{% endblock %}</title>
+
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
+        rel="stylesheet"
+    >
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/app.css') }}"
+    >
+
+    {% block head %}{% endblock %}
+</head>
+
+<body>
+    <div class="pm-app">
+        <header class="navbar navbar-expand-lg pm-topbar sticky-top">
+            <div class="container-fluid px-3 px-lg-4">
+                <button
+                    class="btn pm-menu-button d-lg-none me-2"
+                    type="button"
+                    data-bs-toggle="offcanvas"
+                    data-bs-target="#pmSidebar"
+                    aria-controls="pmSidebar"
+                    aria-label="Открыть меню"
+                >
+                    <span class="pm-menu-icon">☰</span>
+                </button>
+
+                <a
+                    class="navbar-brand pm-brand"
+                    href="{{ url_for('main.index') }}"
+                >
+                    <span class="pm-brand-mark">P</span>
+                    <span class="pm-brand-name">Publication Monitor</span>
+                </a>
+
+                <div class="d-flex align-items-center gap-2 ms-auto">
+                    <div class="dropdown">
+                        <button
+                            class="btn pm-language-button dropdown-toggle"
+                            type="button"
+                            data-bs-toggle="dropdown"
+                            aria-expanded="false"
+                        >
+                            {% if current_user.language == "kk" %}ҚАЗ{% else %}RU{% endif %}
+                        </button>
+
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><span class="dropdown-item-text">Русский</span></li>
+                            <li><span class="dropdown-item-text">Қазақша</span></li>
+                        </ul>
+                    </div>
+
+                    <div class="dropdown">
+                        <button
+                            class="btn pm-user-button dropdown-toggle"
+                            type="button"
+                            data-bs-toggle="dropdown"
+                            aria-expanded="false"
+                        >
+                            <span class="pm-avatar">
+                                {{
+                                    (
+                                        current_user.full_name
+                                        or current_user.username
+                                    )[0] | upper
+                                }}
+                            </span>
+                            <span class="d-none d-md-inline">
+                                {{ current_user.full_name or current_user.username }}
+                            </span>
+                        </button>
+
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li>
+                                <span class="dropdown-item-text">
+                                    {% if current_user.role == "TECH_ADMIN" %}
+                                        Технический администратор
+                                    {% elif current_user.role == "ADMIN" %}
+                                        Администратор
+                                    {% elif current_user.role == "DEPARTMENT_HEAD" %}
+                                        Заведующий кафедрой
+                                    {% else %}
+                                        Пользователь
+                                    {% endif %}
+                                </span>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <form
+                                    method="post"
+                                    action="{{ url_for('auth.logout') }}"
+                                    class="m-0"
+                                >
+                                    <input
+                                        type="hidden"
+                                        name="csrf_token"
+                                        value="{{ csrf_token() }}"
+                                    >
+                                    <button
+                                        type="submit"
+                                        class="dropdown-item pm-logout-item"
+                                    >
+                                        Выйти
+                                    </button>
+                                </form>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="d-flex">
+            <aside
+                class="offcanvas-lg offcanvas-start pm-sidebar"
+                tabindex="-1"
+                id="pmSidebar"
+                aria-labelledby="pmSidebarLabel"
+            >
+                <div class="offcanvas-header d-lg-none">
+                    <h5 class="offcanvas-title" id="pmSidebarLabel">Меню</h5>
+                    <button
+                        type="button"
+                        class="btn-close"
+                        data-bs-dismiss="offcanvas"
+                        data-bs-target="#pmSidebar"
+                        aria-label="Закрыть"
+                    ></button>
+                </div>
+
+                <div class="offcanvas-body d-flex flex-column p-3">
+                    <nav class="pm-navigation">
+                        <a
+                            class="pm-nav-link {% if request.endpoint == 'main.index' %}active{% endif %}"
+                            href="{{ url_for('main.index') }}"
+                        >
+                            <span class="pm-nav-icon">⌂</span>
+                            <span>Главная</span>
+                        </a>
+
+                        {% if current_user.role == "ADMIN" %}
+                            <div class="pm-nav-heading">Публикационная деятельность</div>
+
+                            <a
+                                class="pm-nav-link {% if request.endpoint and request.endpoint.startswith('plans.') %}active{% endif %}"
+                                href="{{ url_for('plans.plans') }}"
+                            >
+                                <span class="pm-nav-icon">▣</span>
+                                <span>Планы</span>
+                            </a>
+
+                            <a
+                                class="pm-nav-link {% if request.endpoint and request.endpoint.startswith('publications.') %}active{% endif %}"
+                                href="{{ url_for('publications.publications') }}"
+                            >
+                                <span class="pm-nav-icon">◈</span>
+                                <span>Публикации</span>
+                            </a>
+
+                            <a
+                                class="pm-nav-link {% if request.endpoint and request.endpoint.startswith('monitoring.') %}active{% endif %}"
+                                href="{{ url_for('monitoring.dashboard') }}"
+                            >
+                                <span class="pm-nav-icon">◉</span>
+                                <span>Мониторинг</span>
+                            </a>
+
+                            <a
+                                class="pm-nav-link {% if request.endpoint and request.endpoint.startswith('reports.') %}active{% endif %}"
+                                href="{{ url_for('reports.publications_report') }}"
+                            >
+                                <span class="pm-nav-icon">▤</span>
+                                <span>Отчёты</span>
+                            </a>
+
+                            <a
+                                class="pm-nav-link {% if request.endpoint and request.endpoint.startswith('analytics.') %}active{% endif %}"
+                                href="{{ url_for('analytics.dashboard') }}"
+                            >
+                                <span class="pm-nav-icon">▥</span>
+                                <span>Аналитика</span>
+                            </a>
+
+                        {% elif current_user.role == "DEPARTMENT_HEAD" %}
+                            <div class="pm-nav-heading">Моя кафедра</div>
+
+                            <a
+                                class="pm-nav-link {% if request.endpoint and request.endpoint.startswith('plans.') %}active{% endif %}"
+                                href="{{ url_for('plans.plans') }}"
+                            >
+                                <span class="pm-nav-icon">▣</span>
+                                <span>Планы</span>
+                            </a>
+
+                            <a
+                                class="pm-nav-link {% if request.endpoint and request.endpoint.startswith('publications.') %}active{% endif %}"
+                                href="{{ url_for('publications.publications') }}"
+                            >
+                                <span class="pm-nav-icon">◈</span>
+                                <span>Публикации</span>
+                            </a>
+
+                            <a
+                                class="pm-nav-link {% if request.endpoint and request.endpoint.startswith('employees.') %}active{% endif %}"
+                                href="{{ url_for('employees.employees') }}"
+                            >
+                                <span class="pm-nav-icon">♙</span>
+                                <span>Сотрудники</span>
+                            </a>
+
+                            <a
+                                class="pm-nav-link {% if request.endpoint and request.endpoint.startswith('reports.') %}active{% endif %}"
+                                href="{{ url_for('reports.publications_report') }}"
+                            >
+                                <span class="pm-nav-icon">▤</span>
+                                <span>Отчёты</span>
+                            </a>
+
+                            <a
+                                class="pm-nav-link {% if request.endpoint and request.endpoint.startswith('analytics.') %}active{% endif %}"
+                                href="{{ url_for('analytics.dashboard') }}"
+                            >
+                                <span class="pm-nav-icon">▥</span>
+                                <span>Аналитика</span>
+                            </a>
+
+                        {% elif current_user.role == "TECH_ADMIN" %}
+                            <div class="pm-nav-heading">Система</div>
+
+                            <a
+                                class="pm-nav-link {% if request.endpoint and request.endpoint.startswith('admin.users') %}active{% endif %}"
+                                href="{{ url_for('admin.users') }}"
+                            >
+                                <span class="pm-nav-icon">♚</span>
+                                <span>Пользователи</span>
+                            </a>
+
+                            <a
+                                class="pm-nav-link {% if request.endpoint and request.endpoint.startswith('admin.departments') %}active{% endif %}"
+                                href="{{ url_for('admin.departments') }}"
+                            >
+                                <span class="pm-nav-icon">⌂</span>
+                                <span>Кафедры</span>
+                            </a>
+                        {% endif %}
+                    </nav>
+
+                    <div class="pm-sidebar-footer mt-auto">
+                        <div class="pm-role-card">
+                            <span class="pm-avatar pm-avatar-small">
+                                {{
+                                    (
+                                        current_user.full_name
+                                        or current_user.username
+                                    )[0] | upper
+                                }}
+                            </span>
+
+                            <div class="min-w-0">
+                                <div class="pm-role-name text-truncate">
+                                    {{ current_user.full_name or current_user.username }}
+                                </div>
+                                <div class="pm-role-description text-truncate">
+                                    {% if current_user.role == "TECH_ADMIN" %}
+                                        Технический администратор
+                                    {% elif current_user.role == "ADMIN" %}
+                                        Администратор
+                                    {% elif current_user.role == "DEPARTMENT_HEAD" %}
+                                        Заведующий кафедрой
+                                    {% else %}
+                                        Пользователь
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <main class="pm-main flex-grow-1">
+                <div class="container-fluid px-3 px-lg-4 py-4">
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            <div class="mb-4">
+                                {% for category, message in messages %}
+                                    <div
+                                        class="alert pm-alert alert-dismissible fade show"
+                                        role="alert"
+                                    >
+                                        {{ message }}
+                                        <button
+                                            type="button"
+                                            class="btn-close"
+                                            data-bs-dismiss="alert"
+                                            aria-label="Закрыть"
+                                        ></button>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    {% endwith %}
+
+                    <div class="pm-page-header">
+                        <div>
+                            <h1 class="pm-page-title">
+                                {% block page_title %}Publication Monitor{% endblock %}
+                            </h1>
+
+                            {% block page_subtitle %}{% endblock %}
+                        </div>
+
+                        {% block page_actions %}{% endblock %}
+                    </div>
+
+                    {% block content %}{% endblock %}
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script
+        src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
+    ></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,381 +1,742 @@
-<!doctype html>
-<html lang="ru">
-<head>
-    <meta charset="utf-8">
+{% extends "base.html" %}
 
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1"
-    >
+{% block title %}
+    Отчёт по публикациям — Publication Monitor
+{% endblock %}
 
-    <title>Отчёт по публикациям</title>
-</head>
+{% block page_title %}
+    Отчёт по публикациям
+{% endblock %}
 
-<body>
-    <header>
-        <h1>Отчёт по публикациям</h1>
+{% block page_subtitle %}
+    <p class="text-body-secondary mb-0 mt-2">
+        Сводный отчёт по публикационной деятельности
+    </p>
+{% endblock %}
 
-        <p>
-            <a href="{{ url_for('main.index') }}">
-                ← На главную
-            </a>
-        </p>
+{% block page_actions %}
+    <div class="d-flex flex-wrap gap-2">
 
-        <p>
-            <a href="{{ url_for('monitoring.dashboard') }}">
-                ← Мониторинг
-            </a>
-        </p>
-    </header>
+        <a
+            href="{{ url_for(
+                'monitoring.dashboard'
+            ) }}"
+            class="btn btn-light border"
+        >
+            ← Мониторинг
+        </a>
 
-    <main>
-        <section>
-            <h2>Фильтры</h2>
+        <a
+            href="{{ url_for(
+                'reports.export_publications_excel',
+                year=selected_year,
+                department_id=selected_department_id,
+                quartile_id=selected_quartile_id,
+                indexing_type_id=selected_indexing_type_id,
+                publication_status=selected_publication_status,
+                verification_status=selected_verification_status
+            ) }}"
+            class="btn btn-light border"
+        >
+            ↓ Excel
+        </a>
+
+        <a
+            href="{{ url_for(
+                'reports.export_publications_pdf',
+                year=selected_year,
+                department_id=selected_department_id,
+                quartile_id=selected_quartile_id,
+                indexing_type_id=selected_indexing_type_id,
+                publication_status=selected_publication_status,
+                verification_status=selected_verification_status
+            ) }}"
+            class="btn btn-pm-primary"
+        >
+            ↓ PDF
+        </a>
+
+    </div>
+{% endblock %}
+
+{% block content %}
+
+<section class="mb-4">
+
+    <div class="card card-pm border-0">
+
+        <div class="card-body p-4">
+
+            <div class="d-flex align-items-center gap-3 mb-4">
+
+                <span class="pm-dashboard-icon pm-dashboard-icon-primary">
+                    ⚙
+                </span>
+
+                <div>
+                    <h2 class="h5 fw-bold mb-1">
+                        Фильтры отчёта
+                    </h2>
+
+                    <p class="small text-body-secondary mb-0">
+                        Настройте параметры выборки публикаций.
+                    </p>
+                </div>
+
+            </div>
+
 
             <form
                 method="get"
                 action="{{ url_for('reports.publications_report') }}"
             >
-                <p>
-                    <label for="year">
-                        Год плана
-                    </label>
-                    <br>
 
-                    <select id="year" name="year">
-                        <option value="">
-                            Все годы
-                        </option>
+                <div class="row g-3">
 
-                        {% for value in years %}
-                            <option
-                                value="{{ value }}"
-                                {% if selected_year == value %}
-                                    selected
-                                {% endif %}
-                            >
-                                {{ value }}
+                    <div class="col-12 col-md-6 col-xl-4">
+
+                        <label
+                            for="year"
+                            class="form-label fw-semibold"
+                        >
+                            Год плана
+                        </label>
+
+                        <select
+                            id="year"
+                            name="year"
+                            class="form-select"
+                        >
+
+                            <option value="">
+                                Все годы
                             </option>
-                        {% endfor %}
-                    </select>
-                </p>
 
-                <p>
-                    <label for="department_id">
-                        Кафедра
-                    </label>
-                    <br>
+                            {% for value in years %}
 
-                    <select
-                        id="department_id"
-                        name="department_id"
-                    >
-                        <option value="">
-                            Все кафедры
-                        </option>
+                                <option
+                                    value="{{ value }}"
+                                    {% if selected_year == value %}
+                                        selected
+                                    {% endif %}
+                                >
+                                    {{ value }}
+                                </option>
 
-                        {% for department in departments %}
-                            <option
-                                value="{{ department.id }}"
-                                {% if selected_department_id == department.id %}
-                                    selected
-                                {% endif %}
-                            >
-                                {{ department.name }}
+                            {% endfor %}
+
+                        </select>
+
+                    </div>
+
+
+                    <div class="col-12 col-md-6 col-xl-4">
+
+                        <label
+                            for="department_id"
+                            class="form-label fw-semibold"
+                        >
+                            Кафедра
+                        </label>
+
+                        <select
+                            id="department_id"
+                            name="department_id"
+                            class="form-select"
+                        >
+
+                            <option value="">
+                                Все кафедры
                             </option>
-                        {% endfor %}
-                    </select>
-                </p>
 
-                <p>
-                    <label for="publication_status">
-                        Статус публикации
-                    </label>
-                    <br>
+                            {% for department in departments %}
 
-                    <select
-                        id="publication_status"
-                        name="publication_status"
-                    >
-                        <option value="">
-                            Все статусы
-                        </option>
+                                <option
+                                    value="{{ department.id }}"
+                                    {% if selected_department_id == department.id %}
+                                        selected
+                                    {% endif %}
+                                >
+                                    {{ department.name }}
+                                </option>
 
-                        {% for status, label in publication_statuses.items() %}
-                            <option
-                                value="{{ status }}"
-                                {% if selected_publication_status == status %}
-                                    selected
-                                {% endif %}
-                            >
-                                {{ label }}
+                            {% endfor %}
+
+                        </select>
+
+                    </div>
+
+
+                    <div class="col-12 col-md-6 col-xl-4">
+
+                        <label
+                            for="publication_status"
+                            class="form-label fw-semibold"
+                        >
+                            Статус публикации
+                        </label>
+
+                        <select
+                            id="publication_status"
+                            name="publication_status"
+                            class="form-select"
+                        >
+
+                            <option value="">
+                                Все статусы
                             </option>
-                        {% endfor %}
-                    </select>
-                </p>
 
-                <p>
-                    <label for="verification_status">
-                        Статус проверки
-                    </label>
-                    <br>
+                            {% for status, label in publication_statuses.items() %}
 
-                    <select
-                        id="verification_status"
-                        name="verification_status"
-                    >
-                        <option value="">
-                            Все статусы
-                        </option>
+                                <option
+                                    value="{{ status }}"
+                                    {% if selected_publication_status == status %}
+                                        selected
+                                    {% endif %}
+                                >
+                                    {{ label }}
+                                </option>
 
-                        {% for status, label in verification_statuses.items() %}
-                            <option
-                                value="{{ status }}"
-                                {% if selected_verification_status == status %}
-                                    selected
-                                {% endif %}
-                            >
-                                {{ label }}
+                            {% endfor %}
+
+                        </select>
+
+                    </div>
+
+
+                    <div class="col-12 col-md-6 col-xl-4">
+
+                        <label
+                            for="verification_status"
+                            class="form-label fw-semibold"
+                        >
+                            Статус проверки
+                        </label>
+
+                        <select
+                            id="verification_status"
+                            name="verification_status"
+                            class="form-select"
+                        >
+
+                            <option value="">
+                                Все статусы
                             </option>
-                        {% endfor %}
-                    </select>
-                </p>
 
-                <p>
-                    <label for="quartile_id">
-                        Квартиль
-                    </label>
-                    <br>
+                            {% for status, label in verification_statuses.items() %}
 
-                    <select
-                        id="quartile_id"
-                        name="quartile_id"
-                    >
-                        <option value="">
-                            Все квартили
-                        </option>
+                                <option
+                                    value="{{ status }}"
+                                    {% if selected_verification_status == status %}
+                                        selected
+                                    {% endif %}
+                                >
+                                    {{ label }}
+                                </option>
 
-                        {% for quartile in quartiles %}
-                            <option
-                                value="{{ quartile.id }}"
-                                {% if selected_quartile_id == quartile.id %}
-                                    selected
-                                {% endif %}
-                            >
-                                {% if current_user.language == "kk" %}
-                                    {{ quartile.name_kk }}
-                                {% else %}
-                                    {{ quartile.name_ru }}
-                                {% endif %}
+                            {% endfor %}
+
+                        </select>
+
+                    </div>
+
+
+                    <div class="col-12 col-md-6 col-xl-4">
+
+                        <label
+                            for="quartile_id"
+                            class="form-label fw-semibold"
+                        >
+                            Квартиль
+                        </label>
+
+                        <select
+                            id="quartile_id"
+                            name="quartile_id"
+                            class="form-select"
+                        >
+
+                            <option value="">
+                                Все квартили
                             </option>
-                        {% endfor %}
-                    </select>
-                </p>
 
-                <p>
-                    <label for="indexing_type_id">
-                        Тип индексации
-                    </label>
-                    <br>
+                            {% for quartile in quartiles %}
 
-                    <select
-                        id="indexing_type_id"
-                        name="indexing_type_id"
-                    >
-                        <option value="">
-                            Все типы
-                        </option>
+                                <option
+                                    value="{{ quartile.id }}"
+                                    {% if selected_quartile_id == quartile.id %}
+                                        selected
+                                    {% endif %}
+                                >
+                                    {% if current_user.language == "kk" %}
+                                        {{ quartile.name_kk }}
+                                    {% else %}
+                                        {{ quartile.name_ru }}
+                                    {% endif %}
+                                </option>
 
-                        {% for indexing_type in indexing_types %}
-                            <option
-                                value="{{ indexing_type.id }}"
-                                {% if selected_indexing_type_id == indexing_type.id %}
-                                    selected
-                                {% endif %}
-                            >
-                                {% if current_user.language == "kk" %}
-                                    {{ indexing_type.name_kk }}
-                                {% else %}
-                                    {{ indexing_type.name_ru }}
-                                {% endif %}
+                            {% endfor %}
+
+                        </select>
+
+                    </div>
+
+
+                    <div class="col-12 col-md-6 col-xl-4">
+
+                        <label
+                            for="indexing_type_id"
+                            class="form-label fw-semibold"
+                        >
+                            Тип индексации
+                        </label>
+
+                        <select
+                            id="indexing_type_id"
+                            name="indexing_type_id"
+                            class="form-select"
+                        >
+
+                            <option value="">
+                                Все типы
                             </option>
-                        {% endfor %}
-                    </select>
-                </p>
 
-                <button type="submit">
-                    Применить
-                </button>
+                            {% for indexing_type in indexing_types %}
 
-                <a
-                    href="{{ url_for('reports.publications_report') }}"
-                >
-                    Сбросить
-                </a>
-                <p>
-                    <a
-                        href="{{ url_for(
-                            'reports.export_publications_excel',
-                            year=selected_year,
-                            department_id=selected_department_id,
-                            quartile_id=selected_quartile_id,
-                            indexing_type_id=selected_indexing_type_id,
-                            publication_status=selected_publication_status,
-                            verification_status=selected_verification_status
-                        ) }}"
-                    >
-                        Скачать Excel
-                    </a>
-                </p>
-                <p>
-                    <a
-                        href="{{ url_for(
-                            'reports.export_publications_pdf',
-                            year=selected_year,
-                            department_id=selected_department_id,
-                            quartile_id=selected_quartile_id,
-                            indexing_type_id=selected_indexing_type_id,
-                            publication_status=selected_publication_status,
-                            verification_status=selected_verification_status
-                        ) }}"
-                    >
-                        Скачать PDF
-                    </a>
-                </p>
+                                <option
+                                    value="{{ indexing_type.id }}"
+                                    {% if selected_indexing_type_id == indexing_type.id %}
+                                        selected
+                                    {% endif %}
+                                >
+                                    {% if current_user.language == "kk" %}
+                                        {{ indexing_type.name_kk }}
+                                    {% else %}
+                                        {{ indexing_type.name_ru }}
+                                    {% endif %}
+                                </option>
+
+                            {% endfor %}
+
+                        </select>
+
+                    </div>
+
+
+                    <div class="col-12">
+
+                        <div class="d-flex flex-wrap gap-2 pt-2">
+
+                            <button
+                                type="submit"
+                                class="btn btn-pm-primary"
+                            >
+                                Применить
+                            </button>
+
+                            <a
+                                href="{{ url_for(
+                                    'reports.publications_report'
+                                ) }}"
+                                class="btn btn-light border"
+                            >
+                                Сбросить
+                            </a>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
             </form>
-        </section>
 
-        <section>
-            <h2>
-                Публикации:
-                {{ publications|length }}
+        </div>
+
+    </div>
+
+</section>
+
+
+<section>
+
+    <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-3">
+
+        <div>
+
+            <h2 class="h5 fw-bold mb-1">
+                Публикации
             </h2>
 
-            {% if publications %}
-                <table>
+            <p class="small text-body-secondary mb-0">
+                Найдено:
+                <strong>{{ publications|length }}</strong>
+            </p>
+
+        </div>
+
+        <div class="d-flex flex-wrap gap-2">
+
+            <a
+                href="{{ url_for(
+                    'reports.export_publications_excel',
+                    year=selected_year,
+                    department_id=selected_department_id,
+                    quartile_id=selected_quartile_id,
+                    indexing_type_id=selected_indexing_type_id,
+                    publication_status=selected_publication_status,
+                    verification_status=selected_verification_status
+                ) }}"
+                class="btn btn-sm btn-light border"
+            >
+                ↓ Excel
+            </a>
+
+            <a
+                href="{{ url_for(
+                    'reports.export_publications_pdf',
+                    year=selected_year,
+                    department_id=selected_department_id,
+                    quartile_id=selected_quartile_id,
+                    indexing_type_id=selected_indexing_type_id,
+                    publication_status=selected_publication_status,
+                    verification_status=selected_verification_status
+                ) }}"
+                class="btn btn-sm btn-pm-primary"
+            >
+                ↓ PDF
+            </a>
+
+        </div>
+
+    </div>
+
+
+    <div class="card card-pm border-0">
+
+        {% if publications %}
+
+            <div class="table-responsive">
+
+                <table class="table table-pm align-middle mb-0">
+
                     <thead>
                         <tr>
-                            <th>Год плана</th>
-                            <th>Кафедра</th>
-                            <th>План</th>
-                            <th>Публикация</th>
-                            <th>Журнал</th>
-                            <th>Год публикации</th>
-                            <th>DOI</th>
-                            <th>Квартиль</th>
-                            <th>Индексация</th>
-                            <th>Статус</th>
-                            <th>Проверка</th>
-                            <th>Проверяющий</th>
-                            <th>Дата проверки</th>
+
+                            <th class="ps-4">
+                                Год плана
+                            </th>
+
+                            <th>
+                                Кафедра
+                            </th>
+
+                            <th>
+                                План
+                            </th>
+
+                            <th>
+                                Публикация
+                            </th>
+
+                            <th>
+                                Журнал
+                            </th>
+
+                            <th>
+                                Год публикации
+                            </th>
+
+                            <th>
+                                DOI
+                            </th>
+
+                            <th>
+                                Квартиль
+                            </th>
+
+                            <th>
+                                Индексация
+                            </th>
+
+                            <th>
+                                Статус
+                            </th>
+
+                            <th>
+                                Проверка
+                            </th>
+
+                            <th>
+                                Проверяющий
+                            </th>
+
+                            <th class="pe-4">
+                                Дата проверки
+                            </th>
+
                         </tr>
                     </thead>
 
+
                     <tbody>
+
                         {% for publication in publications %}
+
                             <tr>
-                                <td>
+
+                                <td class="ps-4 text-nowrap">
                                     {{ publication.plan_item.plan.year }}
                                 </td>
 
-                                <td>
-                                    {{ publication.department.name }}
-                                </td>
 
                                 <td>
-                                    №{{ publication.plan_item.plan.id }}
+
+                                    <span
+                                        class="d-block"
+                                        style="min-width: 150px;"
+                                    >
+                                        {{ publication.department.name }}
+                                    </span>
+
                                 </td>
 
+
+                                <td class="text-nowrap">
+
+                                    <span class="badge rounded-pill badge-pm-primary">
+                                        №{{ publication.plan_item.plan.id }}
+                                    </span>
+
+                                </td>
+
+
                                 <td>
+
                                     <a
                                         href="{{ url_for(
                                             'publications.publication_detail',
                                             publication_id=publication.id
                                         ) }}"
+                                        class="pm-link fw-semibold"
                                     >
                                         {{ publication.title }}
                                     </a>
+
                                 </td>
+
 
                                 <td>
                                     {{ publication.journal or "—" }}
                                 </td>
 
-                                <td>
+
+                                <td class="text-nowrap">
                                     {{ publication.publication_year or "—" }}
                                 </td>
 
-                                <td>
-                                    {{ publication.doi or "—" }}
-                                </td>
 
                                 <td>
+
+                                    {% if publication.doi %}
+
+                                        <span
+                                            class="text-break"
+                                            style="min-width: 140px; display: block;"
+                                        >
+                                            {{ publication.doi }}
+                                        </span>
+
+                                    {% else %}
+
+                                        —
+
+                                    {% endif %}
+
+                                </td>
+
+
+                                <td>
+
                                     {% if publication.quartile %}
+
                                         {% if current_user.language == "kk" %}
                                             {{ publication.quartile.name_kk }}
                                         {% else %}
                                             {{ publication.quartile.name_ru }}
                                         {% endif %}
+
                                     {% else %}
+
                                         —
+
                                     {% endif %}
+
                                 </td>
 
+
                                 <td>
+
                                     {% if publication.indexing_type %}
+
                                         {% if current_user.language == "kk" %}
                                             {{ publication.indexing_type.name_kk }}
                                         {% else %}
                                             {{ publication.indexing_type.name_ru }}
                                         {% endif %}
+
                                     {% else %}
+
                                         —
+
                                     {% endif %}
+
                                 </td>
 
+
                                 <td>
+
                                     {% if publication.status in publication_statuses %}
-                                        {{ publication_statuses[publication.status] }}
+
+                                        {% set status_label = publication_statuses[
+                                            publication.status
+                                        ] %}
+
+                                        {% if publication.status == "PUBLISHED" %}
+
+                                            <span class="badge rounded-pill badge-pm-success">
+                                                {{ status_label }}
+                                            </span>
+
+                                        {% elif publication.status == "REJECTED" %}
+
+                                            <span class="badge rounded-pill badge-pm-danger">
+                                                {{ status_label }}
+                                            </span>
+
+                                        {% elif publication.status == "ACCEPTED" %}
+
+                                            <span class="badge rounded-pill badge-pm-success">
+                                                {{ status_label }}
+                                            </span>
+
+                                        {% else %}
+
+                                            <span class="badge rounded-pill badge-pm-warning">
+                                                {{ status_label }}
+                                            </span>
+
+                                        {% endif %}
+
                                     {% else %}
-                                        {{ publication.status }}
+
+                                        <span class="badge rounded-pill badge-pm-primary">
+                                            {{ publication.status }}
+                                        </span>
+
                                     {% endif %}
+
                                 </td>
 
+
                                 <td>
+
                                     {% if publication.verification_status in verification_statuses %}
-                                        {{ verification_statuses[publication.verification_status] }}
+
+                                        {% set verification_label = verification_statuses[
+                                            publication.verification_status
+                                        ] %}
+
+                                        {% if publication.verification_status == "APPROVED" %}
+
+                                            <span class="badge rounded-pill badge-pm-success">
+                                                {{ verification_label }}
+                                            </span>
+
+                                        {% elif publication.verification_status == "RETURNED" %}
+
+                                            <span class="badge rounded-pill badge-pm-danger">
+                                                {{ verification_label }}
+                                            </span>
+
+                                        {% else %}
+
+                                            <span class="badge rounded-pill badge-pm-warning">
+                                                {{ verification_label }}
+                                            </span>
+
+                                        {% endif %}
+
                                     {% else %}
-                                        {{ publication.verification_status }}
+
+                                        <span class="badge rounded-pill badge-pm-primary">
+                                            {{ publication.verification_status }}
+                                        </span>
+
                                     {% endif %}
+
                                 </td>
 
+
                                 <td>
+
                                     {% if publication.verifier %}
                                         {{ publication.verifier.full_name }}
                                     {% else %}
                                         —
                                     {% endif %}
+
                                 </td>
 
-                                <td>
+
+                                <td class="pe-4 text-nowrap">
+
                                     {% if publication.verified_at %}
+
                                         {{ publication.verified_at.strftime(
                                             "%d.%m.%Y %H:%M"
                                         ) }}
+
                                     {% else %}
+
                                         —
+
                                     {% endif %}
+
                                 </td>
+
                             </tr>
+
                         {% endfor %}
+
                     </tbody>
+
                 </table>
-            {% else %}
-                <p>
-                    По выбранным фильтрам публикации не найдены.
+
+            </div>
+
+        {% else %}
+
+            <div class="pm-empty-state py-5">
+
+                <div class="pm-empty-icon">
+                    ▤
+                </div>
+
+                <h3 class="h6 fw-bold mb-2">
+                    Публикации не найдены
+                </h3>
+
+                <p class="text-body-secondary mb-0">
+                    По выбранным фильтрам публикации отсутствуют.
                 </p>
-            {% endif %}
-        </section>
-    </main>
-</body>
-</html>
+
+            </div>
+
+        {% endif %}
+
+    </div>
+
+</section>
+
+{% endblock %}
