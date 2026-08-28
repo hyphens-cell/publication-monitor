@@ -5,6 +5,7 @@ from flask_login import current_user
 from sqlalchemy import func, select
 
 from app.access import ensure_department_access
+from app.audit import audit
 from app.auth import (
     ROLE_ADMIN,
     ROLE_DEPARTMENT_HEAD,
@@ -83,25 +84,18 @@ def get_accessible_plan(plan_id):
     if plan is None:
         return None
 
-    if (
-        current_user.role == ROLE_DEPARTMENT_HEAD
-        and (
-            current_user.department_id is None
-            or plan.department_id != current_user.department_id
+    try:
+        ensure_department_access(
+            plan.department_id
         )
-    ):
+    except PermissionError:
         flash(
             "У вас нет доступа к этому плану.",
             "danger",
         )
         return None
 
-    ensure_department_access(
-        plan.department_id
-    )
-
     return plan
-
 
 def get_next_version_number(plan):
     current_max = db.session.scalar(
@@ -274,6 +268,19 @@ def create_plan():
         )
 
         db.session.add(plan)
+        db.session.flush()
+
+        audit(
+            "PLAN_CREATED",
+            entity_type="Plan",
+            entity_id=plan.id,
+            details={
+                "department_id": plan.department_id,
+                "year": plan.year,
+                "status": plan.status,
+            },
+        )
+
         db.session.commit()
 
         flash(
@@ -494,6 +501,24 @@ def create_plan_item(plan_id):
                 )
             )
 
+        audit(
+            "PLAN_ITEM_CREATED",
+            entity_type="PlanItem",
+            entity_id=item.id,
+            details={
+                "plan_id": plan.id,
+                "title": item.title,
+                "publication_type_id": item.publication_type_id,
+                "quartile_id": item.quartile_id,
+                "planned_date": (
+                    item.planned_date.isoformat()
+                    if item.planned_date
+                    else None
+                ),
+                "author_ids": sorted(selected_employee_ids),
+            },
+        )
+
         db.session.commit()
 
         flash(
@@ -701,6 +726,24 @@ def edit_plan_item(plan_id, item_id):
                 )
             )
 
+        audit(
+            "PLAN_ITEM_UPDATED",
+            entity_type="PlanItem",
+            entity_id=item.id,
+            details={
+                "plan_id": plan.id,
+                "title": item.title,
+                "publication_type_id": item.publication_type_id,
+                "quartile_id": item.quartile_id,
+                "planned_date": (
+                    item.planned_date.isoformat()
+                    if item.planned_date
+                    else None
+                ),
+                "author_ids": sorted(selected_employee_ids),
+            },
+        )
+
         db.session.commit()
 
         flash(
@@ -763,6 +806,17 @@ def delete_plan_item(plan_id, item_id):
                 plan_id=plan.id,
             )
         )
+
+    audit(
+        "PLAN_ITEM_DELETED",
+        entity_type="PlanItem",
+        entity_id=item.id,
+        details={
+            "plan_id": plan.id,
+            "title": item.title,
+            "publication_type_id": item.publication_type_id,
+        },
+    )
 
     db.session.delete(item)
     db.session.commit()
@@ -827,6 +881,22 @@ def submit_plan(plan_id):
         status=PLAN_STATUS_SUBMITTED,
     )
 
+    audit(
+        "PLAN_SUBMITTED",
+        entity_type="Plan",
+        entity_id=plan.id,
+        details={
+            "department_id": plan.department_id,
+            "year": plan.year,
+            "status": plan.status,
+            "submitted_at": (
+                plan.submitted_at.isoformat()
+                if plan.submitted_at
+                else None
+            ),
+        },
+    )
+
     db.session.commit()
 
     flash(
@@ -876,6 +946,22 @@ def approve_plan(plan_id):
     create_publications_from_plan(
         plan=plan,
         user_id=current_user.id,
+    )
+
+    audit(
+        "PLAN_APPROVED",
+        entity_type="Plan",
+        entity_id=plan.id,
+        details={
+            "department_id": plan.department_id,
+            "year": plan.year,
+            "status": plan.status,
+            "approved_at": (
+                plan.approved_at.isoformat()
+                if plan.approved_at
+                else None
+            ),
+        },
     )
 
     db.session.commit()
@@ -937,6 +1023,18 @@ def return_plan(plan_id):
         plan=plan,
         status=PLAN_STATUS_RETURNED,
         comment=comment,
+    )
+
+    audit(
+        "PLAN_RETURNED",
+        entity_type="Plan",
+        entity_id=plan.id,
+        details={
+            "department_id": plan.department_id,
+            "year": plan.year,
+            "status": plan.status,
+            "comment": comment,
+        },
     )
 
     db.session.commit()

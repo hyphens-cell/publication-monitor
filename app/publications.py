@@ -18,6 +18,7 @@ from werkzeug.utils import secure_filename
 from sqlalchemy import func, select
 
 from app.access import ensure_department_access, get_scoped_department_id
+from app.audit import audit
 from app.auth import ROLE_ADMIN, ROLE_DEPARTMENT_HEAD, roles_required
 from app.extensions import db
 from app.models import (
@@ -155,6 +156,19 @@ def create_publications_from_plan(
         )
 
         db.session.add(publication_history)
+
+        audit(
+            "PUBLICATION_CREATED",
+            entity_type="Publication",
+            entity_id=publication.id,
+            details={
+                "plan_item_id": item.id,
+                "department_id": plan.department_id,
+                "title": publication.title,
+                "journal": publication.journal,
+                "status": publication.status,
+            },
+        )
 
         publications.append(publication)
 
@@ -494,6 +508,20 @@ def edit_publication(publication_id):
         publication.affiliation = affiliation or None
         publication.notes = notes or None
 
+        audit(
+            "PUBLICATION_UPDATED",
+            entity_type="Publication",
+            entity_id=publication.id,
+            details={
+                "title": publication.title,
+                "doi": publication.doi,
+                "journal": publication.journal,
+                "publication_year": publication.publication_year,
+                "indexing_type_id": publication.indexing_type_id,
+                "quartile_id": publication.quartile_id,
+            },
+        )
+
         db.session.commit()
 
         flash(
@@ -580,6 +608,16 @@ def change_publication_status(publication_id):
             old_status=old_status,
             new_status=new_status,
         )
+    )
+
+    audit(
+        "PUBLICATION_STATUS_CHANGED",
+        entity_type="Publication",
+        entity_id=publication.id,
+        details={
+            "old_status": old_status,
+            "new_status": new_status,
+        },
     )
 
     db.session.commit()
@@ -699,6 +737,19 @@ def upload_publication_attachment(publication_id):
     )
 
     db.session.add(attachment)
+    db.session.flush()
+
+    audit(
+        "ATTACHMENT_UPLOADED",
+        entity_type="Attachment",
+        entity_id=attachment.id,
+        details={
+            "publication_id": publication.id,
+            "original_filename": attachment.original_filename,
+            "mime_type": attachment.mime_type,
+            "file_size": attachment.file_size,
+        },
+    )
 
     if (
         publication.verification_status
@@ -795,6 +846,17 @@ def delete_publication_attachment(
     if os.path.isfile(attachment.file_path):
         os.remove(attachment.file_path)
 
+    audit(
+        "ATTACHMENT_DELETED",
+        entity_type="Attachment",
+        entity_id=attachment.id,
+        details={
+            "publication_id": publication.id,
+            "original_filename": attachment.original_filename,
+            "file_size": attachment.file_size,
+        },
+    )
+
     db.session.delete(attachment)
     db.session.flush()
 
@@ -879,6 +941,16 @@ def approve_publication_attachment(
     else:
         publication.verified_by = None
         publication.verified_at = None
+
+    audit(
+        "ATTACHMENT_APPROVED",
+        entity_type="Attachment",
+        entity_id=attachment.id,
+        details={
+            "publication_id": publication.id,
+            "publication_verification_status": publication.verification_status,
+        },
+    )
 
     db.session.commit()
 
@@ -973,6 +1045,17 @@ def reject_publication_attachment(
             entity_id=attachment.id,
             text=comment,
         )
+    )
+
+    audit(
+        "ATTACHMENT_REJECTED",
+        entity_type="Attachment",
+        entity_id=attachment.id,
+        details={
+            "publication_id": publication.id,
+            "comment": comment,
+            "publication_verification_status": publication.verification_status,
+        },
     )
 
     db.session.commit()
@@ -1219,6 +1302,17 @@ def resolve_doi_conflict(publication_id):
         )
     )
 
+    audit(
+        "PUBLICATION_DOI_CONFLICT_RESOLVED",
+        entity_type="Publication",
+        entity_id=winner.id,
+        details={
+            "winner_id": winner.id,
+            "duplicate_id": loser.id,
+            "action": action,
+        },
+    )
+
     db.session.commit()
 
     flash(
@@ -1393,6 +1487,16 @@ def verify_publication(publication_id):
     publication.verified_by = current_user.id
     publication.verified_at = datetime.utcnow()
 
+    audit(
+        "PUBLICATION_VERIFIED",
+        entity_type="Publication",
+        entity_id=publication.id,
+        details={
+            "verification_status": publication.verification_status,
+            "verified_at": publication.verified_at.isoformat(),
+        },
+    )
+
     db.session.commit()
 
     flash(
@@ -1453,6 +1557,16 @@ def return_publication(publication_id):
             entity_id=publication.id,
             text=comment_text,
         )
+    )
+
+    audit(
+        "PUBLICATION_RETURNED",
+        entity_type="Publication",
+        entity_id=publication.id,
+        details={
+            "verification_status": publication.verification_status,
+            "comment": comment_text,
+        },
     )
 
     db.session.commit()

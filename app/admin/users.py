@@ -3,15 +3,21 @@ from flask_login import current_user
 from sqlalchemy import or_, select
 
 from app.admin import admin_bp
+from app.audit import audit
 from app.auth import technical_admin_required
 from app.extensions import db
 from app.models import Department, User
 
 
+ROLE_TECH_ADMIN = "TECH_ADMIN"
+ROLE_ADMIN = "ADMIN"
+ROLE_DEPARTMENT_HEAD = "DEPARTMENT_HEAD"
+
+
 ROLES = (
-    ("TECH_ADMIN", "Технический администратор"),
-    ("ADMIN", "Монитор / Администратор"),
-    ("DEPARTMENT_HEAD", "Заведующий кафедрой"),
+    (ROLE_TECH_ADMIN, "Технический администратор"),
+    (ROLE_ADMIN, "Монитор / Администратор"),
+    (ROLE_DEPARTMENT_HEAD, "Заведующий кафедрой"),
 )
 
 LANGUAGES = (
@@ -40,7 +46,7 @@ def get_user_form_context(user=None):
 def validate_department_assignment(role, department):
     errors = []
 
-    if role == "DEPARTMENT_HEAD":
+    if role == ROLE_DEPARTMENT_HEAD:
         if department is None:
             errors.append(
                 "Для заведующего кафедрой необходимо указать кафедру."
@@ -53,7 +59,7 @@ def validate_department_assignment(role, department):
             existing_head = db.session.scalar(
                 select(User).where(
                     User.department_id == department.id,
-                    User.role == "DEPARTMENT_HEAD",
+                    User.role == ROLE_DEPARTMENT_HEAD,
                     User.is_active.is_(True),
                 )
             )
@@ -162,10 +168,10 @@ def create_user():
         department, department_errors = get_department_from_form()
         errors.extend(department_errors)
 
-        if role != "DEPARTMENT_HEAD":
+        if role != ROLE_DEPARTMENT_HEAD:
             department = None
 
-        if role == "DEPARTMENT_HEAD" and not department_errors:
+        if role == ROLE_DEPARTMENT_HEAD and not department_errors:
             errors.extend(
                 validate_department_assignment(
                     role,
@@ -202,6 +208,20 @@ def create_user():
         user.set_password(password)
 
         db.session.add(user)
+        db.session.flush()
+
+        audit(
+            "USER_CREATED",
+            entity_type="User",
+            entity_id=user.id,
+            details={
+                "username": user.username,
+                "role": user.role,
+                "department_id": user.department_id,
+                "language": user.language,
+            },
+        )
+
         db.session.commit()
 
         flash(
@@ -285,7 +305,7 @@ def edit_user(user_id):
         department, department_errors = get_department_from_form()
         errors.extend(department_errors)
 
-        if role == "DEPARTMENT_HEAD":
+        if role == ROLE_DEPARTMENT_HEAD:
             if department is None:
                 errors.append(
                     "Для заведующего кафедрой необходимо указать кафедру."
@@ -295,7 +315,7 @@ def edit_user(user_id):
                     select(User).where(
                         User.id != user.id,
                         User.department_id == department.id,
-                        User.role == "DEPARTMENT_HEAD",
+                        User.role == ROLE_DEPARTMENT_HEAD,
                         User.is_active.is_(True),
                     )
                 )
@@ -307,7 +327,7 @@ def edit_user(user_id):
         else:
             department = None
 
-        if role == "DEPARTMENT_HEAD" and not is_active:
+        if role == ROLE_DEPARTMENT_HEAD and not is_active:
             errors.append(
                 "Заведующий кафедрой должен иметь активную учетную запись."
             )
@@ -361,6 +381,20 @@ def edit_user(user_id):
         if password:
             user.set_password(password)
 
+        audit(
+            "USER_UPDATED",
+            entity_type="User",
+            entity_id=user.id,
+            details={
+                "username": user.username,
+                "role": user.role,
+                "department_id": user.department_id,
+                "language": user.language,
+                "is_active": user.is_active,
+                "password_changed": bool(password),
+            },
+        )
+
         db.session.commit()
 
         flash(
@@ -403,6 +437,15 @@ def block_user(user_id):
 
     user.is_active = False
 
+    audit(
+        "USER_BLOCKED",
+        entity_type="User",
+        entity_id=user.id,
+        details={
+            "username": user.username,
+        },
+    )
+
     db.session.commit()
 
     flash(
@@ -434,6 +477,19 @@ def delete_user(user_id):
             "danger",
         )
         return redirect(url_for("admin.users"))
+
+    audit(
+        "USER_DELETED",
+        entity_type="User",
+        entity_id=user.id,
+        details={
+            "username": user.username,
+            "full_name": user.full_name,
+            "email": user.email,
+            "role": user.role,
+            "department_id": user.department_id,
+        },
+    )
 
     db.session.delete(user)
     db.session.commit()

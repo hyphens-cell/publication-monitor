@@ -3,6 +3,7 @@ from flask_login import current_user
 from sqlalchemy import or_, select
 
 from app.admin import admin_bp
+from app.audit import audit
 from app.auth import technical_admin_required
 from app.extensions import db
 from app.models import Department
@@ -71,6 +72,18 @@ def create_department():
         )
 
         db.session.add(department)
+        db.session.flush()
+
+        audit(
+            "DEPARTMENT_CREATED",
+            entity_type="Department",
+            entity_id=department.id,
+            details={
+                "name": department.name,
+                "code": department.code,
+            },
+        )
+
         db.session.commit()
 
         flash("Кафедра успешно создана.", "success")
@@ -140,6 +153,17 @@ def edit_department(department_id):
         department.name = name
         department.code = code
 
+        audit(
+            "DEPARTMENT_UPDATED",
+            entity_type="Department",
+            entity_id=department.id,
+            details={
+                "name": department.name,
+                "code": department.code,
+                "is_active": department.is_active,
+            },
+        )
+
         db.session.commit()
 
         flash("Кафедра успешно изменена.", "success")
@@ -164,7 +188,21 @@ def archive_department(department_id):
         flash("Кафедра не найдена.", "danger")
         return redirect(url_for("admin.departments"))
 
+    if not department.is_active:
+        flash("Кафедра уже архивирована.", "warning")
+        return redirect(url_for("admin.departments"))
+
     department.is_active = False
+
+    audit(
+        "DEPARTMENT_ARCHIVED",
+        entity_type="Department",
+        entity_id=department.id,
+        details={
+            "name": department.name,
+            "code": department.code,
+        },
+    )
 
     db.session.commit()
 
@@ -185,7 +223,21 @@ def restore_department(department_id):
         flash("Кафедра не найдена.", "danger")
         return redirect(url_for("admin.departments"))
 
+    if department.is_active:
+        flash("Кафедра уже активна.", "warning")
+        return redirect(url_for("admin.departments"))
+
     department.is_active = True
+
+    audit(
+        "DEPARTMENT_RESTORED",
+        entity_type="Department",
+        entity_id=department.id,
+        details={
+            "name": department.name,
+            "code": department.code,
+        },
+    )
 
     db.session.commit()
 
