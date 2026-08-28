@@ -5,16 +5,29 @@ from flask import Blueprint, abort, render_template, request, send_file
 from flask_login import current_user
 from openpyxl import Workbook
 from openpyxl.utils import get_column_letter
+from reportlab.lib.enums import TA_LEFT
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
-from reportlab.lib.enums import TA_LEFT
 from reportlab.lib.units import mm
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+from reportlab.platypus import (
+    Paragraph,
+    SimpleDocTemplate,
+    Spacer,
+    Table,
+    TableStyle,
+)
 from sqlalchemy import select
 
-from app.auth import roles_required
+from app.access import (
+    ensure_department_access,
+    get_scoped_department_id,
+)
+from app.auth import (
+    ROLE_DEPARTMENT_HEAD,
+    roles_required,
+)
 from app.extensions import db
 from app.models import (
     Department,
@@ -44,11 +57,34 @@ REPORT_VERIFICATION_STATUSES = {
 }
 
 
+REPORT_PLAN_STATUS = "APPROVED"
+
+
 reports_bp = Blueprint(
     "reports",
     __name__,
     url_prefix="/reports",
 )
+
+
+def parse_optional_int(name):
+    value = request.args.get(
+        name,
+        "",
+    ).strip()
+
+    if not value:
+        return None
+
+    try:
+        parsed_value = int(value)
+    except ValueError:
+        abort(400)
+
+    if parsed_value < 0:
+        abort(400)
+
+    return parsed_value
 
 
 def get_report_departments():
@@ -62,7 +98,7 @@ def get_report_departments():
         )
     )
 
-    if current_user.role == "DEPARTMENT_HEAD":
+    if current_user.role == ROLE_DEPARTMENT_HEAD:
         if current_user.department_id is None:
             abort(403)
 
@@ -74,18 +110,16 @@ def get_report_departments():
 
 
 def get_report_years():
-    query = (
+    return db.session.scalars(
         select(Plan.year)
         .where(
-            Plan.status == "APPROVED",
+            Plan.status == REPORT_PLAN_STATUS,
         )
         .distinct()
         .order_by(
             Plan.year.desc(),
         )
-    )
-
-    return db.session.scalars(query).all()
+    ).all()
 
 
 def get_report_reference_values(reference_type):
@@ -103,25 +137,19 @@ def get_report_reference_values(reference_type):
 
 
 def get_publications_report_filters():
-    year_raw = request.args.get(
-        "year",
-        "",
-    ).strip()
+    year = parse_optional_int("year")
 
-    department_raw = request.args.get(
-        "department_id",
-        "",
-    ).strip()
+    requested_department_id = parse_optional_int(
+        "department_id"
+    )
 
-    quartile_raw = request.args.get(
-        "quartile_id",
-        "",
-    ).strip()
+    quartile_id = parse_optional_int(
+        "quartile_id"
+    )
 
-    indexing_type_raw = request.args.get(
-        "indexing_type_id",
-        "",
-    ).strip()
+    indexing_type_id = parse_optional_int(
+        "indexing_type_id"
+    )
 
     publication_status = request.args.get(
         "publication_status",
@@ -133,49 +161,27 @@ def get_publications_report_filters():
         "",
     ).strip()
 
-    year = None
-    department_id = None
-    quartile_id = None
-    indexing_type_id = None
-
-    if year_raw:
-        try:
-            year = int(year_raw)
-        except ValueError:
-            abort(400)
-
-    if department_raw:
-        try:
-            department_id = int(department_raw)
-        except ValueError:
-            abort(400)
-
-    if quartile_raw:
-        try:
-            quartile_id = int(quartile_raw)
-        except ValueError:
-            abort(400)
-
-    if indexing_type_raw:
-        try:
-            indexing_type_id = int(indexing_type_raw)
-        except ValueError:
-            abort(400)
-
     if publication_status:
-        if publication_status not in REPORT_PUBLICATION_STATUSES:
+        if (
+            publication_status
+            not in REPORT_PUBLICATION_STATUSES
+        ):
             abort(400)
 
     if verification_status:
-        if verification_status not in REPORT_VERIFICATION_STATUSES:
+        if (
+            verification_status
+            not in REPORT_VERIFICATION_STATUSES
+        ):
             abort(400)
 
-    if (
-        current_user.role == "DEPARTMENT_HEAD"
-        and department_id is not None
-        and department_id != current_user.department_id
-    ):
-        abort(403)
+    ensure_department_access(
+        requested_department_id
+    )
+
+    department_id = get_scoped_department_id(
+        requested_department_id
+    )
 
     return {
         "year": year,
@@ -210,6 +216,9 @@ def build_publications_report_query(
         .join(
             Publication.department,
         )
+        .where(
+            Plan.status == REPORT_PLAN_STATUS,
+        )
     )
 
     if year is not None:
@@ -219,15 +228,17 @@ def build_publications_report_query(
 
     if department_id is not None:
         query = query.where(
-            Publication.department_id == department_id,
+            Publication.department_id
+            == department_id,
         )
 
-    if publication_status:
+    if publication_status is not None:
         query = query.where(
-            Publication.status == publication_status,
+            Publication.status
+            == publication_status,
         )
 
-    if verification_status:
+    if verification_status is not None:
         query = query.where(
             Publication.verification_status
             == verification_status,
@@ -235,21 +246,14 @@ def build_publications_report_query(
 
     if quartile_id is not None:
         query = query.where(
-            Publication.quartile_id == quartile_id,
+            Publication.quartile_id
+            == quartile_id,
         )
 
     if indexing_type_id is not None:
         query = query.where(
-            Publication.indexing_type_id == indexing_type_id,
-        )
-
-    if current_user.role == "DEPARTMENT_HEAD":
-        if current_user.department_id is None:
-            abort(403)
-
-        query = query.where(
-            Publication.department_id
-            == current_user.department_id,
+            Publication.indexing_type_id
+            == indexing_type_id,
         )
 
     return query.order_by(
@@ -265,9 +269,17 @@ def get_quartile_name(publication):
         return ""
 
     if current_user.language == "kk":
-        return publication.quartile.name_kk
+        return (
+            publication.quartile.name_kk
+            or publication.quartile.name_ru
+            or ""
+        )
 
-    return publication.quartile.name_ru
+    return (
+        publication.quartile.name_ru
+        or publication.quartile.name_kk
+        or ""
+    )
 
 
 def get_indexing_type_name(publication):
@@ -275,9 +287,17 @@ def get_indexing_type_name(publication):
         return ""
 
     if current_user.language == "kk":
-        return publication.indexing_type.name_kk
+        return (
+            publication.indexing_type.name_kk
+            or publication.indexing_type.name_ru
+            or ""
+        )
 
-    return publication.indexing_type.name_ru
+    return (
+        publication.indexing_type.name_ru
+        or publication.indexing_type.name_kk
+        or ""
+    )
 
 
 def get_publication_report_row(publication):
@@ -292,7 +312,7 @@ def get_publication_report_row(publication):
 
     if publication.verified_at:
         verified_at = publication.verified_at.strftime(
-            "%d.%m.%Y %H:%M",
+            "%d.%m.%Y %H:%M"
         )
 
     return [
@@ -345,29 +365,29 @@ def create_publications_workbook(publications):
     for publication in publications:
         worksheet.append(
             get_publication_report_row(
-                publication,
+                publication
             )
         )
 
     worksheet.freeze_panes = "A2"
 
     if worksheet.max_row >= 2:
-        worksheet.auto_filter.ref = worksheet.dimensions
+        worksheet.auto_filter.ref = (
+            worksheet.dimensions
+        )
 
     for column_cells in worksheet.columns:
-        max_length = 0
-
-        for cell in column_cells:
-            if cell.value is None:
-                continue
-
-            max_length = max(
-                max_length,
-                len(str(cell.value)),
-            )
+        max_length = max(
+            (
+                len(str(cell.value))
+                for cell in column_cells
+                if cell.value is not None
+            ),
+            default=0,
+        )
 
         column_letter = get_column_letter(
-            column_cells[0].column,
+            column_cells[0].column
         )
 
         worksheet.column_dimensions[
@@ -384,27 +404,51 @@ def get_pdf_font_paths():
     regular_candidates = [
         Path("C:/Windows/Fonts/arial.ttf"),
         Path("C:/Windows/Fonts/calibri.ttf"),
-        Path("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"),
-        Path("/usr/share/fonts/truetype/liberation2/LiberationSans-Regular.ttf"),
+        Path(
+            "/usr/share/fonts/truetype/dejavu/"
+            "DejaVuSans.ttf"
+        ),
+        Path(
+            "/usr/share/fonts/truetype/liberation2/"
+            "LiberationSans-Regular.ttf"
+        ),
     ]
 
     bold_candidates = [
         Path("C:/Windows/Fonts/arialbd.ttf"),
         Path("C:/Windows/Fonts/calibrib.ttf"),
-        Path("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"),
-        Path("/usr/share/fonts/truetype/liberation2/LiberationSans-Bold.ttf"),
+        Path(
+            "/usr/share/fonts/truetype/dejavu/"
+            "DejaVuSans-Bold.ttf"
+        ),
+        Path(
+            "/usr/share/fonts/truetype/liberation2/"
+            "LiberationSans-Bold.ttf"
+        ),
     ]
 
     regular_path = next(
-        (path for path in regular_candidates if path.is_file()),
-        None,
-    )
-    bold_path = next(
-        (path for path in bold_candidates if path.is_file()),
+        (
+            path
+            for path in regular_candidates
+            if path.is_file()
+        ),
         None,
     )
 
-    if regular_path is None or bold_path is None:
+    bold_path = next(
+        (
+            path
+            for path in bold_candidates
+            if path.is_file()
+        ),
+        None,
+    )
+
+    if (
+        regular_path is None
+        or bold_path is None
+    ):
         raise RuntimeError(
             "Не найден Unicode-шрифт для генерации PDF. "
             "Установите Arial, Calibri или DejaVu Sans."
@@ -414,21 +458,31 @@ def get_pdf_font_paths():
 
 
 def register_pdf_fonts():
-    regular_path, bold_path = get_pdf_font_paths()
-
-    pdfmetrics.registerFont(
-        TTFont(
-            "PublicationReportRegular",
-            str(regular_path),
-        )
+    regular_path, bold_path = (
+        get_pdf_font_paths()
     )
 
-    pdfmetrics.registerFont(
-        TTFont(
-            "PublicationReportBold",
-            str(bold_path),
+    if (
+        "PublicationReportRegular"
+        not in pdfmetrics.getRegisteredFontNames()
+    ):
+        pdfmetrics.registerFont(
+            TTFont(
+                "PublicationReportRegular",
+                str(regular_path),
+            )
         )
-    )
+
+    if (
+        "PublicationReportBold"
+        not in pdfmetrics.getRegisteredFontNames()
+    ):
+        pdfmetrics.registerFont(
+            TTFont(
+                "PublicationReportBold",
+                str(bold_path),
+            )
+        )
 
 
 def create_publications_pdf(publications):
@@ -505,7 +559,7 @@ def create_publications_pdf(publications):
     rows = [
         [
             Paragraph(
-                str(header),
+                header,
                 header_style,
             )
             for header in headers
@@ -514,18 +568,21 @@ def create_publications_pdf(publications):
 
     for publication in publications:
         values = get_publication_report_row(
-            publication,
+            publication
         )
 
         rows.append(
             [
                 Paragraph(
-                    str(value) if value != "" else "—",
+                    str(value)
+                    if value != ""
+                    else "—",
                     cell_style,
                 )
                 for value in values
             ]
         )
+
     column_widths = [
         8 * mm,
         22 * mm,
@@ -622,80 +679,78 @@ def create_publications_pdf(publications):
     return output
 
 
-@reports_bp.route("/publications")
-@roles_required(
-    "ADMIN",
-    "DEPARTMENT_HEAD",
-)
-def publications_report():
+def get_filtered_publications():
     filters = get_publications_report_filters()
 
     query = build_publications_report_query(
-        **filters,
+        **filters
     )
 
-    publications = db.session.scalars(
-        query,
-    ).all()
+    return db.session.scalars(
+        query
+    ).all(), filters
 
-    departments = get_report_departments()
 
-    years = get_report_years()
-
-    quartiles = get_report_reference_values(
-        "QUARTILE",
-    )
-
-    indexing_types = get_report_reference_values(
-        "INDEXING_TYPE",
+@reports_bp.route("/publications")
+@roles_required(
+    "ADMIN",
+    ROLE_DEPARTMENT_HEAD,
+)
+def publications_report():
+    publications, filters = (
+        get_filtered_publications()
     )
 
     return render_template(
         "reports/publications.html",
         publications=publications,
-        departments=departments,
-        years=years,
-        quartiles=quartiles,
-        indexing_types=indexing_types,
-        publication_statuses=REPORT_PUBLICATION_STATUSES,
-        verification_statuses=REPORT_VERIFICATION_STATUSES,
+        departments=get_report_departments(),
+        years=get_report_years(),
+        quartiles=get_report_reference_values(
+            "QUARTILE"
+        ),
+        indexing_types=get_report_reference_values(
+            "INDEXING_TYPE"
+        ),
+        publication_statuses=(
+            REPORT_PUBLICATION_STATUSES
+        ),
+        verification_statuses=(
+            REPORT_VERIFICATION_STATUSES
+        ),
         selected_year=filters["year"],
-        selected_department_id=filters[
-            "department_id"
-        ],
-        selected_quartile_id=filters[
-            "quartile_id"
-        ],
-        selected_indexing_type_id=filters[
-            "indexing_type_id"
-        ],
-        selected_publication_status=filters[
-            "publication_status"
-        ],
-        selected_verification_status=filters[
-            "verification_status"
-        ],
+        selected_department_id=(
+            filters["department_id"]
+        ),
+        selected_quartile_id=(
+            filters["quartile_id"]
+        ),
+        selected_indexing_type_id=(
+            filters["indexing_type_id"]
+        ),
+        selected_publication_status=(
+            filters["publication_status"]
+        ),
+        selected_verification_status=(
+            filters["verification_status"]
+        ),
     )
 
 
-@reports_bp.route("/publications/export.xlsx")
+@reports_bp.route(
+    "/publications/export.xlsx"
+)
 @roles_required(
     "ADMIN",
-    "DEPARTMENT_HEAD",
+    ROLE_DEPARTMENT_HEAD,
 )
 def export_publications_excel():
-    filters = get_publications_report_filters()
-
-    query = build_publications_report_query(
-        **filters,
+    publications, _ = (
+        get_filtered_publications()
     )
 
-    publications = db.session.scalars(
-        query,
-    ).all()
-
     workbook = create_publications_workbook(
-        publications,
+        publications
     )
 
     output = BytesIO()
@@ -714,24 +769,21 @@ def export_publications_excel():
         ),
     )
 
-@reports_bp.route("/publications/export.pdf")
+
+@reports_bp.route(
+    "/publications/export.pdf"
+)
 @roles_required(
     "ADMIN",
-    "DEPARTMENT_HEAD",
+    ROLE_DEPARTMENT_HEAD,
 )
 def export_publications_pdf():
-    filters = get_publications_report_filters()
-
-    query = build_publications_report_query(
-        **filters,
+    publications, _ = (
+        get_filtered_publications()
     )
 
-    publications = db.session.scalars(
-        query,
-    ).all()
-
     output = create_publications_pdf(
-        publications,
+        publications
     )
 
     return send_file(

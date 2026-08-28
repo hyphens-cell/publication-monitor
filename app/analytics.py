@@ -1,8 +1,35 @@
+from io import BytesIO
+from pathlib import Path
+
 from flask import Blueprint, abort, render_template, request, send_file
 from flask_login import current_user
+from openpyxl import Workbook
+from openpyxl.utils import get_column_letter
+from reportlab.lib import colors
+from reportlab.lib.enums import TA_CENTER
+from reportlab.lib.pagesizes import A4, landscape
+from reportlab.lib.styles import ParagraphStyle
+from reportlab.lib.units import mm
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.platypus import (
+    Paragraph,
+    SimpleDocTemplate,
+    Spacer,
+    Table,
+    TableStyle,
+)
 from sqlalchemy import case, func, select
 
-from app.auth import roles_required
+from app.access import (
+    ensure_department_access,
+    get_scoped_department_id,
+)
+from app.auth import (
+    ROLE_ADMIN,
+    ROLE_DEPARTMENT_HEAD,
+    roles_required,
+)
 from app.extensions import db
 from app.models import (
     Department,
@@ -15,6 +42,7 @@ from app.models import (
 
 ANALYTICS_PLAN_STATUS = "APPROVED"
 ANALYTICS_FACT_STATUS = "APPROVED"
+PUBLICATION_TYPE_REFERENCE = "PUBLICATION_TYPE"
 
 
 analytics_bp = Blueprint(
@@ -29,40 +57,50 @@ def calculate_percentage(planned_count, actual_count):
         return 0.0
 
     return round(
-        min(actual_count / planned_count * 100, 100.0),
+        min(
+            actual_count / planned_count * 100,
+            100.0,
+        ),
         2,
     )
 
 
 def parse_optional_int(name):
-    value = request.args.get(name, "").strip()
+    value = request.args.get(
+        name,
+        "",
+    ).strip()
 
     if not value:
         return None
 
     try:
-        return int(value)
+        parsed_value = int(value)
     except ValueError:
         abort(400)
+
+    if parsed_value < 0:
+        abort(400)
+
+    return parsed_value
 
 
 def get_filters():
     year = parse_optional_int("year")
-    department_id = parse_optional_int("department_id")
-    publication_type_id = parse_optional_int("publication_type_id")
+    requested_department_id = parse_optional_int(
+        "department_id"
+    )
+    publication_type_id = parse_optional_int(
+        "publication_type_id"
+    )
 
-    if (
-        current_user.role == "DEPARTMENT_HEAD"
-        and department_id is not None
-        and department_id != current_user.department_id
-    ):
-        abort(403)
+    ensure_department_access(
+        requested_department_id
+    )
 
-    if current_user.role == "DEPARTMENT_HEAD":
-        if current_user.department_id is None:
-            abort(403)
-
-        department_id = current_user.department_id
+    department_id = get_scoped_department_id(
+        requested_department_id
+    )
 
     return {
         "year": year,
@@ -95,7 +133,10 @@ def get_departments():
         )
     )
 
-    if current_user.role == "DEPARTMENT_HEAD":
+    if current_user.role == ROLE_DEPARTMENT_HEAD:
+        if current_user.department_id is None:
+            abort(403)
+
         query = query.where(
             Department.id == current_user.department_id,
         )
@@ -107,7 +148,8 @@ def get_publication_types():
     return db.session.scalars(
         select(ReferenceValue)
         .where(
-            ReferenceValue.type == "PUBLICATION_TYPE",
+            ReferenceValue.type
+            == PUBLICATION_TYPE_REFERENCE,
             ReferenceValue.is_active.is_(True),
         )
         .order_by(
@@ -124,16 +166,32 @@ def get_plan_item_query(
 ):
     query = (
         select(
-            PlanItem.id.label("plan_item_id"),
-            Plan.year.label("year"),
-            Department.id.label("department_id"),
-            Department.name.label("department_name"),
-            ReferenceValue.id.label("publication_type_id"),
-            ReferenceValue.name_ru.label("publication_type_name_ru"),
-            ReferenceValue.name_kk.label("publication_type_name_kk"),
-            Publication.id.label("publication_id"),
+            PlanItem.id.label(
+                "plan_item_id"
+            ),
+            Plan.year.label(
+                "year"
+            ),
+            Department.id.label(
+                "department_id"
+            ),
+            Department.name.label(
+                "department_name"
+            ),
+            ReferenceValue.id.label(
+                "publication_type_id"
+            ),
+            ReferenceValue.name_ru.label(
+                "publication_type_name_ru"
+            ),
+            ReferenceValue.name_kk.label(
+                "publication_type_name_kk"
+            ),
+            Publication.id.label(
+                "publication_id"
+            ),
             Publication.verification_status.label(
-                "verification_status",
+                "verification_status"
             ),
         )
         .select_from(PlanItem)
@@ -147,11 +205,13 @@ def get_plan_item_query(
         )
         .join(
             ReferenceValue,
-            ReferenceValue.id == PlanItem.publication_type_id,
+            ReferenceValue.id
+            == PlanItem.publication_type_id,
         )
         .outerjoin(
             Publication,
-            Publication.plan_item_id == PlanItem.id,
+            Publication.plan_item_id
+            == PlanItem.id,
         )
         .where(
             Plan.status == ANALYTICS_PLAN_STATUS,
@@ -196,11 +256,15 @@ def get_summary_by_publication_type(filters):
             base_query.c.publication_type_id,
             base_query.c.publication_type_name_ru,
             base_query.c.publication_type_name_kk,
-            func.count(base_query.c.plan_item_id).label(
-                "planned_count",
+            func.count(
+                base_query.c.plan_item_id
+            ).label(
+                "planned_count"
             ),
-            func.sum(actual_expression).label(
-                "actual_count",
+            func.sum(
+                actual_expression
+            ).label(
+                "actual_count"
             ),
         )
         .group_by(
@@ -216,14 +280,24 @@ def get_summary_by_publication_type(filters):
     result = []
 
     for row in rows:
-        planned_count = int(row.planned_count or 0)
-        actual_count = int(row.actual_count or 0)
+        planned_count = int(
+            row.planned_count or 0
+        )
+        actual_count = int(
+            row.actual_count or 0
+        )
 
         result.append(
             {
-                "publication_type_id": row.publication_type_id,
-                "name_ru": row.publication_type_name_ru,
-                "name_kk": row.publication_type_name_kk,
+                "publication_type_id": (
+                    row.publication_type_id
+                ),
+                "name_ru": (
+                    row.publication_type_name_ru
+                ),
+                "name_kk": (
+                    row.publication_type_name_kk
+                ),
                 "planned_count": planned_count,
                 "actual_count": actual_count,
                 "progress": calculate_percentage(
@@ -254,11 +328,15 @@ def get_summary_by_department(filters):
         select(
             base_query.c.department_id,
             base_query.c.department_name,
-            func.count(base_query.c.plan_item_id).label(
-                "planned_count",
+            func.count(
+                base_query.c.plan_item_id
+            ).label(
+                "planned_count"
             ),
-            func.sum(actual_expression).label(
-                "actual_count",
+            func.sum(
+                actual_expression
+            ).label(
+                "actual_count"
             ),
         )
         .group_by(
@@ -273,8 +351,12 @@ def get_summary_by_department(filters):
     result = []
 
     for row in rows:
-        planned_count = int(row.planned_count or 0)
-        actual_count = int(row.actual_count or 0)
+        planned_count = int(
+            row.planned_count or 0
+        )
+        actual_count = int(
+            row.actual_count or 0
+        )
 
         result.append(
             {
@@ -308,17 +390,25 @@ def get_total_summary(filters):
 
     row = db.session.execute(
         select(
-            func.count(base_query.c.plan_item_id).label(
-                "planned_count",
+            func.count(
+                base_query.c.plan_item_id
+            ).label(
+                "planned_count"
             ),
-            func.sum(actual_expression).label(
-                "actual_count",
+            func.sum(
+                actual_expression
+            ).label(
+                "actual_count"
             ),
         )
     ).one()
 
-    planned_count = int(row.planned_count or 0)
-    actual_count = int(row.actual_count or 0)
+    planned_count = int(
+        row.planned_count or 0
+    )
+    actual_count = int(
+        row.actual_count or 0
+    )
 
     return {
         "planned_count": planned_count,
@@ -330,122 +420,152 @@ def get_total_summary(filters):
     }
 
 
+def build_analytics_data(filters):
+    return {
+        "total": get_total_summary(filters),
+        "by_publication_type": (
+            get_summary_by_publication_type(
+                filters
+            )
+        ),
+        "by_department": (
+            get_summary_by_department(
+                filters
+            )
+        ),
+    }
+
+
 @analytics_bp.route("/")
 @roles_required(
-    "ADMIN",
-    "DEPARTMENT_HEAD",
+    ROLE_ADMIN,
+    ROLE_DEPARTMENT_HEAD,
 )
 def dashboard():
     filters = get_filters()
 
-    summary = get_total_summary(filters)
-
-    by_publication_type = (
-        get_summary_by_publication_type(
-            filters,
-        )
-    )
-
-    by_department = get_summary_by_department(
-        filters,
+    data = build_analytics_data(
+        filters
     )
 
     return render_template(
         "analytics/dashboard.html",
-        summary=summary,
-        by_publication_type=by_publication_type,
-        by_department=by_department,
+        summary=data["total"],
+        by_publication_type=(
+            data["by_publication_type"]
+        ),
+        by_department=data["by_department"],
         years=get_years(),
         departments=get_departments(),
         publication_types=get_publication_types(),
         selected_year=filters["year"],
-        selected_department_id=filters[
-            "department_id"
-        ],
-        selected_publication_type_id=filters[
-            "publication_type_id"
-        ],
+        selected_department_id=(
+            filters["department_id"]
+        ),
+        selected_publication_type_id=(
+            filters["publication_type_id"]
+        ),
     )
+
 
 @analytics_bp.route("/export.xlsx")
 @roles_required(
-    "ADMIN",
-    "DEPARTMENT_HEAD",
+    ROLE_ADMIN,
+    ROLE_DEPARTMENT_HEAD,
 )
 def export_excel():
     filters = get_filters()
 
-    data = {
-        "total": get_total_summary(filters),
-        "by_publication_type": get_summary_by_publication_type(filters),
-        "by_department": get_summary_by_department(filters),
-    }
-
-    from io import BytesIO
-
-    from openpyxl import Workbook
-    from openpyxl.utils import get_column_letter
+    data = build_analytics_data(
+        filters
+    )
 
     workbook = Workbook()
 
     summary_sheet = workbook.active
     summary_sheet.title = "Итоги"
 
-    summary_sheet.append(["Показатель", "Значение"])
-    summary_sheet.append([
-        "План",
-        data["total"]["planned_count"],
-    ])
-    summary_sheet.append([
-        "Факт",
-        data["total"]["actual_count"],
-    ])
-    summary_sheet.append([
-        "Выполнение, %",
-        data["total"]["progress"],
-    ])
+    summary_sheet.append(
+        [
+            "Показатель",
+            "Значение",
+        ]
+    )
+
+    summary_sheet.append(
+        [
+            "План",
+            data["total"]["planned_count"],
+        ]
+    )
+
+    summary_sheet.append(
+        [
+            "Факт",
+            data["total"]["actual_count"],
+        ]
+    )
+
+    summary_sheet.append(
+        [
+            "Выполнение, %",
+            data["total"]["progress"],
+        ]
+    )
 
     type_sheet = workbook.create_sheet(
-        "По типам публикаций",
+        "По типам публикаций"
     )
 
-    type_sheet.append([
-        "Тип публикации",
-        "План",
-        "Факт",
-        "Выполнение, %",
-    ])
+    type_sheet.append(
+        [
+            "Тип публикации",
+            "План",
+            "Факт",
+            "Выполнение, %",
+        ]
+    )
 
     for item in data["by_publication_type"]:
-        type_sheet.append([
-            item["name_ru"] or item["name_kk"] or "",
-            item["planned_count"],
-            item["actual_count"],
-            item["progress"],
-        ])
+        type_sheet.append(
+            [
+                item["name_ru"]
+                or item["name_kk"]
+                or "",
+                item["planned_count"],
+                item["actual_count"],
+                item["progress"],
+            ]
+        )
 
     department_sheet = workbook.create_sheet(
-        "По кафедрам",
+        "По кафедрам"
     )
 
-    department_sheet.append([
-        "Кафедра",
-        "План",
-        "Факт",
-        "Выполнение, %",
-    ])
+    department_sheet.append(
+        [
+            "Кафедра",
+            "План",
+            "Факт",
+            "Выполнение, %",
+        ]
+    )
 
     for item in data["by_department"]:
-        department_sheet.append([
-            item["name"],
-            item["planned_count"],
-            item["actual_count"],
-            item["progress"],
-        ])
+        department_sheet.append(
+            [
+                item["name"],
+                item["planned_count"],
+                item["actual_count"],
+                item["progress"],
+            ]
+        )
 
     for worksheet in workbook.worksheets:
         worksheet.freeze_panes = "A2"
-        worksheet.auto_filter.ref = worksheet.dimensions
+        worksheet.auto_filter.ref = (
+            worksheet.dimensions
+        )
 
         for column_cells in worksheet.columns:
             maximum = max(
@@ -458,7 +578,7 @@ def export_excel():
             )
 
             letter = get_column_letter(
-                column_cells[0].column,
+                column_cells[0].column
             )
 
             worksheet.column_dimensions[
@@ -476,57 +596,43 @@ def export_excel():
     return send_file(
         output,
         as_attachment=True,
-        download_name="publication_analytics.xlsx",
+        download_name=(
+            "publication_analytics.xlsx"
+        ),
         mimetype=(
             "application/vnd.openxmlformats-officedocument."
             "spreadsheetml.sheet"
         ),
     )
 
+
 @analytics_bp.route("/export.pdf")
 @roles_required(
-    "ADMIN",
-    "DEPARTMENT_HEAD",
+    ROLE_ADMIN,
+    ROLE_DEPARTMENT_HEAD,
 )
 def export_pdf():
     filters = get_filters()
 
-    summary = get_total_summary(filters)
+    data = build_analytics_data(
+        filters
+    )
 
+    summary = data["total"]
     by_publication_type = (
-        get_summary_by_publication_type(
-            filters,
-        )
+        data["by_publication_type"]
     )
-
-    by_department = get_summary_by_department(
-        filters,
-    )
-
-    from io import BytesIO
-    from pathlib import Path
-
-    from reportlab.lib import colors
-    from reportlab.lib.enums import TA_CENTER
-    from reportlab.lib.pagesizes import A4, landscape
-    from reportlab.lib.styles import ParagraphStyle
-    from reportlab.lib.units import mm
-    from reportlab.pdfbase import pdfmetrics
-    from reportlab.pdfbase.ttfonts import TTFont
-    from reportlab.platypus import (
-        Paragraph,
-        SimpleDocTemplate,
-        Spacer,
-        Table,
-        TableStyle,
-    )
+    by_department = data["by_department"]
 
     output = BytesIO()
 
     font_candidates = [
         Path("C:/Windows/Fonts/arial.ttf"),
         Path("C:/Windows/Fonts/calibri.ttf"),
-        Path("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"),
+        Path(
+            "/usr/share/fonts/truetype/dejavu/"
+            "DejaVuSans.ttf"
+        ),
     ]
 
     font_path = next(
@@ -541,7 +647,10 @@ def export_pdf():
     if font_path is not None:
         font_name = "AnalyticsUnicode"
 
-        if font_name not in pdfmetrics.getRegisteredFontNames():
+        if (
+            font_name
+            not in pdfmetrics.getRegisteredFontNames()
+        ):
             pdfmetrics.registerFont(
                 TTFont(
                     font_name,
@@ -593,31 +702,54 @@ def export_pdf():
         Paragraph(
             "Аналитика публикационной деятельности",
             title_style,
-        ),
+        )
     ]
 
     summary_table = Table(
         [
             [
-                Paragraph("Показатель", header_style),
-                Paragraph("Значение", header_style),
+                Paragraph(
+                    "Показатель",
+                    header_style,
+                ),
+                Paragraph(
+                    "Значение",
+                    header_style,
+                ),
             ],
             [
-                Paragraph("План", text_style),
                 Paragraph(
-                    str(summary["planned_count"]),
+                    "План",
+                    text_style,
+                ),
+                Paragraph(
+                    str(
+                        summary[
+                            "planned_count"
+                        ]
+                    ),
                     text_style,
                 ),
             ],
             [
-                Paragraph("Факт", text_style),
                 Paragraph(
-                    str(summary["actual_count"]),
+                    "Факт",
+                    text_style,
+                ),
+                Paragraph(
+                    str(
+                        summary[
+                            "actual_count"
+                        ]
+                    ),
                     text_style,
                 ),
             ],
             [
-                Paragraph("Выполнение", text_style),
+                Paragraph(
+                    "Выполнение",
+                    text_style,
+                ),
                 Paragraph(
                     f'{summary["progress"]}%',
                     text_style,
@@ -657,7 +789,12 @@ def export_pdf():
     )
 
     story.append(summary_table)
-    story.append(Spacer(1, 5 * mm))
+    story.append(
+        Spacer(
+            1,
+            5 * mm,
+        )
+    )
 
     story.append(
         Paragraph(
@@ -672,9 +809,18 @@ def export_pdf():
                 "Тип публикации",
                 header_style,
             ),
-            Paragraph("План", header_style),
-            Paragraph("Факт", header_style),
-            Paragraph("%", header_style),
+            Paragraph(
+                "План",
+                header_style,
+            ),
+            Paragraph(
+                "Факт",
+                header_style,
+            ),
+            Paragraph(
+                "%",
+                header_style,
+            ),
         ]
     ]
 
@@ -688,11 +834,19 @@ def export_pdf():
                     text_style,
                 ),
                 Paragraph(
-                    str(item["planned_count"]),
+                    str(
+                        item[
+                            "planned_count"
+                        ]
+                    ),
                     text_style,
                 ),
                 Paragraph(
-                    str(item["actual_count"]),
+                    str(
+                        item[
+                            "actual_count"
+                        ]
+                    ),
                     text_style,
                 ),
                 Paragraph(
@@ -740,7 +894,12 @@ def export_pdf():
     )
 
     story.append(type_table)
-    story.append(Spacer(1, 5 * mm))
+    story.append(
+        Spacer(
+            1,
+            5 * mm,
+        )
+    )
 
     story.append(
         Paragraph(
@@ -751,10 +910,22 @@ def export_pdf():
 
     department_rows = [
         [
-            Paragraph("Кафедра", header_style),
-            Paragraph("План", header_style),
-            Paragraph("Факт", header_style),
-            Paragraph("%", header_style),
+            Paragraph(
+                "Кафедра",
+                header_style,
+            ),
+            Paragraph(
+                "План",
+                header_style,
+            ),
+            Paragraph(
+                "Факт",
+                header_style,
+            ),
+            Paragraph(
+                "%",
+                header_style,
+            ),
         ]
     ]
 
@@ -766,11 +937,19 @@ def export_pdf():
                     text_style,
                 ),
                 Paragraph(
-                    str(item["planned_count"]),
+                    str(
+                        item[
+                            "planned_count"
+                        ]
+                    ),
                     text_style,
                 ),
                 Paragraph(
-                    str(item["actual_count"]),
+                    str(
+                        item[
+                            "actual_count"
+                        ]
+                    ),
                     text_style,
                 ),
                 Paragraph(
@@ -826,6 +1005,8 @@ def export_pdf():
     return send_file(
         output,
         as_attachment=True,
-        download_name="publication_analytics.pdf",
+        download_name=(
+            "publication_analytics.pdf"
+        ),
         mimetype="application/pdf",
     )

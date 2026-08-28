@@ -4,7 +4,14 @@ from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_login import current_user
 from sqlalchemy import func, select
 
-from app.auth import admin_required, department_head_required, roles_required
+from app.access import ensure_department_access
+from app.auth import (
+    ROLE_ADMIN,
+    ROLE_DEPARTMENT_HEAD,
+    admin_required,
+    department_head_required,
+    roles_required,
+)
 from app.extensions import db
 from app.models import Employee, Plan, PlanItem, PlanItemAuthor, PlanVersion, ReferenceValue
 from app.publications import create_publications_from_plan
@@ -70,25 +77,28 @@ def get_plan(plan_id):
     return plan
 
 
-def get_department_head_plan(plan_id):
+def get_accessible_plan(plan_id):
     plan = get_plan(plan_id)
 
     if plan is None:
         return None
 
-    if current_user.department_id is None:
-        flash(
-            "У пользователя не указана кафедра.",
-            "danger",
+    if (
+        current_user.role == ROLE_DEPARTMENT_HEAD
+        and (
+            current_user.department_id is None
+            or plan.department_id != current_user.department_id
         )
-        return None
-
-    if plan.department_id != current_user.department_id:
+    ):
         flash(
             "У вас нет доступа к этому плану.",
             "danger",
         )
         return None
+
+    ensure_department_access(
+        plan.department_id
+    )
 
     return plan
 
@@ -189,33 +199,29 @@ def editable_plan_required(plan):
 
 
 @plans_bp.route("/")
-@roles_required("ADMIN", "DEPARTMENT_HEAD")
+@roles_required(ROLE_ADMIN, ROLE_DEPARTMENT_HEAD)
 def plans():
-    if current_user.role == "DEPARTMENT_HEAD":
-        if current_user.department_id is None:
+    department_id = None
+
+    if current_user.role == ROLE_DEPARTMENT_HEAD:
+        department_id = current_user.department_id
+
+        if department_id is None:
             flash(
                 "У пользователя не указана кафедра.",
                 "danger",
             )
             return redirect(url_for("main.index"))
 
-        plans_list = db.session.scalars(
-            select(Plan)
-            .where(
-                Plan.department_id == current_user.department_id,
-            )
-            .order_by(Plan.year.desc())
-        ).all()
+    query = select(Plan)
 
-        return render_template(
-            "plans/list.html",
-            plans=plans_list,
-            monitor=False,
+    if department_id is not None:
+        query = query.where(
+            Plan.department_id == department_id
         )
 
     plans_list = db.session.scalars(
-        select(Plan)
-        .order_by(
+        query.order_by(
             Plan.year.desc(),
             Plan.department_id,
         )
@@ -224,7 +230,7 @@ def plans():
     return render_template(
         "plans/list.html",
         plans=plans_list,
-        monitor=True,
+        monitor=current_user.role == ROLE_ADMIN,
     )
 
 
@@ -289,21 +295,11 @@ def create_plan():
 
 
 @plans_bp.route("/<int:plan_id>")
-@roles_required("ADMIN", "DEPARTMENT_HEAD")
+@roles_required(ROLE_ADMIN, ROLE_DEPARTMENT_HEAD)
 def plan_detail(plan_id):
-    plan = get_plan(plan_id)
+    plan = get_accessible_plan(plan_id)
 
     if plan is None:
-        return redirect(url_for("plans.plans"))
-
-    if (
-        current_user.role == "DEPARTMENT_HEAD"
-        and plan.department_id != current_user.department_id
-    ):
-        flash(
-            "У вас нет доступа к этому плану.",
-            "danger",
-        )
         return redirect(url_for("plans.plans"))
 
     versions = db.session.scalars(
@@ -320,7 +316,7 @@ def plan_detail(plan_id):
         "plans/detail.html",
         plan=plan,
         versions=versions,
-        monitor=current_user.role == "ADMIN",
+        monitor=current_user.role == ROLE_ADMIN,
     )
 
 
@@ -330,7 +326,7 @@ def plan_detail(plan_id):
 )
 @department_head_required
 def create_plan_item(plan_id):
-    plan = get_department_head_plan(plan_id)
+    plan = get_accessible_plan(plan_id)
 
     if plan is None:
         return redirect(url_for("plans.plans"))
@@ -529,7 +525,7 @@ def create_plan_item(plan_id):
 )
 @department_head_required
 def edit_plan_item(plan_id, item_id):
-    plan = get_department_head_plan(plan_id)
+    plan = get_accessible_plan(plan_id)
 
     if plan is None:
         return redirect(url_for("plans.plans"))
@@ -741,7 +737,7 @@ def edit_plan_item(plan_id, item_id):
 )
 @department_head_required
 def delete_plan_item(plan_id, item_id):
-    plan = get_department_head_plan(plan_id)
+    plan = get_accessible_plan(plan_id)
 
     if plan is None:
         return redirect(url_for("plans.plans"))
@@ -790,7 +786,7 @@ def delete_plan_item(plan_id, item_id):
 )
 @department_head_required
 def submit_plan(plan_id):
-    plan = get_department_head_plan(plan_id)
+    plan = get_accessible_plan(plan_id)
 
     if plan is None:
         return redirect(url_for("plans.plans"))

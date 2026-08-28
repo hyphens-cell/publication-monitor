@@ -17,7 +17,8 @@ from flask_login import current_user
 from werkzeug.utils import secure_filename
 from sqlalchemy import func, select
 
-from app.auth import roles_required
+from app.access import ensure_department_access, get_scoped_department_id
+from app.auth import ROLE_ADMIN, ROLE_DEPARTMENT_HEAD, roles_required
 from app.extensions import db
 from app.models import (
     Attachment,
@@ -240,7 +241,7 @@ def synchronize_publication_verification_status(
     publication.verified_at = None
 
 @publications_bp.route("/")
-@roles_required("ADMIN", "DEPARTMENT_HEAD")
+@roles_required(ROLE_ADMIN, ROLE_DEPARTMENT_HEAD)
 def publications():
     query = Publication.query
 
@@ -266,12 +267,23 @@ def publications():
             Publication.verification_status == verification_status
         )
 
+    requested_department_id = None
+
     if department_id:
         try:
-            department_id_value = int(department_id)
+            requested_department_id = int(department_id)
         except ValueError:
             abort(400)
 
+    ensure_department_access(
+        requested_department_id
+    )
+
+    department_id_value = get_scoped_department_id(
+        requested_department_id
+    )
+
+    if department_id_value is not None:
         query = query.filter(
             Publication.department_id == department_id_value
         )
@@ -288,14 +300,6 @@ def publications():
             Plan.year == plan_year_value
         )
 
-    if current_user.role == "DEPARTMENT_HEAD":
-        if current_user.department_id is None:
-            abort(403)
-
-        query = query.filter(
-            Publication.department_id == current_user.department_id
-        )
-
     publications_list = query.order_by(
         Publication.created_at.desc(),
         Publication.id.desc(),
@@ -308,7 +312,7 @@ def publications():
 
 
 @publications_bp.route("/<int:publication_id>")
-@roles_required("ADMIN", "DEPARTMENT_HEAD")
+@roles_required(ROLE_ADMIN, ROLE_DEPARTMENT_HEAD)
 def publication_detail(publication_id):
     publication = db.session.get(
         Publication,
@@ -318,11 +322,9 @@ def publication_detail(publication_id):
     if publication is None:
         abort(404)
 
-    if (
-        current_user.role == "DEPARTMENT_HEAD"
-        and publication.department_id != current_user.department_id
-    ):
-        abort(403)
+    ensure_department_access(
+        publication.department_id
+    )
 
     doi_conflicts = find_doi_conflicts(publication)
 
@@ -342,7 +344,7 @@ def publication_detail(publication_id):
     "/<int:publication_id>/edit",
     methods=["GET", "POST"],
 )
-@roles_required("ADMIN", "DEPARTMENT_HEAD")
+@roles_required(ROLE_ADMIN, ROLE_DEPARTMENT_HEAD)
 def edit_publication(publication_id):
     publication = db.session.get(
         Publication,
@@ -352,11 +354,9 @@ def edit_publication(publication_id):
     if publication is None:
         abort(404)
 
-    if (
-        current_user.role == "DEPARTMENT_HEAD"
-        and publication.department_id != current_user.department_id
-    ):
-        abort(403)
+    ensure_department_access(
+        publication.department_id
+    )
 
     indexing_types = get_reference_values("INDEXING_TYPE")
     quartiles = get_reference_values("QUARTILE")
@@ -519,7 +519,7 @@ def edit_publication(publication_id):
     "/<int:publication_id>/status",
     methods=["POST"],
 )
-@roles_required("DEPARTMENT_HEAD")
+@roles_required(ROLE_DEPARTMENT_HEAD)
 def change_publication_status(publication_id):
     publication = db.session.get(
         Publication,
@@ -529,8 +529,9 @@ def change_publication_status(publication_id):
     if publication is None:
         abort(404)
 
-    if publication.department_id != current_user.department_id:
-        abort(403)
+    ensure_department_access(
+        publication.department_id
+    )
 
     new_status = request.form.get(
         "status",
@@ -599,7 +600,7 @@ def change_publication_status(publication_id):
     "/<int:publication_id>/attachments",
     methods=["POST"],
 )
-@roles_required("DEPARTMENT_HEAD")
+@roles_required(ROLE_DEPARTMENT_HEAD)
 def upload_publication_attachment(publication_id):
     publication = db.session.get(
         Publication,
@@ -609,8 +610,9 @@ def upload_publication_attachment(publication_id):
     if publication is None:
         abort(404)
 
-    if publication.department_id != current_user.department_id:
-        abort(403)
+    ensure_department_access(
+        publication.department_id
+    )
 
     uploaded_file = request.files.get("file")
 
@@ -727,18 +729,16 @@ def upload_publication_attachment(publication_id):
 @publications_bp.route(
     "/<int:publication_id>/attachments/<int:attachment_id>/download",
 )
-@roles_required("ADMIN", "DEPARTMENT_HEAD")
+@roles_required(ROLE_ADMIN, ROLE_DEPARTMENT_HEAD)
 def download_publication_attachment(publication_id, attachment_id):
     publication = db.session.get(Publication, publication_id)
 
     if publication is None:
         abort(404)
 
-    if (
-        current_user.role == "DEPARTMENT_HEAD"
-        and publication.department_id != current_user.department_id
-    ):
-        abort(403)
+    ensure_department_access(
+        publication.department_id
+    )
 
     attachment = db.session.get(Attachment, attachment_id)
 
@@ -761,7 +761,7 @@ def download_publication_attachment(publication_id, attachment_id):
     "/<int:publication_id>/attachments/<int:attachment_id>/delete",
     methods=["POST"],
 )
-@roles_required("DEPARTMENT_HEAD")
+@roles_required(ROLE_DEPARTMENT_HEAD)
 def delete_publication_attachment(
     publication_id,
     attachment_id,
@@ -774,8 +774,9 @@ def delete_publication_attachment(
     if publication is None:
         abort(404)
 
-    if publication.department_id != current_user.department_id:
-        abort(403)
+    ensure_department_access(
+        publication.department_id
+    )
 
     attachment = db.session.get(
         Attachment,
@@ -820,7 +821,7 @@ def delete_publication_attachment(
     "/<int:publication_id>/attachments/<int:attachment_id>/approve",
     methods=["POST"],
 )
-@roles_required("ADMIN")
+@roles_required(ROLE_ADMIN)
 def approve_publication_attachment(
     publication_id,
     attachment_id,
@@ -898,7 +899,7 @@ def approve_publication_attachment(
     "/<int:publication_id>/attachments/<int:attachment_id>/reject",
     methods=["POST"],
 )
-@roles_required("ADMIN")
+@roles_required(ROLE_ADMIN)
 def reject_publication_attachment(
     publication_id,
     attachment_id,
@@ -1079,7 +1080,7 @@ def find_doi_conflicts(publication):
     "/<int:publication_id>/resolve-doi",
     methods=["POST"],
 )
-@roles_required("ADMIN")
+@roles_required(ROLE_ADMIN)
 def resolve_doi_conflict(publication_id):
     publication = db.session.get(
         Publication,
@@ -1237,7 +1238,7 @@ def resolve_doi_conflict(publication_id):
     "/<int:publication_id>/verify",
     methods=["POST"],
 )
-@roles_required("ADMIN")
+@roles_required(ROLE_ADMIN)
 def verify_publication(publication_id):
     publication = db.session.get(
         Publication,
@@ -1411,7 +1412,7 @@ def verify_publication(publication_id):
     "/<int:publication_id>/return",
     methods=["POST"],
 )
-@roles_required("ADMIN")
+@roles_required(ROLE_ADMIN)
 def return_publication(publication_id):
     publication = db.session.get(
         Publication,
