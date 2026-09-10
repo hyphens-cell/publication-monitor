@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}Система и резервные копии{% endblock %}
+{% block page_title %}Система и резервные копии{% endblock %}
+{% block page_subtitle %}<p class="text-body-secondary mb-0">Диагностика и резервное копирование доступны только техническому администратору.</p>{% endblock %}
+
+{% block content %}
+    <div class="row g-4">
+        <div class="col-12 col-lg-6">
+            <section class="card card-pm border-0 h-100"><div class="card-body p-4">
+                <h2 class="h5">Состояние системы</h2>
+                <p class="text-body-secondary">Текущее состояние приложения, базы данных, диска и загруженных файлов.</p>
+                <a class="btn btn-outline-primary" href="{{ url_for('admin.system_status') }}">Открыть состояние</a>
+            </div></section>
+        </div>
+        <div class="col-12 col-lg-6">
+            <section class="card card-pm border-0 h-100"><div class="card-body p-4">
+                <h2 class="h5">Резервная копия PostgreSQL</h2>
+                <p class="text-body-secondary">Создаётся архив базы данных в формате PostgreSQL custom dump.</p>
+                <form method="post" action="{{ url_for('admin.create_backup') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button class="btn btn-pm-primary" type="submit">Создать и скачать копию</button>
+                </form>
+                <a class="btn btn-link px-0 mt-2" href="{{ url_for('admin.list_backups') }}">Список сохранённых копий</a>
+            </div></section>
+        </div>
+    </div>
+{% endblock %}

@@ -394,9 +394,26 @@
         );
     };
 
+    const initializeDestructiveActionConfirmation = () => {
+        const destructivePattern = /\/(delete|archive|block)(?:\/|$)/;
+
+        document.querySelectorAll("form[action]").forEach((form) => {
+            if (!destructivePattern.test(form.action)) {
+                return;
+            }
+
+            form.addEventListener("submit", (event) => {
+                if (!window.confirm("Подтвердите выполнение необратимого действия.")) {
+                    event.preventDefault();
+                }
+            });
+        });
+    };
+
     const initializeApplication = () => {
         initializeAnalytics();
         initializeDropdownPortals();
+        initializeDestructiveActionConfirmation();
     };
 
     if (document.readyState === "loading") {

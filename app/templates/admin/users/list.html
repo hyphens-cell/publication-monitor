@@ -279,6 +279,33 @@
 
                                             {% endif %}
 
+                                            {% if not user.is_active %}
+
+                                                <li>
+                                                    <form
+                                                        method="post"
+                                                        action="{{ url_for(
+                                                            'admin.unblock_user',
+                                                            user_id=user.id
+                                                        ) }}"
+                                                    >
+                                                        <input
+                                                            type="hidden"
+                                                            name="csrf_token"
+                                                            value="{{ csrf_token() }}"
+                                                        >
+
+                                                        <button
+                                                            type="submit"
+                                                            class="dropdown-item"
+                                                        >
+                                                            Разблокировать
+                                                        </button>
+                                                    </form>
+                                                </li>
+
+                                            {% endif %}
+
                                             <li>
                                                 <form
                                                     method="post"

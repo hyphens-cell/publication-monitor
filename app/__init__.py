@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, render_template
 
 from app.admin import admin_bp
 from app.auth import auth_bp
@@ -44,6 +44,27 @@ def create_app():
     app.register_blueprint(monitoring_bp)
     app.register_blueprint(reports_bp)
     app.register_blueprint(analytics_bp)
+
+    @app.errorhandler(400)
+    def bad_request(error):
+        return render_template("errors/error.html", status_code=400, title="Некорректный запрос", message="Проверьте введённые данные и повторите попытку."), 400
+
+    @app.errorhandler(403)
+    def forbidden(error):
+        return render_template("errors/error.html", status_code=403, title="Доступ запрещён", message="У вас нет прав для выполнения этого действия."), 403
+
+    @app.errorhandler(404)
+    def not_found(error):
+        return render_template("errors/error.html", status_code=404, title="Страница не найдена", message="Запрошенная страница или запись не существует."), 404
+
+    @app.errorhandler(413)
+    def request_too_large(error):
+        return render_template("errors/error.html", status_code=413, title="Файл слишком большой", message="Выберите файл меньшего размера и повторите загрузку."), 413
+
+    @app.errorhandler(500)
+    def internal_error(error):
+        db.session.rollback()
+        return render_template("errors/error.html", status_code=500, title="Ошибка сервера", message="Не удалось обработать запрос. Попробуйте ещё раз позже."), 500
     @app.cli.command("seed-reference-values")
     def seed_reference_values_command():
         created_count = seed_reference_values()

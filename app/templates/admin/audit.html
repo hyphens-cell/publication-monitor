@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}Журнал событий{% endblock %}
+{% block page_title %}Журнал событий{% endblock %}
+{% block page_subtitle %}<p class="text-body-secondary mb-0">Всего записей: {{ total }}</p>{% endblock %}
+
+{% block content %}
+    <div class="card card-pm border-0">
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead><tr><th>Дата</th><th>Пользователь</th><th>Действие</th><th>Сущность</th><th>IP</th></tr></thead>
+                <tbody>
+                    {% for log in logs %}
+                        <tr>
+                            <td>{{ log.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
+                            <td>{{ log.user.full_name if log.user else 'Система' }}</td>
+                            <td><code>{{ log.action }}</code></td>
+                            <td>{{ log.entity_type or '—' }}{% if log.entity_id %} #{{ log.entity_id }}{% endif %}</td>
+                            <td>{{ log.ip_address or '—' }}</td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="5" class="text-center py-5 text-body-secondary">Событий пока нет.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}

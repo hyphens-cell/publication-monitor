@@ -15,7 +15,7 @@ from flask import (
 )
 from flask_login import current_user
 from werkzeug.utils import secure_filename
-from sqlalchemy import func, select
+from sqlalchemy import select
 
 from app.access import ensure_department_access, get_scoped_department_id
 from app.audit import audit
@@ -183,6 +183,21 @@ def is_allowed_attachment(filename):
     return extension in ALLOWED_ATTACHMENT_EXTENSIONS
 
 
+def normalize_doi(value: str | None) -> str | None:
+    """Return a canonical DOI suitable for storage and duplicate checks."""
+    if not value:
+        return None
+
+    normalized = value.strip().lower()
+    for prefix in ("https://doi.org/", "http://doi.org/", "http://dx.doi.org/", "doi:"):
+        if normalized.startswith(prefix):
+            normalized = normalized[len(prefix):]
+            break
+
+    normalized = "".join(normalized.split())
+    return normalized or None
+
+
 def get_reference_values(reference_type):
     return db.session.scalars(
         select(ReferenceValue)
@@ -240,12 +255,6 @@ def synchronize_publication_verification_status(
         )
         publication.verified_by = None
         publication.verified_at = None
-        return
-
-    if review_statuses == {"APPROVED"}:
-        publication.verification_status = (
-            PUBLICATION_VERIFICATION_APPROVED
-        )
         return
 
     publication.verification_status = (
@@ -358,7 +367,7 @@ def publication_detail(publication_id):
     "/<int:publication_id>/edit",
     methods=["GET", "POST"],
 )
-@roles_required(ROLE_ADMIN, ROLE_DEPARTMENT_HEAD)
+@roles_required(ROLE_DEPARTMENT_HEAD)
 def edit_publication(publication_id):
     publication = db.session.get(
         Publication,
@@ -488,7 +497,7 @@ def edit_publication(publication_id):
             )
 
         publication.title = title
-        publication.doi = doi or None
+        publication.doi = normalize_doi(doi)
         publication.url = url or None
         publication.journal = journal or None
         publication.publication_year = publication_year_value
@@ -932,15 +941,8 @@ def approve_publication_attachment(
         publication
     )
 
-    if (
-        publication.verification_status
-        == PUBLICATION_VERIFICATION_APPROVED
-    ):
-        publication.verified_by = current_user.id
-        publication.verified_at = datetime.utcnow()
-    else:
-        publication.verified_by = None
-        publication.verified_at = None
+    publication.verified_by = None
+    publication.verified_at = None
 
     audit(
         "ATTACHMENT_APPROVED",
@@ -1075,11 +1077,7 @@ def reject_publication_attachment(
 def find_publication_duplicates(publication):
     duplicates = {}
 
-    normalized_doi = (
-        publication.doi.strip().lower()
-        if publication.doi
-        else None
-    )
+    normalized_doi = normalize_doi(publication.doi)
 
     if normalized_doi:
         candidate_publications = db.session.scalars(
@@ -1090,11 +1088,7 @@ def find_publication_duplicates(publication):
         ).all()
 
         for candidate in candidate_publications:
-            candidate_doi = (
-                candidate.doi.strip().lower()
-                if candidate.doi
-                else None
-            )
+            candidate_doi = normalize_doi(candidate.doi)
 
             if candidate_doi == normalized_doi:
                 duplicates[candidate.id] = candidate
@@ -1149,15 +1143,14 @@ def find_doi_conflicts(publication):
     if not publication.doi:
         return []
 
-    normalized_doi = publication.doi.strip().lower()
-
-    return db.session.scalars(
+    normalized_doi = normalize_doi(publication.doi)
+    candidates = db.session.scalars(
         select(Publication).where(
             Publication.id != publication.id,
             Publication.doi.is_not(None),
-            func.lower(Publication.doi) == normalized_doi,
         )
     ).all()
+    return [item for item in candidates if normalize_doi(item.doi) == normalized_doi]
 
 @publications_bp.route(
     "/<int:publication_id>/resolve-doi",
@@ -1219,17 +1212,8 @@ def resolve_doi_conflict(publication_id):
             )
         )
 
-    publication_doi = (
-        publication.doi.strip().lower()
-        if publication.doi
-        else None
-    )
-
-    conflict_doi = (
-        conflict.doi.strip().lower()
-        if conflict.doi
-        else None
-    )
+    publication_doi = normalize_doi(publication.doi)
+    conflict_doi = normalize_doi(conflict.doi)
 
     if not publication_doi or publication_doi != conflict_doi:
         flash(
@@ -1430,20 +1414,13 @@ def verify_publication(publication_id):
             "Не указана аффилиация."
         )
 
-    doi_conflicts = find_doi_conflicts(
-        publication
-    )
+    duplicates = find_publication_duplicates(publication)
 
-    if doi_conflicts:
-        conflict_ids = ", ".join(
-            str(conflict.id)
-            for conflict in doi_conflicts
-        )
-
+    if duplicates:
+        conflict_ids = ", ".join(str(item.id) for item in duplicates)
         errors.append(
-            "Обнаружен конфликт DOI. "
-            f"Публикации с таким DOI: № {conflict_ids}. "
-            "Сначала необходимо разрешить конфликт монитором."
+            "Обнаружены возможные дубликаты: публикации № "
+            f"{conflict_ids}. Сначала необходимо разрешить конфликт монитором."
         )
 
     if not publication.attachments:

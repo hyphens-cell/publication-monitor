@@ -55,8 +55,22 @@
                         </button>
 
                         <ul class="dropdown-menu dropdown-menu-end">
-                            <li><span class="dropdown-item-text">Русский</span></li>
-                            <li><span class="dropdown-item-text">Қазақша</span></li>
+                            <li>
+                                <form method="post" action="{{ url_for('auth.change_language') }}">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="language" value="ru">
+                                    <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
+                                    <button class="dropdown-item{% if current_user.language == 'ru' %} active{% endif %}" type="submit">Русский</button>
+                                </form>
+                            </li>
+                            <li>
+                                <form method="post" action="{{ url_for('auth.change_language') }}">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="language" value="kk">
+                                    <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
+                                    <button class="dropdown-item{% if current_user.language == 'kk' %} active{% endif %}" type="submit">Қазақша</button>
+                                </form>
+                            </li>
                         </ul>
                     </div>
 
@@ -251,6 +265,30 @@
                             >
                                 <span class="pm-nav-icon">⌂</span>
                                 <span>Кафедры</span>
+                            </a>
+
+                            <a
+                                class="pm-nav-link {% if request.endpoint == 'admin.audit_list' %}active{% endif %}"
+                                href="{{ url_for('admin.audit_list', view=1) }}"
+                            >
+                                <span class="pm-nav-icon">▤</span>
+                                <span>Журнал событий</span>
+                            </a>
+
+                            <a
+                                class="pm-nav-link {% if request.endpoint == 'admin.list_references' %}active{% endif %}"
+                                href="{{ url_for('admin.list_references', view=1) }}"
+                            >
+                                <span class="pm-nav-icon">≡</span>
+                                <span>Справочники</span>
+                            </a>
+
+                            <a
+                                class="pm-nav-link {% if request.endpoint == 'admin.system_dashboard' %}active{% endif %}"
+                                href="{{ url_for('admin.system_dashboard') }}"
+                            >
+                                <span class="pm-nav-icon">⚙</span>
+                                <span>Система и копии</span>
                             </a>
                         {% endif %}
                     </nav>
