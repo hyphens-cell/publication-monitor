@@ -6,6 +6,7 @@ from flask import (
     redirect,
     render_template,
     request,
+    session,
     url_for,
 )
 from flask_login import (
@@ -17,6 +18,7 @@ from flask_login import (
 from sqlalchemy import select
 
 from app.extensions import db
+from app.audit import audit
 from app.models import User
 
 
@@ -93,7 +95,12 @@ def login():
                 "auth/login.html"
             )
 
+        # Drop any anonymous session state before issuing the authenticated session.
+        session.clear()
+        session.permanent = True
         login_user(user)
+        audit("USER_LOGGED_IN", entity_type="User", entity_id=user.id, details={"username": user.username})
+        db.session.commit()
 
         next_url = request.args.get("next")
 
@@ -116,7 +123,12 @@ def login():
 @auth_bp.route("/logout", methods=["POST"])
 @login_required
 def logout():
+    selected_language = current_user.language if current_user.language in {"ru", "kk"} else "ru"
+    audit("USER_LOGGED_OUT", entity_type="User", entity_id=current_user.id)
+    db.session.commit()
     logout_user()
+    session.clear()
+    session["language"] = selected_language
 
     flash(
         "Вы вышли из системы.",
@@ -126,6 +138,24 @@ def logout():
     return redirect(
         url_for("auth.login")
     )
+
+
+@auth_bp.route("/language", methods=["POST"])
+def change_language():
+    language = request.form.get("language", "").strip()
+    next_url = request.form.get("next", "").strip()
+
+    if language not in {"ru", "kk"}:
+        flash("Выбран некорректный язык.", "danger")
+    else:
+        session["language"] = language
+        if current_user.is_authenticated:
+            current_user.language = language
+            db.session.commit()
+
+    if next_url.startswith("/") and not next_url.startswith("//"):
+        return redirect(next_url)
+    return redirect(url_for("main.index"))
 
 
 def roles_required(*roles):

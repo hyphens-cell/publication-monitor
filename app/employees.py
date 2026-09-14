@@ -3,6 +3,7 @@ from flask_login import current_user
 from sqlalchemy import select
 
 from app.auth import department_head_required
+from app.audit import audit
 from app.extensions import db
 from app.models import Employee
 
@@ -108,6 +109,8 @@ def create_employee():
         )
 
         db.session.add(employee)
+        db.session.flush()
+        audit("EMPLOYEE_CREATED", entity_type="Employee", entity_id=employee.id, details={"department_id": employee.department_id, "full_name": employee.full_name})
         db.session.commit()
 
         flash(
@@ -172,6 +175,8 @@ def edit_employee(employee_id):
         employee.position = position or None
         employee.email = email or None
 
+        audit("EMPLOYEE_UPDATED", entity_type="Employee", entity_id=employee.id, details={"department_id": employee.department_id, "full_name": employee.full_name})
+
         db.session.commit()
 
         flash(
@@ -200,6 +205,8 @@ def archive_employee(employee_id):
 
     employee.is_active = False
 
+    audit("EMPLOYEE_ARCHIVED", entity_type="Employee", entity_id=employee.id, details={"department_id": employee.department_id})
+
     db.session.commit()
 
     flash(
@@ -222,6 +229,8 @@ def restore_employee(employee_id):
         return redirect(url_for("employees.employees"))
 
     employee.is_active = True
+
+    audit("EMPLOYEE_RESTORED", entity_type="Employee", entity_id=employee.id, details={"department_id": employee.department_id})
 
     db.session.commit()
 

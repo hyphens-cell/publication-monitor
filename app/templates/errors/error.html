@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="{{ current_language() }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ status_code }} — {{ title }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+</head>
+<body>
+    <main class="pm-error-page container py-5 d-flex align-items-center">
+        <section class="card card-pm border-0 mx-auto w-100" style="max-width: 620px;">
+            <div class="card-body p-4 p-md-5 text-center">
+                <div class="pm-error-code mb-3" aria-hidden="true">{{ status_code }}</div>
+                <h1 class="h3 fw-bold mb-3">{{ tr(title) }}</h1>
+                <p class="text-body-secondary mb-4">{{ tr(message) }}</p>
+                {% if current_user.is_authenticated %}
+                    <a class="btn btn-pm-primary" href="{{ url_for('main.index') }}">На главную</a>
+                {% else %}
+                    <a class="btn btn-pm-primary" href="{{ url_for('auth.login') }}">К странице входа</a>
+                {% endif %}
+            </div>
+        </section>
+    </main>
+</body>
+</html>

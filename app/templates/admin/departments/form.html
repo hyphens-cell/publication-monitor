@@ -88,7 +88,7 @@
                                 type="text"
                                 class="form-control form-control-lg"
                                 maxlength="255"
-                                value="{{ department.name if department else '' }}"
+                                value="{{ request.form.get('name', department.name if department else '') }}"
                                 autocomplete="organization"
                                 required
                             >
@@ -115,7 +115,7 @@
                                 type="text"
                                 class="form-control form-control-lg"
                                 maxlength="50"
-                                value="{{ department.code if department else '' }}"
+                                value="{{ request.form.get('code', department.code if department else '') }}"
                                 required
                             >
 

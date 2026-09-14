@@ -1,9 +1,21 @@
-from flask import Flask
+from flask import Flask, render_template
 
 from app.admin import admin_bp
 from app.auth import auth_bp
 from app.config import Config
 from app.extensions import bcrypt, csrf, db, login_manager, migrate
+from app.i18n import (
+    ATTACHMENT_STATUS_LABELS,
+    PLAN_STATUS_LABELS,
+    PUBLICATION_STATUS_LABELS,
+    ROLE_LABELS,
+    VERIFICATION_STATUS_LABELS,
+    TemplateTranslationExtension,
+    current_language,
+    format_file_size,
+    localized_label,
+    translate,
+)
 from app.main import main_bp
 from app.models import User
 
@@ -26,6 +38,17 @@ def create_app():
     login_manager.init_app(app)
     bcrypt.init_app(app)
     csrf.init_app(app)
+    app.jinja_env.add_extension(TemplateTranslationExtension)
+    app.jinja_env.globals.update(
+        tr=translate,
+        current_language=current_language,
+        filesize=format_file_size,
+        role_label=lambda code: localized_label(ROLE_LABELS, code),
+        plan_status_label=lambda code: localized_label(PLAN_STATUS_LABELS, code),
+        publication_status_label=lambda code: localized_label(PUBLICATION_STATUS_LABELS, code),
+        verification_status_label=lambda code: localized_label(VERIFICATION_STATUS_LABELS, code),
+        attachment_status_label=lambda code: localized_label(ATTACHMENT_STATUS_LABELS, code),
+    )
 
     login_manager.login_view = "auth.login"
     login_manager.login_message = "Для доступа необходимо войти в систему."
@@ -44,6 +67,27 @@ def create_app():
     app.register_blueprint(monitoring_bp)
     app.register_blueprint(reports_bp)
     app.register_blueprint(analytics_bp)
+
+    @app.errorhandler(400)
+    def bad_request(error):
+        return render_template("errors/error.html", status_code=400, title="Некорректный запрос", message="Проверьте введённые данные и повторите попытку."), 400
+
+    @app.errorhandler(403)
+    def forbidden(error):
+        return render_template("errors/error.html", status_code=403, title="Доступ запрещён", message="У вас нет прав для выполнения этого действия."), 403
+
+    @app.errorhandler(404)
+    def not_found(error):
+        return render_template("errors/error.html", status_code=404, title="Страница не найдена", message="Запрошенная страница или запись не существует."), 404
+
+    @app.errorhandler(413)
+    def request_too_large(error):
+        return render_template("errors/error.html", status_code=413, title="Файл слишком большой", message="Выберите файл меньшего размера и повторите загрузку."), 413
+
+    @app.errorhandler(500)
+    def internal_error(error):
+        db.session.rollback()
+        return render_template("errors/error.html", status_code=500, title="Ошибка сервера", message="Не удалось обработать запрос. Попробуйте ещё раз позже."), 500
     @app.cli.command("seed-reference-values")
     def seed_reference_values_command():
         created_count = seed_reference_values()

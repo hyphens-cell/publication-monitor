@@ -29,6 +29,13 @@ from app.auth import (
     roles_required,
 )
 from app.extensions import db
+from app.i18n import (
+    PUBLICATION_STATUS_LABELS,
+    VERIFICATION_STATUS_LABELS,
+    current_language,
+    localized_label,
+    translate,
+)
 from app.models import (
     Department,
     Plan,
@@ -268,7 +275,7 @@ def get_quartile_name(publication):
     if publication.quartile is None:
         return ""
 
-    if current_user.language == "kk":
+    if current_language() == "kk":
         return (
             publication.quartile.name_kk
             or publication.quartile.name_ru
@@ -286,7 +293,7 @@ def get_indexing_type_name(publication):
     if publication.indexing_type is None:
         return ""
 
-    if current_user.language == "kk":
+    if current_language() == "kk":
         return (
             publication.indexing_type.name_kk
             or publication.indexing_type.name_ru
@@ -325,14 +332,8 @@ def get_publication_report_row(publication):
         publication.doi or "",
         get_quartile_name(publication),
         get_indexing_type_name(publication),
-        REPORT_PUBLICATION_STATUSES.get(
-            publication.status,
-            publication.status,
-        ),
-        REPORT_VERIFICATION_STATUSES.get(
-            publication.verification_status,
-            publication.verification_status,
-        ),
+        localized_label(PUBLICATION_STATUS_LABELS, publication.status),
+        localized_label(VERIFICATION_STATUS_LABELS, publication.verification_status),
         verifier,
         verified_at,
     ]
@@ -342,9 +343,9 @@ def create_publications_workbook(publications):
     workbook = Workbook()
 
     worksheet = workbook.active
-    worksheet.title = "Публикации"
+    worksheet.title = translate("Публикации")
 
-    headers = [
+    headers = [translate(label) for label in [
         "Год плана",
         "Кафедра",
         "План",
@@ -358,7 +359,7 @@ def create_publications_workbook(publications):
         "Статус проверки",
         "Проверяющий",
         "Дата проверки",
-    ]
+    ]]
 
     worksheet.append(headers)
 
@@ -497,7 +498,7 @@ def create_publications_pdf(publications):
         leftMargin=4 * mm,
         topMargin=8 * mm,
         bottomMargin=8 * mm,
-        title="Отчёт по публикациям",
+        title=translate("Отчёт по публикациям"),
         author="Publication Monitor",
     )
 
@@ -531,7 +532,7 @@ def create_publications_pdf(publications):
 
     story = [
         Paragraph(
-            "Отчёт по публикациям",
+            translate("Отчёт по публикациям"),
             title_style,
         ),
         Spacer(
@@ -540,7 +541,7 @@ def create_publications_pdf(publications):
         ),
     ]
 
-    headers = [
+    headers = [translate(label) for label in [
         "Год",
         "Кафедра",
         "План",
@@ -554,7 +555,7 @@ def create_publications_pdf(publications):
         "Проверка",
         "Проверяющий",
         "Дата",
-    ]
+    ]]
 
     rows = [
         [
@@ -667,7 +668,7 @@ def create_publications_pdf(publications):
 
     story.append(
         Paragraph(
-            f"Всего публикаций: {len(publications)}",
+            f"{translate('Всего публикаций:')} {len(publications)}",
             cell_style,
         )
     )

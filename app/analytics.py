@@ -31,6 +31,7 @@ from app.auth import (
     roles_required,
 )
 from app.extensions import db
+from app.i18n import current_language, translate
 from app.models import (
     Department,
     Plan,
@@ -483,53 +484,54 @@ def export_excel():
     workbook = Workbook()
 
     summary_sheet = workbook.active
-    summary_sheet.title = "Итоги"
+    summary_sheet.title = translate("Итоги")
 
     summary_sheet.append(
         [
-            "Показатель",
-            "Значение",
+            translate("Показатель"),
+            translate("Значение"),
         ]
     )
 
     summary_sheet.append(
         [
-            "План",
+            translate("План"),
             data["total"]["planned_count"],
         ]
     )
 
     summary_sheet.append(
         [
-            "Факт",
+            translate("Факт"),
             data["total"]["actual_count"],
         ]
     )
 
     summary_sheet.append(
         [
-            "Выполнение, %",
+            translate("Выполнение, %"),
             data["total"]["progress"],
         ]
     )
 
     type_sheet = workbook.create_sheet(
-        "По типам публикаций"
+        translate("По типам публикаций")
     )
 
     type_sheet.append(
         [
-            "Тип публикации",
-            "План",
-            "Факт",
-            "Выполнение, %",
+            translate("Тип публикации"),
+            translate("План"),
+            translate("Факт"),
+            translate("Выполнение, %"),
         ]
     )
 
     for item in data["by_publication_type"]:
         type_sheet.append(
             [
-                item["name_ru"]
+                (item["name_kk"] if current_language() == "kk" else item["name_ru"])
+                or item["name_ru"]
                 or item["name_kk"]
                 or "",
                 item["planned_count"],
@@ -539,15 +541,15 @@ def export_excel():
         )
 
     department_sheet = workbook.create_sheet(
-        "По кафедрам"
+        translate("По кафедрам")
     )
 
     department_sheet.append(
         [
-            "Кафедра",
-            "План",
-            "Факт",
-            "Выполнение, %",
+            translate("Кафедра"),
+            translate("План"),
+            translate("Факт"),
+            translate("Выполнение, %"),
         ]
     )
 
@@ -700,7 +702,7 @@ def export_pdf():
 
     story = [
         Paragraph(
-            "Аналитика публикационной деятельности",
+            translate("Аналитика публикационной деятельности"),
             title_style,
         )
     ]
@@ -709,17 +711,17 @@ def export_pdf():
         [
             [
                 Paragraph(
-                    "Показатель",
+                    translate("Показатель"),
                     header_style,
                 ),
                 Paragraph(
-                    "Значение",
+                    translate("Значение"),
                     header_style,
                 ),
             ],
             [
                 Paragraph(
-                    "План",
+                    translate("План"),
                     text_style,
                 ),
                 Paragraph(
@@ -733,7 +735,7 @@ def export_pdf():
             ],
             [
                 Paragraph(
-                    "Факт",
+                    translate("Факт"),
                     text_style,
                 ),
                 Paragraph(
@@ -747,7 +749,7 @@ def export_pdf():
             ],
             [
                 Paragraph(
-                    "Выполнение",
+                    translate("Выполнение"),
                     text_style,
                 ),
                 Paragraph(
@@ -798,7 +800,7 @@ def export_pdf():
 
     story.append(
         Paragraph(
-            "По типам публикаций",
+            translate("По типам публикаций"),
             section_style,
         )
     )
@@ -806,15 +808,15 @@ def export_pdf():
     type_rows = [
         [
             Paragraph(
-                "Тип публикации",
+                translate("Тип публикации"),
                 header_style,
             ),
             Paragraph(
-                "План",
+                translate("План"),
                 header_style,
             ),
             Paragraph(
-                "Факт",
+                translate("Факт"),
                 header_style,
             ),
             Paragraph(
@@ -828,7 +830,8 @@ def export_pdf():
         type_rows.append(
             [
                 Paragraph(
-                    item["name_ru"]
+                    (item["name_kk"] if current_language() == "kk" else item["name_ru"])
+                    or item["name_ru"]
                     or item["name_kk"]
                     or "",
                     text_style,
@@ -903,7 +906,7 @@ def export_pdf():
 
     story.append(
         Paragraph(
-            "По кафедрам",
+            translate("По кафедрам"),
             section_style,
         )
     )
@@ -911,15 +914,15 @@ def export_pdf():
     department_rows = [
         [
             Paragraph(
-                "Кафедра",
+                translate("Кафедра"),
                 header_style,
             ),
             Paragraph(
-                "План",
+                translate("План"),
                 header_style,
             ),
             Paragraph(
-                "Факт",
+                translate("Факт"),
                 header_style,
             ),
             Paragraph(

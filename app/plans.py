@@ -14,7 +14,7 @@ from app.auth import (
     roles_required,
 )
 from app.extensions import db
-from app.models import Employee, Plan, PlanItem, PlanItemAuthor, PlanVersion, ReferenceValue
+from app.models import Comment, Employee, Plan, PlanItem, PlanItemAuthor, PlanVersion, ReferenceValue
 from app.publications import create_publications_from_plan
 
 
@@ -84,16 +84,7 @@ def get_accessible_plan(plan_id):
     if plan is None:
         return None
 
-    try:
-        ensure_department_access(
-            plan.department_id
-        )
-    except PermissionError:
-        flash(
-            "У вас нет доступа к этому плану.",
-            "danger",
-        )
-        return None
+    ensure_department_access(plan.department_id)
 
     return plan
 
@@ -1023,6 +1014,15 @@ def return_plan(plan_id):
         plan=plan,
         status=PLAN_STATUS_RETURNED,
         comment=comment,
+    )
+
+    db.session.add(
+        Comment(
+            user_id=current_user.id,
+            entity_type="PLAN",
+            entity_id=plan.id,
+            text=comment,
+        )
     )
 
     audit(

@@ -79,7 +79,7 @@
                                 name="title"
                                 type="text"
                                 class="form-control"
-                                value="{{ publication.title }}"
+                                value="{{ request.form.get('title', publication.title) }}"
                                 maxlength="1000"
                                 required
                             >
@@ -101,7 +101,7 @@
                                 name="journal"
                                 type="text"
                                 class="form-control"
-                                value="{{ publication.journal or '' }}"
+                                value="{{ request.form.get('journal', publication.journal or '') }}"
                                 maxlength="500"
                             >
 
@@ -124,7 +124,7 @@
                                 class="form-control"
                                 min="1900"
                                 max="2100"
-                                value="{{ publication.publication_year or '' }}"
+                                value="{{ request.form.get('publication_year', publication.publication_year or '') }}"
                             >
 
                         </div>
@@ -144,7 +144,7 @@
                                 name="volume"
                                 type="text"
                                 class="form-control"
-                                value="{{ publication.volume or '' }}"
+                                value="{{ request.form.get('volume', publication.volume or '') }}"
                                 maxlength="100"
                             >
 
@@ -165,7 +165,7 @@
                                 name="issue"
                                 type="text"
                                 class="form-control"
-                                value="{{ publication.issue or '' }}"
+                                value="{{ request.form.get('issue', publication.issue or '') }}"
                                 maxlength="100"
                             >
 
@@ -186,7 +186,7 @@
                                 name="pages"
                                 type="text"
                                 class="form-control"
-                                value="{{ publication.pages or '' }}"
+                                value="{{ request.form.get('pages', publication.pages or '') }}"
                                 maxlength="100"
                             >
 
@@ -207,7 +207,7 @@
                                 name="doi"
                                 type="text"
                                 class="form-control"
-                                value="{{ publication.doi or '' }}"
+                                value="{{ request.form.get('doi', publication.doi or '') }}"
                                 maxlength="500"
                             >
 
@@ -228,7 +228,7 @@
                                 name="url"
                                 type="url"
                                 class="form-control"
-                                value="{{ publication.url or '' }}"
+                                value="{{ request.form.get('url', publication.url or '') }}"
                                 maxlength="1000"
                             >
 
@@ -289,7 +289,7 @@
 
                                     <option
                                         value="{{ indexing_type.id }}"
-                                        {% if publication.indexing_type_id == indexing_type.id %}
+                                        {% if request.form.get('indexing_type_id', publication.indexing_type_id|string if publication.indexing_type_id else '') == indexing_type.id|string %}
                                             selected
                                         {% endif %}
                                     >
@@ -330,7 +330,7 @@
 
                                     <option
                                         value="{{ quartile.id }}"
-                                        {% if publication.quartile_id == quartile.id %}
+                                        {% if request.form.get('quartile_id', publication.quartile_id|string if publication.quartile_id else '') == quartile.id|string %}
                                             selected
                                         {% endif %}
                                     >
@@ -391,7 +391,7 @@
                             name="affiliation"
                             class="form-control"
                             rows="4"
-                        >{{ publication.affiliation or '' }}</textarea>
+                        >{{ request.form.get('affiliation', publication.affiliation or '') }}</textarea>
 
                     </div>
 
@@ -410,7 +410,7 @@
                             name="notes"
                             class="form-control"
                             rows="6"
-                        >{{ publication.notes or '' }}</textarea>
+                        >{{ request.form.get('notes', publication.notes or '') }}</textarea>
 
                     </div>
 

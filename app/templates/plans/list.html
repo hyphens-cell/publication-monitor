@@ -5,22 +5,24 @@
 {% endblock %}
 
 {% block page_title %}
-    Планы кафедры
+    {% if monitor %}Планы{% else %}Планы кафедры{% endif %}
 {% endblock %}
 
 {% block page_subtitle %}
     <p class="text-body-secondary mb-0 mt-2">
-        Управление планами публикационной деятельности
+        {% if monitor %}Проверка и согласование планов кафедр{% else %}Управление планами публикационной деятельности{% endif %}
     </p>
 {% endblock %}
 
 {% block page_actions %}
+    {% if not monitor %}
     <a
         href="{{ url_for('plans.create_plan') }}"
         class="btn btn-pm-primary"
     >
         + Создать план
     </a>
+    {% endif %}
 {% endblock %}
 
 {% block content %}
@@ -37,12 +39,11 @@
 
                 <div>
                     <h2 class="h5 fw-bold mb-1">
-                        Планы кафедры
+                        {% if monitor %}Планы подразделений{% else %}Планы кафедры{% endif %}
                     </h2>
 
                     <p class="small text-body-secondary mb-0">
-                        Заведующий:
-                        <strong>{{ current_user.full_name }}</strong>
+                        {% if monitor %}Рассмотрите отправленные планы и отслеживайте их состояние.{% else %}Заведующий: <strong>{{ current_user.full_name }}</strong>{% endif %}
                     </p>
                 </div>
 
@@ -61,6 +62,8 @@
                             <th class="ps-4">
                                 Год
                             </th>
+
+                            {% if monitor %}<th>Кафедра</th>{% endif %}
 
                             <th>
                                 Статус
@@ -88,40 +91,14 @@
                                     </span>
                                 </td>
 
+                                {% if monitor %}<td>{{ plan.department.name if plan.department else '—' }}</td>{% endif %}
+
 
                                 <td>
 
-                                    {% if plan.status == "DRAFT" %}
-
-                                        <span class="badge rounded-pill badge-pm-primary">
-                                            Черновик
-                                        </span>
-
-                                    {% elif plan.status == "SUBMITTED" %}
-
-                                        <span class="badge rounded-pill badge-pm-warning">
-                                            На рассмотрении
-                                        </span>
-
-                                    {% elif plan.status == "APPROVED" %}
-
-                                        <span class="badge rounded-pill badge-pm-success">
-                                            Утверждён
-                                        </span>
-
-                                    {% elif plan.status == "RETURNED" %}
-
-                                        <span class="badge rounded-pill badge-pm-danger">
-                                            На доработке
-                                        </span>
-
-                                    {% else %}
-
-                                        <span class="badge rounded-pill badge-pm-primary">
-                                            {{ plan.status }}
-                                        </span>
-
-                                    {% endif %}
+                                    <span class="badge rounded-pill {% if plan.status == 'APPROVED' %}badge-pm-success{% elif plan.status == 'SUBMITTED' %}badge-pm-warning{% elif plan.status == 'RETURNED' %}badge-pm-danger{% else %}badge-pm-primary{% endif %}">
+                                        {{ plan_status_label(plan.status) }}
+                                    </span>
 
                                 </td>
 
@@ -174,15 +151,15 @@
                 </h3>
 
                 <p class="text-body-secondary mb-3">
-                    Создайте план на следующий календарный год.
+                    {% if monitor %}Планы по выбранным условиям отсутствуют.{% else %}Создайте план на следующий календарный год.{% endif %}
                 </p>
 
-                <a
+                {% if not monitor %}<a
                     href="{{ url_for('plans.create_plan') }}"
                     class="btn btn-pm-primary"
                 >
                     Создать план
-                </a>
+                </a>{% endif %}
 
             </div>
 

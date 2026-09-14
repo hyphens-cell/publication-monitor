@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="{{ current_user.language if current_user.is_authenticated else 'ru' }}">
+<html lang="{{ current_language() }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -30,7 +30,7 @@
                     data-bs-toggle="offcanvas"
                     data-bs-target="#pmSidebar"
                     aria-controls="pmSidebar"
-                    aria-label="Открыть меню"
+                    aria-label="{{ tr('Открыть меню') }}"
                 >
                     <span class="pm-menu-icon">☰</span>
                 </button>
@@ -51,12 +51,26 @@
                             data-bs-toggle="dropdown"
                             aria-expanded="false"
                         >
-                            {% if current_user.language == "kk" %}ҚАЗ{% else %}RU{% endif %}
+                            {% if current_language() == "kk" %}ҚАЗ{% else %}RU{% endif %}
                         </button>
 
                         <ul class="dropdown-menu dropdown-menu-end">
-                            <li><span class="dropdown-item-text">Русский</span></li>
-                            <li><span class="dropdown-item-text">Қазақша</span></li>
+                            <li>
+                                <form method="post" action="{{ url_for('auth.change_language') }}">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="language" value="ru">
+                                    <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
+                                    <button class="dropdown-item{% if current_language() == 'ru' %} active{% endif %}" type="submit">{{ tr("Русский") }}</button>
+                                </form>
+                            </li>
+                            <li>
+                                <form method="post" action="{{ url_for('auth.change_language') }}">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="language" value="kk">
+                                    <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
+                                    <button class="dropdown-item{% if current_language() == 'kk' %} active{% endif %}" type="submit">Қазақша</button>
+                                </form>
+                            </li>
                         </ul>
                     </div>
 
@@ -84,13 +98,13 @@
                             <li>
                                 <span class="dropdown-item-text">
                                     {% if current_user.role == "TECH_ADMIN" %}
-                                        Технический администратор
+                                        {{ role_label("TECH_ADMIN") }}
                                     {% elif current_user.role == "ADMIN" %}
-                                        Администратор
+                                        {{ role_label("ADMIN") }}
                                     {% elif current_user.role == "DEPARTMENT_HEAD" %}
-                                        Заведующий кафедрой
+                                        {{ role_label("DEPARTMENT_HEAD") }}
                                     {% else %}
-                                        Пользователь
+                                        {{ tr("Пользователь") }}
                                     {% endif %}
                                 </span>
                             </li>
@@ -110,7 +124,7 @@
                                         type="submit"
                                         class="dropdown-item pm-logout-item"
                                     >
-                                        Выйти
+                                        {{ tr("Выйти") }}
                                     </button>
                                 </form>
                             </li>
@@ -128,13 +142,13 @@
                 aria-labelledby="pmSidebarLabel"
             >
                 <div class="offcanvas-header d-lg-none">
-                    <h5 class="offcanvas-title" id="pmSidebarLabel">Меню</h5>
+                    <h5 class="offcanvas-title" id="pmSidebarLabel">{{ tr("Меню") }}</h5>
                     <button
                         type="button"
                         class="btn-close"
                         data-bs-dismiss="offcanvas"
                         data-bs-target="#pmSidebar"
-                        aria-label="Закрыть"
+                        aria-label="{{ tr('Закрыть') }}"
                     ></button>
                 </div>
 
@@ -145,26 +159,34 @@
                             href="{{ url_for('main.index') }}"
                         >
                             <span class="pm-nav-icon">⌂</span>
-                            <span>Главная</span>
+                            <span>{{ tr("Главная") }}</span>
                         </a>
 
                         {% if current_user.role == "ADMIN" %}
-                            <div class="pm-nav-heading">Публикационная деятельность</div>
+                            <div class="pm-nav-heading">{{ tr("Публикационная деятельность") }}</div>
 
                             <a
                                 class="pm-nav-link {% if request.endpoint and request.endpoint.startswith('plans.') %}active{% endif %}"
                                 href="{{ url_for('plans.plans') }}"
                             >
                                 <span class="pm-nav-icon">▣</span>
-                                <span>Планы</span>
+                                <span>{{ tr("Планы") }}</span>
                             </a>
 
                             <a
-                                class="pm-nav-link {% if request.endpoint and request.endpoint.startswith('publications.') %}active{% endif %}"
+                                class="pm-nav-link {% if request.endpoint and request.endpoint.startswith('publications.') and request.args.get('verification_status') != 'PENDING' %}active{% endif %}"
                                 href="{{ url_for('publications.publications') }}"
                             >
                                 <span class="pm-nav-icon">◈</span>
-                                <span>Публикации</span>
+                                <span>{{ tr("Публикации") }}</span>
+                            </a>
+
+                            <a
+                                class="pm-nav-link {% if request.endpoint == 'publications.publications' and request.args.get('verification_status') == 'PENDING' %}active{% endif %}"
+                                href="{{ url_for('publications.publications', verification_status='PENDING') }}"
+                            >
+                                <span class="pm-nav-icon">✓</span>
+                                <span>{{ tr("Проверка") }}</span>
                             </a>
 
                             <a
@@ -172,7 +194,7 @@
                                 href="{{ url_for('monitoring.dashboard') }}"
                             >
                                 <span class="pm-nav-icon">◉</span>
-                                <span>Мониторинг</span>
+                                <span>{{ tr("Мониторинг") }}</span>
                             </a>
 
                             <a
@@ -180,7 +202,7 @@
                                 href="{{ url_for('reports.publications_report') }}"
                             >
                                 <span class="pm-nav-icon">▤</span>
-                                <span>Отчёты</span>
+                                <span>{{ tr("Отчёты") }}</span>
                             </a>
 
                             <a
@@ -188,18 +210,18 @@
                                 href="{{ url_for('analytics.dashboard') }}"
                             >
                                 <span class="pm-nav-icon">▥</span>
-                                <span>Аналитика</span>
+                                <span>{{ tr("Аналитика") }}</span>
                             </a>
 
                         {% elif current_user.role == "DEPARTMENT_HEAD" %}
-                            <div class="pm-nav-heading">Моя кафедра</div>
+                            <div class="pm-nav-heading">{{ tr("Моя кафедра") }}</div>
 
                             <a
                                 class="pm-nav-link {% if request.endpoint and request.endpoint.startswith('plans.') %}active{% endif %}"
                                 href="{{ url_for('plans.plans') }}"
                             >
                                 <span class="pm-nav-icon">▣</span>
-                                <span>Планы</span>
+                                <span>{{ tr("Планы") }}</span>
                             </a>
 
                             <a
@@ -207,7 +229,7 @@
                                 href="{{ url_for('publications.publications') }}"
                             >
                                 <span class="pm-nav-icon">◈</span>
-                                <span>Публикации</span>
+                                <span>{{ tr("Публикации") }}</span>
                             </a>
 
                             <a
@@ -215,7 +237,7 @@
                                 href="{{ url_for('employees.employees') }}"
                             >
                                 <span class="pm-nav-icon">♙</span>
-                                <span>Сотрудники</span>
+                                <span>{{ tr("Сотрудники") }}</span>
                             </a>
 
                             <a
@@ -223,7 +245,7 @@
                                 href="{{ url_for('reports.publications_report') }}"
                             >
                                 <span class="pm-nav-icon">▤</span>
-                                <span>Отчёты</span>
+                                <span>{{ tr("Отчёты") }}</span>
                             </a>
 
                             <a
@@ -231,18 +253,18 @@
                                 href="{{ url_for('analytics.dashboard') }}"
                             >
                                 <span class="pm-nav-icon">▥</span>
-                                <span>Аналитика</span>
+                                <span>{{ tr("Аналитика") }}</span>
                             </a>
 
                         {% elif current_user.role == "TECH_ADMIN" %}
-                            <div class="pm-nav-heading">Система</div>
+                            <div class="pm-nav-heading">{{ tr("Система") }}</div>
 
                             <a
                                 class="pm-nav-link {% if request.endpoint and request.endpoint.startswith('admin.users') %}active{% endif %}"
                                 href="{{ url_for('admin.users') }}"
                             >
                                 <span class="pm-nav-icon">♚</span>
-                                <span>Пользователи</span>
+                                <span>{{ tr("Пользователи") }}</span>
                             </a>
 
                             <a
@@ -250,7 +272,39 @@
                                 href="{{ url_for('admin.departments') }}"
                             >
                                 <span class="pm-nav-icon">⌂</span>
-                                <span>Кафедры</span>
+                                <span>{{ tr("Кафедры") }}</span>
+                            </a>
+
+                            <a
+                                class="pm-nav-link {% if request.endpoint == 'admin.audit_list' %}active{% endif %}"
+                                href="{{ url_for('admin.audit_list', view=1) }}"
+                            >
+                                <span class="pm-nav-icon">▤</span>
+                                <span>{{ tr("Журнал событий") }}</span>
+                            </a>
+
+                            <a
+                                class="pm-nav-link {% if request.endpoint == 'admin.list_references' %}active{% endif %}"
+                                href="{{ url_for('admin.list_references', view=1) }}"
+                            >
+                                <span class="pm-nav-icon">≡</span>
+                                <span>{{ tr("Справочники") }}</span>
+                            </a>
+
+                            <a
+                                class="pm-nav-link {% if request.endpoint in ['admin.system_dashboard', 'admin.system_status'] %}active{% endif %}"
+                                href="{{ url_for('admin.system_dashboard') }}"
+                            >
+                                <span class="pm-nav-icon">⚙</span>
+                                <span>{{ tr("Состояние системы") }}</span>
+                            </a>
+
+                            <a
+                                class="pm-nav-link {% if request.endpoint in ['admin.backups_page', 'admin.list_backups', 'admin.download_backup'] %}active{% endif %}"
+                                href="{{ url_for('admin.backups_page') }}"
+                            >
+                                <span class="pm-nav-icon">▱</span>
+                                <span>{{ tr("Резервные копии") }}</span>
                             </a>
                         {% endif %}
                     </nav>
@@ -272,13 +326,13 @@
                                 </div>
                                 <div class="pm-role-description text-truncate">
                                     {% if current_user.role == "TECH_ADMIN" %}
-                                        Технический администратор
+                                        {{ role_label("TECH_ADMIN") }}
                                     {% elif current_user.role == "ADMIN" %}
-                                        Администратор
+                                        {{ role_label("ADMIN") }}
                                     {% elif current_user.role == "DEPARTMENT_HEAD" %}
-                                        Заведующий кафедрой
+                                        {{ role_label("DEPARTMENT_HEAD") }}
                                     {% else %}
-                                        Пользователь
+                                        {{ tr("Пользователь") }}
                                     {% endif %}
                                 </div>
                             </div>
@@ -294,21 +348,30 @@
                             <div class="mb-4">
                                 {% for category, message in messages %}
                                     <div
-                                        class="alert pm-alert alert-dismissible fade show"
+                                        class="alert alert-{{ category if category in ['success', 'danger', 'warning', 'info'] else 'info' }} pm-alert alert-dismissible fade show"
                                         role="alert"
                                     >
-                                        {{ message }}
+                                        {{ tr(message) }}
                                         <button
                                             type="button"
                                             class="btn-close"
                                             data-bs-dismiss="alert"
-                                            aria-label="Закрыть"
+                                            aria-label="{{ tr('Закрыть') }}"
                                         ></button>
                                     </div>
                                 {% endfor %}
                             </div>
                         {% endif %}
                     {% endwith %}
+
+                    {% if request.endpoint != 'main.index' %}
+                        <nav class="pm-breadcrumb" aria-label="{{ tr('Навигационная цепочка') }}">
+                            <ol class="breadcrumb mb-3">
+                                <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">{{ tr("Главная") }}</a></li>
+                                <li class="breadcrumb-item active" aria-current="page">{{ self.page_title() }}</li>
+                            </ol>
+                        </nav>
+                    {% endif %}
 
                     <div class="pm-page-header">
                         <div>
@@ -332,6 +395,7 @@
         src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
     ></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>window.pmMessages = { confirmDestructive: {{ tr("Подтвердите выполнение необратимого действия.")|tojson }} };</script>
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 
     {% block scripts %}{% endblock %}

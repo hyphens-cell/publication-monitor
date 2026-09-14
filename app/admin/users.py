@@ -1,6 +1,6 @@
 from flask import flash, redirect, render_template, request, url_for
 from flask_login import current_user
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 
 from app.admin import admin_bp
 from app.audit import audit
@@ -24,6 +24,20 @@ LANGUAGES = (
     ("ru", "Русский"),
     ("kk", "Қазақша"),
 )
+
+
+def has_another_active_technical_admin(user_id):
+    return bool(
+        db.session.scalar(
+            select(func.count())
+            .select_from(User)
+            .where(
+                User.id != user_id,
+                User.role == ROLE_TECH_ADMIN,
+                User.is_active.is_(True),
+            )
+        )
+    )
 
 
 def get_active_departments():
@@ -354,6 +368,16 @@ def edit_user(user_id):
                     "Нельзя заблокировать собственную учетную запись."
                 )
 
+        if (
+            user.role == ROLE_TECH_ADMIN
+            and user.is_active
+            and (role != ROLE_TECH_ADMIN or not is_active)
+            and not has_another_active_technical_admin(user.id)
+        ):
+            errors.append(
+                "В системе должен оставаться хотя бы один активный технический администратор."
+            )
+
         if errors:
             for error in errors:
                 flash(error, "danger")
@@ -435,6 +459,10 @@ def block_user(user_id):
         )
         return redirect(url_for("admin.users"))
 
+    if user.role == ROLE_TECH_ADMIN and not has_another_active_technical_admin(user.id):
+        flash("Нельзя заблокировать последнего активного технического администратора.", "danger")
+        return redirect(url_for("admin.users"))
+
     user.is_active = False
 
     audit(
@@ -478,6 +506,10 @@ def delete_user(user_id):
         )
         return redirect(url_for("admin.users"))
 
+    if user.role == ROLE_TECH_ADMIN and not has_another_active_technical_admin(user.id):
+        flash("Нельзя удалить последнего активного технического администратора.", "danger")
+        return redirect(url_for("admin.users"))
+
     audit(
         "USER_DELETED",
         entity_type="User",
@@ -499,4 +531,37 @@ def delete_user(user_id):
         "success",
     )
 
+    return redirect(url_for("admin.users"))
+
+
+@admin_bp.route(
+    "/users/<int:user_id>/unblock",
+    methods=["POST"],
+)
+@technical_admin_required
+def unblock_user(user_id):
+    user = db.session.get(User, user_id)
+
+    if user is None:
+        flash("Пользователь не найден.", "danger")
+        return redirect(url_for("admin.users"))
+
+    if user.is_active:
+        flash("Учётная запись уже активна.", "warning")
+        return redirect(url_for("admin.users"))
+
+    if user.role == ROLE_DEPARTMENT_HEAD and user.department_id is None:
+        flash("Нельзя разблокировать заведующего без назначенной кафедры.", "danger")
+        return redirect(url_for("admin.users"))
+
+    user.is_active = True
+    audit(
+        "USER_UNBLOCKED",
+        entity_type="User",
+        entity_id=user.id,
+        details={"username": user.username},
+    )
+    db.session.commit()
+
+    flash("Пользователь разблокирован.", "success")
     return redirect(url_for("admin.users"))
