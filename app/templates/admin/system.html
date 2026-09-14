@@ -5,24 +5,41 @@
 {% block page_subtitle %}<p class="text-body-secondary mb-0">Диагностика и резервное копирование доступны только техническому администратору.</p>{% endblock %}
 
 {% block content %}
-    <div class="row g-4">
-        <div class="col-12 col-lg-6">
+    <div class="row g-3 mb-4" aria-label="Ключевые показатели">
+        <div class="col-6 col-xl-3"><div class="card card-pm border-0 h-100"><div class="card-body"><div class="small text-body-secondary">База данных</div><div class="h4 mb-0 {% if status.database.ok %}text-success{% else %}text-danger{% endif %}">{{ tr('Доступна') if status.database.ok else tr('Недоступна') }}</div></div></div></div>
+        <div class="col-6 col-xl-3"><div class="card card-pm border-0 h-100"><div class="card-body"><div class="small text-body-secondary">Пользователи</div><div class="h4 mb-0">{{ status.counts.active_users }} / {{ status.counts.users }}</div></div></div></div>
+        <div class="col-6 col-xl-3"><div class="card card-pm border-0 h-100"><div class="card-body"><div class="small text-body-secondary">Кафедры</div><div class="h4 mb-0">{{ status.counts.active_departments }} / {{ status.counts.departments }}</div></div></div></div>
+        <div class="col-6 col-xl-3"><div class="card card-pm border-0 h-100"><div class="card-body"><div class="small text-body-secondary">Публикации</div><div class="h4 mb-0">{{ status.counts.publications }}</div></div></div></div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-12 col-xl-7">
             <section class="card card-pm border-0 h-100"><div class="card-body p-4">
                 <h2 class="h5">Состояние системы</h2>
                 <p class="text-body-secondary">Текущее состояние приложения, базы данных, диска и загруженных файлов.</p>
-                <a class="btn btn-outline-primary" href="{{ url_for('admin.system_status') }}">Открыть состояние</a>
+                <dl class="row mb-0 pm-system-details">
+                    <dt class="col-sm-5">Сервер базы данных</dt><dd class="col-sm-7 text-break">{{ status.database.host or tr('Локальное подключение') }}</dd>
+                    <dt class="col-sm-5">Загруженные файлы</dt><dd class="col-sm-7">{{ filesize(status.uploads.bytes) }}</dd>
+                    <dt class="col-sm-5">Использование диска</dt><dd class="col-sm-7"><div class="d-flex justify-content-between small mb-1"><span>{{ status.disk.used_percent }}%</span><span>{{ filesize(status.disk.free_bytes) }} свободно</span></div><div class="progress" role="progressbar" aria-label="Использование диска" aria-valuenow="{{ status.disk.used_percent }}" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar" style="width: {{ status.disk.used_percent }}%"></div></div></dd>
+                    <dt class="col-sm-5">Сотрудники</dt><dd class="col-sm-7">{{ status.counts.employees }}</dd>
+                    <dt class="col-sm-5">Планы</dt><dd class="col-sm-7">{{ status.counts.plans }}</dd>
+                    <dt class="col-sm-5">Записи аудита</dt><dd class="col-sm-7">{{ status.counts.audit_logs }}</dd>
+                </dl>
             </div></section>
         </div>
-        <div class="col-12 col-lg-6">
+        <div class="col-12 col-xl-5">
             <section class="card card-pm border-0 h-100"><div class="card-body p-4">
                 <h2 class="h5">Резервная копия PostgreSQL</h2>
                 <p class="text-body-secondary">Создаётся архив базы данных в формате PostgreSQL custom dump.</p>
                 <form method="post" action="{{ url_for('admin.create_backup') }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="next" value="{{ url_for('admin.backups_page') }}">
                     <button class="btn btn-pm-primary" type="submit">Создать и скачать копию</button>
                 </form>
-                <a class="btn btn-link px-0 mt-2" href="{{ url_for('admin.list_backups') }}">Список сохранённых копий</a>
+                <p class="small text-body-secondary mt-3 mb-0">Пароль читается из DATABASE_URL или DB_PASSWORD и не передаётся в командной строке.</p>
             </div></section>
         </div>
     </div>
+
+    <div class="d-flex justify-content-end"><a class="btn btn-outline-primary" href="{{ url_for('admin.backups_page') }}">Открыть резервные копии</a></div>
 {% endblock %}

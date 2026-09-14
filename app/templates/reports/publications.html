@@ -194,7 +194,7 @@
                                         selected
                                     {% endif %}
                                 >
-                                    {{ label }}
+                                    {{ publication_status_label(status) }}
                                 </option>
 
                             {% endfor %}
@@ -231,7 +231,7 @@
                                         selected
                                     {% endif %}
                                 >
-                                    {{ label }}
+                                    {{ verification_status_label(status) }}
                                 </option>
 
                             {% endfor %}
@@ -598,9 +598,7 @@
 
                                     {% if publication.status in publication_statuses %}
 
-                                        {% set status_label = publication_statuses[
-                                            publication.status
-                                        ] %}
+                                        {% set status_label = publication_status_label(publication.status) %}
 
                                         {% if publication.status == "PUBLISHED" %}
 
@@ -631,7 +629,7 @@
                                     {% else %}
 
                                         <span class="badge rounded-pill badge-pm-primary">
-                                            {{ publication.status }}
+                                            {{ publication_status_label(publication.status) }}
                                         </span>
 
                                     {% endif %}
@@ -643,9 +641,7 @@
 
                                     {% if publication.verification_status in verification_statuses %}
 
-                                        {% set verification_label = verification_statuses[
-                                            publication.verification_status
-                                        ] %}
+                                        {% set verification_label = verification_status_label(publication.verification_status) %}
 
                                         {% if publication.verification_status == "APPROVED" %}
 
@@ -670,7 +666,7 @@
                                     {% else %}
 
                                         <span class="badge rounded-pill badge-pm-primary">
-                                            {{ publication.verification_status }}
+                                            {{ verification_status_label(publication.verification_status) }}
                                         </span>
 
                                     {% endif %}

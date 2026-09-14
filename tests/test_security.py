@@ -1,6 +1,8 @@
 from app.extensions import db
 from app.models import Department, Publication, User
 from app.publications import normalize_doi
+from app.admin.system import _pg_dump_command
+from pathlib import Path
 
 
 def make_user(username, role, department_id=None):
@@ -100,3 +102,31 @@ def test_not_found_uses_safe_error_page(client):
     response = client.get("/missing-page")
     assert response.status_code == 404
     assert "Страница не найдена" in response.get_data(as_text=True)
+
+
+def test_language_selection_persists_and_preserves_local_path(client, app):
+    with app.app_context():
+        user = make_user("head", "DEPARTMENT_HEAD")
+        user.language = "ru"
+        db.session.commit()
+
+    login(client, "head")
+    response = client.post(
+        "/auth/language",
+        data={"language": "kk", "next": "/plans/?year=2026"},
+        follow_redirects=False,
+    )
+    assert response.headers["Location"].endswith("/plans/?year=2026")
+    with app.app_context():
+        assert User.query.filter_by(username="head").one().language == "kk"
+
+
+def test_backup_command_keeps_password_out_of_command_line(monkeypatch):
+    monkeypatch.delenv("DB_PASSWORD", raising=False)
+    command, process_env = _pg_dump_command(
+        "postgresql+psycopg://backup_user:secret-password@db.example:5433/publications",
+        Path("backup.dump"),
+    )
+    assert "secret-password" not in " ".join(command)
+    assert process_env["PGPASSWORD"] == "secret-password"
+    assert command[command.index("--dbname") + 1] == "publications"

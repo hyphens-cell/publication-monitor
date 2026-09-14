@@ -4,6 +4,18 @@ from app.admin import admin_bp
 from app.auth import auth_bp
 from app.config import Config
 from app.extensions import bcrypt, csrf, db, login_manager, migrate
+from app.i18n import (
+    ATTACHMENT_STATUS_LABELS,
+    PLAN_STATUS_LABELS,
+    PUBLICATION_STATUS_LABELS,
+    ROLE_LABELS,
+    VERIFICATION_STATUS_LABELS,
+    TemplateTranslationExtension,
+    current_language,
+    format_file_size,
+    localized_label,
+    translate,
+)
 from app.main import main_bp
 from app.models import User
 
@@ -26,6 +38,17 @@ def create_app():
     login_manager.init_app(app)
     bcrypt.init_app(app)
     csrf.init_app(app)
+    app.jinja_env.add_extension(TemplateTranslationExtension)
+    app.jinja_env.globals.update(
+        tr=translate,
+        current_language=current_language,
+        filesize=format_file_size,
+        role_label=lambda code: localized_label(ROLE_LABELS, code),
+        plan_status_label=lambda code: localized_label(PLAN_STATUS_LABELS, code),
+        publication_status_label=lambda code: localized_label(PUBLICATION_STATUS_LABELS, code),
+        verification_status_label=lambda code: localized_label(VERIFICATION_STATUS_LABELS, code),
+        attachment_status_label=lambda code: localized_label(ATTACHMENT_STATUS_LABELS, code),
+    )
 
     login_manager.login_view = "auth.login"
     login_manager.login_message = "Для доступа необходимо войти в систему."

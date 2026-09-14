@@ -92,7 +92,7 @@
                                 type="text"
                                 class="form-control form-control-lg"
                                 maxlength="255"
-                                value="{{ employee.full_name if employee else '' }}"
+                                value="{{ request.form.get('full_name', employee.full_name if employee else '') }}"
                                 autocomplete="name"
                                 required
                             >
@@ -115,7 +115,7 @@
                                 type="text"
                                 class="form-control"
                                 maxlength="255"
-                                value="{{ employee.position if employee else '' }}"
+                                value="{{ request.form.get('position', employee.position if employee and employee.position else '') }}"
                                 autocomplete="organization-title"
                             >
 
@@ -137,7 +137,7 @@
                                 type="email"
                                 class="form-control"
                                 maxlength="255"
-                                value="{{ employee.email if employee else '' }}"
+                                value="{{ request.form.get('email', employee.email if employee and employee.email else '') }}"
                                 autocomplete="email"
                             >
 

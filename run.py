@@ -1,4 +1,5 @@
 import socket
+import os
 
 import qrcode
 
@@ -18,6 +19,11 @@ def get_local_ip():
 
 
 if __name__ == "__main__":
+    # The local helper serves plain HTTP for devices in the university network.
+    # A production WSGI deployment must use HTTPS and retain the secure default.
+    if not os.getenv("SESSION_COOKIE_SECURE"):
+        app.config["SESSION_COOKIE_SECURE"] = False
+
     ip = get_local_ip()
     url = f"http://{ip}:5000"
 

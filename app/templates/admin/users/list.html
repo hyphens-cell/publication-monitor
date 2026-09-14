@@ -139,31 +139,9 @@
 
                             <td>
 
-                                {% if user.role == "TECH_ADMIN" %}
-
-                                    <span class="badge rounded-pill badge-pm-primary">
-                                        Технический администратор
-                                    </span>
-
-                                {% elif user.role == "ADMIN" %}
-
-                                    <span class="badge rounded-pill badge-pm-accent">
-                                        Монитор / Администратор
-                                    </span>
-
-                                {% elif user.role == "DEPARTMENT_HEAD" %}
-
-                                    <span class="badge rounded-pill badge-pm-success">
-                                        Заведующий кафедрой
-                                    </span>
-
-                                {% else %}
-
-                                    <span class="badge rounded-pill bg-light text-dark">
-                                        {{ user.role }}
-                                    </span>
-
-                                {% endif %}
+                                <span class="badge rounded-pill {% if user.role == 'TECH_ADMIN' %}badge-pm-primary{% elif user.role == 'ADMIN' %}badge-pm-accent{% elif user.role == 'DEPARTMENT_HEAD' %}badge-pm-success{% else %}bg-light text-dark{% endif %}">
+                                    {{ role_label(user.role) }}
+                                </span>
 
                             </td>
 

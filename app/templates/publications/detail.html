@@ -5,34 +5,31 @@
 {% endblock %}
 
 {% block page_title %}
-    Публикация
+    {{ tr("Публикация") }}
 {% endblock %}
 
 {% block page_subtitle %}
     <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
 
         <span class="badge rounded-pill badge-pm-primary">
-            {{ publication_statuses.get(
-                publication.status,
-                publication.status
-            ) }}
+            {{ publication_status_label(publication.status) }}
         </span>
 
         {% if publication.verification_status == "PENDING" %}
             <span class="badge rounded-pill badge-pm-warning">
-                На проверке
+                {{ verification_status_label(publication.verification_status) }}
             </span>
         {% elif publication.verification_status == "APPROVED" %}
             <span class="badge rounded-pill badge-pm-success">
-                Проверена
+                {{ verification_status_label(publication.verification_status) }}
             </span>
         {% elif publication.verification_status == "RETURNED" %}
             <span class="badge rounded-pill badge-pm-danger">
-                Возвращена на доработку
+                {{ verification_status_label(publication.verification_status) }}
             </span>
         {% else %}
             <span class="badge rounded-pill badge-pm-primary">
-                {{ publication.verification_status }}
+                {{ verification_status_label(publication.verification_status) }}
             </span>
         {% endif %}
 
@@ -159,15 +156,7 @@
 
                         <div class="fw-semibold">
 
-                            {% if publication.verification_status == "PENDING" %}
-                                На проверке
-                            {% elif publication.verification_status == "APPROVED" %}
-                                Проверена
-                            {% elif publication.verification_status == "RETURNED" %}
-                                Возвращена на доработку
-                            {% else %}
-                                {{ publication.verification_status }}
-                            {% endif %}
+                            {{ verification_status_label(publication.verification_status) }}
 
                         </div>
                     </div>
@@ -274,10 +263,7 @@
                                     </dt>
 
                                     <dd class="mb-0">
-                                        {{ publication_verification_statuses.get(
-                                            conflict.verification_status,
-                                            conflict.verification_status
-                                        ) }}
+                                        {{ verification_status_label(conflict.verification_status) }}
                                     </dd>
                                 </div>
 
@@ -800,25 +786,25 @@
                                         {% if attachment.review_status == "PENDING" %}
 
                                             <span class="badge rounded-pill badge-pm-warning">
-                                                На проверке
+                                                {{ attachment_status_label(attachment.review_status) }}
                                             </span>
 
                                         {% elif attachment.review_status == "APPROVED" %}
 
                                             <span class="badge rounded-pill badge-pm-success">
-                                                Принят
+                                                {{ attachment_status_label(attachment.review_status) }}
                                             </span>
 
                                         {% elif attachment.review_status == "REJECTED" %}
 
                                             <span class="badge rounded-pill badge-pm-danger">
-                                                Отклонён
+                                                {{ attachment_status_label(attachment.review_status) }}
                                             </span>
 
                                         {% else %}
 
                                             <span class="badge rounded-pill badge-pm-primary">
-                                                {{ attachment.review_status }}
+                                                {{ attachment_status_label(attachment.review_status) }}
                                             </span>
 
                                         {% endif %}
@@ -1219,7 +1205,7 @@
                             {% for status in allowed_statuses %}
 
                                 <option value="{{ status }}">
-                                    {{ publication_statuses[status] }}
+                                    {{ publication_status_label(status) }}
                                 </option>
 
                             {% endfor %}
@@ -1452,10 +1438,7 @@
 
                                     {% if history.old_status %}
 
-                                        {{ publication_statuses.get(
-                                            history.old_status,
-                                            history.old_status
-                                        ) }}
+                                        {{ publication_status_label(history.old_status) }}
 
                                     {% else %}
 
@@ -1470,10 +1453,7 @@
 
                                 <td class="pe-4 fw-semibold">
 
-                                    {{ publication_statuses.get(
-                                        history.new_status,
-                                        history.new_status
-                                    ) }}
+                                    {{ publication_status_label(history.new_status) }}
 
                                 </td>
 

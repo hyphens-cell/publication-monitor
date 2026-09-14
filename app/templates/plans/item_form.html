@@ -96,7 +96,7 @@
                                 type="text"
                                 class="form-control form-control-lg"
                                 maxlength="1000"
-                                value="{{ item.title if item else '' }}"
+                                value="{{ request.form.get('title', item.title if item else '') }}"
                                 required
                             >
 
@@ -127,7 +127,7 @@
 
                                     <option
                                         value="{{ value.id }}"
-                                        {% if item and item.publication_type_id == value.id %}
+                                        {% if request.form.get('publication_type_id', item.publication_type_id|string if item else '') == value.id|string %}
                                             selected
                                         {% endif %}
                                     >
@@ -168,7 +168,7 @@
 
                                     <option
                                         value="{{ value.id }}"
-                                        {% if item and item.quartile_id == value.id %}
+                                        {% if request.form.get('quartile_id', item.quartile_id|string if item and item.quartile_id else '') == value.id|string %}
                                             selected
                                         {% endif %}
                                     >
@@ -201,7 +201,7 @@
                                 type="text"
                                 class="form-control"
                                 maxlength="500"
-                                value="{{ item.journal if item else '' }}"
+                                value="{{ request.form.get('journal', item.journal if item and item.journal else '') }}"
                             >
 
                         </div>
@@ -221,7 +221,7 @@
                                 name="planned_date"
                                 type="date"
                                 class="form-control"
-                                value="{% if item and item.planned_date %}{{ item.planned_date.isoformat() }}{% endif %}"
+                                value="{{ request.form.get('planned_date', item.planned_date.isoformat() if item and item.planned_date else '') }}"
                             >
 
                         </div>

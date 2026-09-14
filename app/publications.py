@@ -24,6 +24,7 @@ from app.extensions import db
 from app.models import (
     Attachment,
     Comment,
+    Department,
     Plan,
     Publication,
     PublicationAuthor,
@@ -331,6 +332,23 @@ def publications():
     return render_template(
         "publications/list.html",
         publications=publications_list,
+        departments=(
+            db.session.scalars(
+                select(Department)
+                .where(Department.is_active.is_(True))
+                .order_by(Department.name)
+            ).all()
+            if current_user.role == ROLE_ADMIN
+            else []
+        ),
+        plan_years=db.session.scalars(
+            select(Plan.year).distinct().order_by(Plan.year.desc())
+        ).all(),
+        verification_statuses=PUBLICATION_VERIFICATION_STATUSES,
+        selected_verification_status=verification_status,
+        selected_department_id=department_id_value,
+        selected_plan_year=plan_year,
+        monitor=current_user.role == ROLE_ADMIN,
     )
 
 

@@ -1,48 +1,20 @@
 {% extends "base.html" %}
 
 {% block title %}
-    План {{ plan.year }} — Publication Monitor
+    {{ tr("План") }} {{ plan.year }} — Publication Monitor
 {% endblock %}
 
 {% block page_title %}
-    План на {{ plan.year }} год
+    {{ tr("План на") }} {{ plan.year }} {{ tr("год") }}
 {% endblock %}
 
 {% block page_subtitle %}
 
     <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
 
-        {% if plan.status == "DRAFT" %}
-
-            <span class="badge rounded-pill badge-pm-primary">
-                Черновик
-            </span>
-
-        {% elif plan.status == "SUBMITTED" %}
-
-            <span class="badge rounded-pill badge-pm-warning">
-                На рассмотрении
-            </span>
-
-        {% elif plan.status == "APPROVED" %}
-
-            <span class="badge rounded-pill badge-pm-success">
-                Утверждён
-            </span>
-
-        {% elif plan.status == "RETURNED" %}
-
-            <span class="badge rounded-pill badge-pm-danger">
-                На доработке
-            </span>
-
-        {% else %}
-
-            <span class="badge rounded-pill badge-pm-primary">
-                {{ plan.status }}
-            </span>
-
-        {% endif %}
+        <span class="badge rounded-pill {% if plan.status == 'APPROVED' %}badge-pm-success{% elif plan.status == 'SUBMITTED' %}badge-pm-warning{% elif plan.status == 'RETURNED' %}badge-pm-danger{% else %}badge-pm-primary{% endif %}">
+            {{ plan_status_label(plan.status) }}
+        </span>
 
     </div>
 
@@ -643,31 +615,9 @@
 
                                 <td>
 
-                                    {% if version.status == "SUBMITTED" %}
-
-                                        <span class="badge rounded-pill badge-pm-warning">
-                                            Отправлен на согласование
-                                        </span>
-
-                                    {% elif version.status == "RETURNED" %}
-
-                                        <span class="badge rounded-pill badge-pm-danger">
-                                            Возвращён на доработку
-                                        </span>
-
-                                    {% elif version.status == "APPROVED" %}
-
-                                        <span class="badge rounded-pill badge-pm-success">
-                                            Одобрен
-                                        </span>
-
-                                    {% else %}
-
-                                        <span class="badge rounded-pill badge-pm-primary">
-                                            {{ version.status }}
-                                        </span>
-
-                                    {% endif %}
+                                    <span class="badge rounded-pill {% if version.status == 'APPROVED' %}badge-pm-success{% elif version.status == 'SUBMITTED' %}badge-pm-warning{% elif version.status == 'RETURNED' %}badge-pm-danger{% else %}badge-pm-primary{% endif %}">
+                                        {{ plan_status_label(version.status) }}
+                                    </span>
 
                                 </td>
 

@@ -1,8 +1,8 @@
 {% extends "base.html" %}
 
-{% block title %}Главная — Мониторинг публикаций{% endblock %}
+{% block title %}{{ tr("Главная") }} — Publication Monitor{% endblock %}
 
-{% block page_title %}Главная{% endblock %}
+{% block page_title %}{{ tr("Главная") }}{% endblock %}
 
 {% block page_subtitle %}
 <p class="text-body-secondary mb-0 mt-2">Мониторинг публикационной активности</p>
@@ -19,7 +19,7 @@
                             {{ (current_user.full_name or current_user.username)[0] | upper }}
                         </span>
                         <div>
-                            <div class="text-body-secondary small">Добро пожаловать</div>
+                            <div class="text-body-secondary small">{{ tr("Добро пожаловать") }}</div>
                             <h2 class="h3 fw-bold mb-0">{{ current_user.full_name or current_user.username }}</h2>
                         </div>
                     </div>
@@ -35,14 +35,14 @@
 
                 <div class="col-lg-4">
                     <div class="p-3 rounded-4 bg-light">
-                        <div class="small text-body-secondary mb-1">Ваша роль</div>
+                        <div class="small text-body-secondary mb-1">{{ tr("Ваша роль") }}</div>
                         <div class="fw-bold">
                             {% if current_user.role == "TECH_ADMIN" %}
-                            Технический администратор
+                            {{ role_label("TECH_ADMIN") }}
                             {% elif current_user.role == "ADMIN" %}
-                            Монитор / Администратор
+                            {{ role_label("ADMIN") }}
                             {% elif current_user.role == "DEPARTMENT_HEAD" %}
-                            Заведующий кафедрой
+                            {{ role_label("DEPARTMENT_HEAD") }}
                             {% else %}
                             Пользователь
                             {% endif %}
@@ -54,10 +54,27 @@
     </div>
 </section>
 
+{% if metrics %}
+<section class="row g-3 mb-4" aria-label="{{ tr("Ключевые показатели") }}">
+    {% if current_user.role == "TECH_ADMIN" %}
+        <div class="col-12 col-sm-4"><div class="card card-pm border-0 h-100"><div class="card-body"><div class="small text-body-secondary">{{ tr("Пользователи") }}</div><div class="display-6 fw-bold">{{ metrics.users }}</div><div class="small text-body-secondary">{{ metrics.active_users }} {{ tr("активных") }}</div></div></div></div>
+        <div class="col-12 col-sm-4"><div class="card card-pm border-0 h-100"><div class="card-body"><div class="small text-body-secondary">{{ tr("Кафедры") }}</div><div class="display-6 fw-bold">{{ metrics.departments }}</div><div class="small text-body-secondary">{{ tr("активных подразделений") }}</div></div></div></div>
+    {% elif current_user.role == "ADMIN" %}
+        <div class="col-12 col-sm-4"><div class="card card-pm border-0 h-100"><div class="card-body"><div class="small text-body-secondary">{{ tr("Планы на согласовании") }}</div><div class="display-6 fw-bold">{{ metrics.submitted_plans }}</div></div></div></div>
+        <div class="col-12 col-sm-4"><div class="card card-pm border-0 h-100"><div class="card-body"><div class="small text-body-secondary">{{ tr("Публикации на проверке") }}</div><div class="display-6 fw-bold">{{ metrics.pending_publications }}</div></div></div></div>
+        <div class="col-12 col-sm-4"><div class="card card-pm border-0 h-100"><div class="card-body"><div class="small text-body-secondary">{{ tr("Опубликовано") }}</div><div class="display-6 fw-bold">{{ metrics.published_publications }}</div></div></div></div>
+    {% else %}
+        <div class="col-12 col-sm-4"><div class="card card-pm border-0 h-100"><div class="card-body"><div class="small text-body-secondary">{{ tr("Планы") }}</div><div class="display-6 fw-bold">{{ metrics.plans }}</div></div></div></div>
+        <div class="col-12 col-sm-4"><div class="card card-pm border-0 h-100"><div class="card-body"><div class="small text-body-secondary">{{ tr("Публикации") }}</div><div class="display-6 fw-bold">{{ metrics.publications }}</div></div></div></div>
+        <div class="col-12 col-sm-4"><div class="card card-pm border-0 h-100"><div class="card-body"><div class="small text-body-secondary">{{ tr("Опубликовано") }}</div><div class="display-6 fw-bold">{{ metrics.published_publications }}</div></div></div></div>
+    {% endif %}
+</section>
+{% endif %}
+
 {% if current_user.role == "TECH_ADMIN" %}
 <section>
     <div class="mb-3">
-        <h2 class="h5 fw-bold mb-1">Система</h2>
+        <h2 class="h5 fw-bold mb-1">{{ tr("Система") }}</h2>
         <p class="text-body-secondary small mb-0">Основные функции технического администрирования.</p>
     </div>
     <div class="row g-3">
@@ -69,7 +86,7 @@
                             <span class="pm-dashboard-icon pm-dashboard-icon-primary">♚</span>
                             <span class="text-body-secondary">→</span>
                         </div>
-                        <h3 class="h5 fw-bold text-dark">Пользователи</h3>
+                        <h3 class="h5 fw-bold text-dark">{{ tr("Пользователи") }}</h3>
                         <p class="text-body-secondary mb-0">Управление пользователями системы.</p>
                     </div>
                 </div>
@@ -83,11 +100,23 @@
                             <span class="pm-dashboard-icon pm-dashboard-icon-accent">⌂</span>
                             <span class="text-body-secondary">→</span>
                         </div>
-                        <h3 class="h5 fw-bold text-dark">Кафедры</h3>
+                        <h3 class="h5 fw-bold text-dark">{{ tr("Кафедры") }}</h3>
                         <p class="text-body-secondary mb-0">Управление кафедрами организации.</p>
                     </div>
                 </div>
             </a>
+        </div>
+        <div class="col-12 col-md-6 col-xl-3">
+            <a href="{{ url_for('admin.list_references', view=1) }}" class="text-decoration-none"><div class="card card-pm h-100 border-0"><div class="card-body p-4"><div class="d-flex justify-content-between mb-4"><span class="pm-dashboard-icon pm-dashboard-icon-primary">≡</span><span class="text-body-secondary">→</span></div><h3 class="h5 fw-bold text-dark">Справочники</h3><p class="text-body-secondary mb-0">Значения классификаторов системы.</p></div></div></a>
+        </div>
+        <div class="col-12 col-md-6 col-xl-3">
+            <a href="{{ url_for('admin.audit_list', view=1) }}" class="text-decoration-none"><div class="card card-pm h-100 border-0"><div class="card-body p-4"><div class="d-flex justify-content-between mb-4"><span class="pm-dashboard-icon pm-dashboard-icon-accent">▤</span><span class="text-body-secondary">→</span></div><h3 class="h5 fw-bold text-dark">Журнал событий</h3><p class="text-body-secondary mb-0">Критические действия пользователей.</p></div></div></a>
+        </div>
+        <div class="col-12 col-md-6 col-xl-3">
+            <a href="{{ url_for('admin.system_dashboard') }}" class="text-decoration-none"><div class="card card-pm h-100 border-0"><div class="card-body p-4"><div class="d-flex justify-content-between mb-4"><span class="pm-dashboard-icon pm-dashboard-icon-success">⚙</span><span class="text-body-secondary">→</span></div><h3 class="h5 fw-bold text-dark">Состояние системы</h3><p class="text-body-secondary mb-0">База данных, диск и рабочие показатели.</p></div></div></a>
+        </div>
+        <div class="col-12 col-md-6 col-xl-3">
+            <a href="{{ url_for('admin.backups_page') }}" class="text-decoration-none"><div class="card card-pm h-100 border-0"><div class="card-body p-4"><div class="d-flex justify-content-between mb-4"><span class="pm-dashboard-icon pm-dashboard-icon-danger">▱</span><span class="text-body-secondary">→</span></div><h3 class="h5 fw-bold text-dark">Резервные копии</h3><p class="text-body-secondary mb-0">Создание и скачивание копий PostgreSQL.</p></div></div></a>
         </div>
     </div>
 </section>
@@ -95,7 +124,7 @@
 {% elif current_user.role == "ADMIN" %}
 <section>
     <div class="mb-3">
-        <h2 class="h5 fw-bold mb-1">Публикационная деятельность</h2>
+        <h2 class="h5 fw-bold mb-1">{{ tr("Публикационная деятельность") }}</h2>
         <p class="text-body-secondary small mb-0">Основные рабочие разделы системы.</p>
     </div>
     <div class="row g-3">
@@ -103,7 +132,7 @@
             <a href="{{ url_for('plans.plans') }}" class="text-decoration-none">
                 <div class="card card-pm h-100 border-0"><div class="card-body p-4">
                     <div class="d-flex justify-content-between mb-4"><span class="pm-dashboard-icon pm-dashboard-icon-primary">▣</span><span class="text-body-secondary">→</span></div>
-                    <h3 class="h5 fw-bold text-dark">Планы</h3><p class="text-body-secondary mb-0">Планирование публикационной деятельности.</p>
+                    <h3 class="h5 fw-bold text-dark">{{ tr("Планы") }}</h3><p class="text-body-secondary mb-0">{{ tr("Планирование публикационной деятельности.") }}</p>
                 </div></div>
             </a>
         </div>
@@ -111,7 +140,7 @@
             <a href="{{ url_for('publications.publications') }}" class="text-decoration-none">
                 <div class="card card-pm h-100 border-0"><div class="card-body p-4">
                     <div class="d-flex justify-content-between mb-4"><span class="pm-dashboard-icon pm-dashboard-icon-accent">◈</span><span class="text-body-secondary">→</span></div>
-                    <h3 class="h5 fw-bold text-dark">Публикации</h3><p class="text-body-secondary mb-0">Реестр и проверка публикаций.</p>
+                    <h3 class="h5 fw-bold text-dark">{{ tr("Публикации") }}</h3><p class="text-body-secondary mb-0">{{ tr("Реестр и проверка публикаций.") }}</p>
                 </div></div>
             </a>
         </div>
@@ -119,7 +148,7 @@
             <a href="{{ url_for('monitoring.dashboard') }}" class="text-decoration-none">
                 <div class="card card-pm h-100 border-0"><div class="card-body p-4">
                     <div class="d-flex justify-content-between mb-4"><span class="pm-dashboard-icon pm-dashboard-icon-success">◉</span><span class="text-body-secondary">→</span></div>
-                    <h3 class="h5 fw-bold text-dark">Мониторинг</h3><p class="text-body-secondary mb-0">Контроль выполнения публикационных планов.</p>
+                    <h3 class="h5 fw-bold text-dark">{{ tr("Мониторинг") }}</h3><p class="text-body-secondary mb-0">{{ tr("Контроль выполнения публикационных планов.") }}</p>
                 </div></div>
             </a>
         </div>
@@ -127,7 +156,7 @@
             <a href="{{ url_for('reports.publications_report') }}" class="text-decoration-none">
                 <div class="card card-pm h-100 border-0"><div class="card-body p-4">
                     <div class="d-flex justify-content-between mb-4"><span class="pm-dashboard-icon pm-dashboard-icon-danger">▤</span><span class="text-body-secondary">→</span></div>
-                    <h3 class="h5 fw-bold text-dark">Отчёты</h3><p class="text-body-secondary mb-0">Формирование отчётов по публикациям.</p>
+                    <h3 class="h5 fw-bold text-dark">{{ tr("Отчёты") }}</h3><p class="text-body-secondary mb-0">{{ tr("Формирование отчётов по публикациям.") }}</p>
                 </div></div>
             </a>
         </div>
@@ -135,7 +164,7 @@
             <a href="{{ url_for('analytics.dashboard') }}" class="text-decoration-none">
                 <div class="card card-pm h-100 border-0"><div class="card-body p-4">
                     <div class="d-flex justify-content-between mb-4"><span class="pm-dashboard-icon pm-dashboard-icon-primary">▥</span><span class="text-body-secondary">→</span></div>
-                    <h3 class="h5 fw-bold text-dark">Аналитика</h3><p class="text-body-secondary mb-0">Анализ плановых и фактических показателей.</p>
+                    <h3 class="h5 fw-bold text-dark">{{ tr("Аналитика") }}</h3><p class="text-body-secondary mb-0">{{ tr("Анализ плановых и фактических показателей.") }}</p>
                 </div></div>
             </a>
         </div>

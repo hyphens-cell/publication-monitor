@@ -1,10 +1,22 @@
 import shutil
 import subprocess
+import os
 from datetime import datetime
 from pathlib import Path
 
-from flask import abort, current_app, jsonify, render_template, send_file
+from flask import (
+    abort,
+    current_app,
+    flash,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    send_file,
+    url_for,
+)
 from sqlalchemy import func, select, text
+from sqlalchemy.engine import make_url
 
 from app.admin import admin_bp
 from app.audit import audit
@@ -36,15 +48,53 @@ def _backup_path(filename: str) -> Path:
     return path
 
 
+def _pg_dump_command(database_url: str, backup_path: Path) -> tuple[list[str], dict[str, str]]:
+    """Build a pg_dump invocation without exposing a database password in argv."""
+    url = make_url(database_url)
+    if not url.database or not url.username:
+        raise ValueError("Для резервного копирования нужны имя базы данных и пользователь.")
+
+    command = [
+        "pg_dump",
+        "--format=custom",
+        "--no-owner",
+        "--no-privileges",
+        "--file",
+        str(backup_path),
+        "--username",
+        url.username,
+        "--dbname",
+        url.database,
+    ]
+    if url.host:
+        command.extend(["--host", url.host])
+    if url.port:
+        command.extend(["--port", str(url.port)])
+
+    process_env = os.environ.copy()
+    password = url.password or os.getenv("DB_PASSWORD")
+    if password:
+        process_env["PGPASSWORD"] = password
+    return command, process_env
+
+
 @admin_bp.route("/system", methods=["GET"])
 @technical_admin_required
 def system_dashboard():
-    return render_template("admin/system.html")
+    return render_template(
+        "admin/system.html",
+        status=_system_status_payload(),
+        backups=_backup_items(),
+    )
 
 
 @admin_bp.route("/system/status", methods=["GET"])
 @technical_admin_required
 def system_status():
+    return jsonify(_system_status_payload())
+
+
+def _system_status_payload():
     database_ok = False
     database_error = None
 
@@ -88,6 +138,7 @@ def system_status():
             "total_bytes": disk.total,
             "used_bytes": disk.used,
             "free_bytes": disk.free,
+            "used_percent": round((disk.used / disk.total) * 100, 1) if disk.total else 0,
         },
         "counts": {
             "users": db.session.scalar(
@@ -117,7 +168,7 @@ def system_status():
         },
     }
 
-    return jsonify(result)
+    return result
 
 
 @admin_bp.route("/system/backup", methods=["POST"])
@@ -126,26 +177,17 @@ def create_backup():
     database_url = current_app.config.get("SQLALCHEMY_DATABASE_URI", "")
 
     if not database_url.startswith("postgresql"):
-        return jsonify(
-            {
-                "error": "Резервное копирование поддерживает только PostgreSQL."
-            }
-        ), 500
+        return _backup_error("Резервное копирование поддерживает только PostgreSQL.", 500)
 
     backup_directory = _backup_directory()
 
     timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
     backup_path = backup_directory / f"publication_monitor_{timestamp}.dump"
 
-    command = [
-        "pg_dump",
-        "--format=custom",
-        "--no-owner",
-        "--no-privileges",
-        "--file",
-        str(backup_path),
-        database_url,
-    ]
+    try:
+        command, process_env = _pg_dump_command(database_url, backup_path)
+    except ValueError as exc:
+        return _backup_error(str(exc), 500)
 
     try:
         completed = subprocess.run(
@@ -154,30 +196,22 @@ def create_backup():
             capture_output=True,
             text=True,
             timeout=300,
+            env=process_env,
         )
     except FileNotFoundError:
         if backup_path.exists():
             backup_path.unlink()
-        return jsonify(
-            {"error": "pg_dump не найден в PATH сервера."}
-        ), 500
+        return _backup_error("pg_dump не найден в PATH сервера.", 500)
     except subprocess.TimeoutExpired:
         if backup_path.exists():
             backup_path.unlink()
-        return jsonify(
-            {"error": "Создание резервной копии превысило лимит времени."}
-        ), 504
+        return _backup_error("Создание резервной копии превысило лимит времени.", 504)
 
     if completed.returncode != 0:
         if backup_path.exists():
             backup_path.unlink()
 
-        return jsonify(
-            {
-                "error": "pg_dump завершился с ошибкой.",
-                "details": completed.stderr[-2000:],
-            }
-        ), 500
+        return _backup_error("pg_dump завершился с ошибкой.", 500)
 
     audit(
         "SYSTEM_BACKUP_CREATED",
@@ -198,9 +232,26 @@ def create_backup():
     )
 
 
+def _backup_error(message, status_code):
+    if request.form.get("next"):
+        flash(message, "danger")
+        return redirect(url_for("admin.backups_page"), code=303)
+    return jsonify({"error": message}), status_code
+
+
 @admin_bp.route("/system/backups", methods=["GET"])
 @technical_admin_required
+def backups_page():
+    return render_template("admin/backups.html", backups=_backup_items())
+
+
+@admin_bp.route("/system/api/backups", methods=["GET"])
+@technical_admin_required
 def list_backups():
+    return jsonify({"items": _backup_items()})
+
+
+def _backup_items():
     files = []
     for path in sorted(_backup_directory().glob("*.dump"), key=lambda item: item.stat().st_mtime, reverse=True):
         stat = path.stat()
@@ -209,7 +260,7 @@ def list_backups():
             "size": stat.st_size,
             "created_at": datetime.utcfromtimestamp(stat.st_mtime).isoformat(),
         })
-    return jsonify({"items": files})
+    return files
 
 
 @admin_bp.route("/system/backups/<filename>", methods=["GET"])

@@ -86,7 +86,7 @@
                                 name="full_name"
                                 type="text"
                                 class="form-control form-control-lg"
-                                value="{{ user.full_name if user else '' }}"
+                                value="{{ request.form.get('full_name', user.full_name if user else '') }}"
                                 autocomplete="name"
                                 required
                             >
@@ -105,7 +105,7 @@
                                 name="username"
                                 type="text"
                                 class="form-control form-control-lg"
-                                value="{{ user.username if user else '' }}"
+                                value="{{ request.form.get('username', user.username if user else '') }}"
                                 autocomplete="username"
                                 required
                             >
@@ -128,7 +128,7 @@
                                 name="email"
                                 type="email"
                                 class="form-control form-control-lg"
-                                value="{{ user.email if user else '' }}"
+                                value="{{ request.form.get('email', user.email if user else '') }}"
                                 autocomplete="email"
                                 required
                             >
@@ -178,11 +178,11 @@
                                 {% for value, label in roles %}
                                     <option
                                         value="{{ value }}"
-                                        {% if user and user.role == value %}
+                                        {% if request.form.get('role', user.role if user else '') == value %}
                                             selected
                                         {% endif %}
                                     >
-                                        {{ label }}
+                                        {{ role_label(value) }}
                                     </option>
                                 {% endfor %}
                             </select>
@@ -208,7 +208,7 @@
                                 {% for department in departments %}
                                     <option
                                         value="{{ department.id }}"
-                                        {% if user and user.department_id == department.id %}
+                                        {% if request.form.get('department_id', user.department_id|string if user and user.department_id else '') == department.id|string %}
                                             selected
                                         {% endif %}
                                     >
@@ -235,11 +235,11 @@
                                 {% for value, label in languages %}
                                     <option
                                         value="{{ value }}"
-                                        {% if user and user.language == value %}
+                                        {% if request.form.get('language', user.language if user else 'ru') == value %}
                                             selected
                                         {% endif %}
                                     >
-                                        {{ label }}
+                                        {{ tr(label) }}
                                     </option>
                                 {% endfor %}
                             </select>

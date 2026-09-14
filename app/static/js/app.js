@@ -403,9 +403,51 @@
             }
 
             form.addEventListener("submit", (event) => {
-                if (!window.confirm("Подтвердите выполнение необратимого действия.")) {
+                if (!window.confirm(window.pmMessages?.confirmDestructive || "Confirm destructive action.")) {
                     event.preventDefault();
                 }
+            });
+        });
+    };
+
+    const initializeSubmitStates = () => {
+        document.querySelectorAll("form").forEach((form) => {
+            form.addEventListener("submit", (event) => {
+                if (event.defaultPrevented) {
+                    return;
+                }
+                const submitters = form.querySelectorAll(
+                    'button[type="submit"], input[type="submit"]'
+                );
+                form.setAttribute("aria-busy", "true");
+                form.classList.add("is-submitting");
+                submitters.forEach((control) => {
+                    control.disabled = true;
+                    control.setAttribute("aria-disabled", "true");
+                });
+            });
+        });
+    };
+
+    const initializeResponsiveTables = () => {
+        document.querySelectorAll(".table-responsive table").forEach((table) => {
+            const headers = Array.from(table.querySelectorAll("thead th")).map(
+                (header) => header.textContent.trim()
+            );
+
+            if (!headers.length) {
+                return;
+            }
+
+            table.classList.add("pm-responsive-table");
+            table.querySelectorAll("tbody tr").forEach((row) => {
+                Array.from(row.children).forEach((cell, index) => {
+                    if (cell.hasAttribute("colspan")) {
+                        cell.classList.add("pm-table-empty-cell");
+                        return;
+                    }
+                    cell.dataset.label = headers[index] || "";
+                });
             });
         });
     };
@@ -414,6 +456,8 @@
         initializeAnalytics();
         initializeDropdownPortals();
         initializeDestructiveActionConfirmation();
+        initializeSubmitStates();
+        initializeResponsiveTables();
     };
 
     if (document.readyState === "loading") {

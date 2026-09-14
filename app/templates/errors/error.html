@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ru">
+<html lang="{{ current_language() }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -8,16 +8,16 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
 </head>
 <body>
-    <main class="container py-5">
-        <section class="card card-pm border-0 mx-auto" style="max-width: 620px;">
+    <main class="pm-error-page container py-5 d-flex align-items-center">
+        <section class="card card-pm border-0 mx-auto w-100" style="max-width: 620px;">
             <div class="card-body p-4 p-md-5 text-center">
-                <p class="display-5 fw-bold mb-2">{{ status_code }}</p>
-                <h1 class="h4 mb-3">{{ title }}</h1>
-                <p class="text-body-secondary mb-4">{{ message }}</p>
+                <div class="pm-error-code mb-3" aria-hidden="true">{{ status_code }}</div>
+                <h1 class="h3 fw-bold mb-3">{{ tr(title) }}</h1>
+                <p class="text-body-secondary mb-4">{{ tr(message) }}</p>
                 {% if current_user.is_authenticated %}
-                    <a class="btn btn-primary" href="{{ url_for('main.index') }}">На главную</a>
+                    <a class="btn btn-pm-primary" href="{{ url_for('main.index') }}">На главную</a>
                 {% else %}
-                    <a class="btn btn-primary" href="{{ url_for('auth.login') }}">К странице входа</a>
+                    <a class="btn btn-pm-primary" href="{{ url_for('auth.login') }}">К странице входа</a>
                 {% endif %}
             </div>
         </section>
