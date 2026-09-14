@@ -8,6 +8,8 @@
     --pm-success-light: #F1F9E5;
     --pm-accent: #14CCAE;
     --pm-accent-light: #E7FAF6;
+    --pm-warning: #9A6700;
+    --pm-warning-light: #FFF4D6;
     --pm-bg: #F7F7FA;
     --pm-surface: #FFFFFF;
     --pm-border: #E7E5EC;
@@ -473,6 +475,95 @@ a:hover .card-pm {
     background: var(--pm-accent-light);
 }
 
+.badge-pm-warning {
+    color: var(--pm-warning);
+    background: var(--pm-warning-light);
+}
+
+.badge[class*="badge-pm-"] {
+    padding: 0.48em 0.72em;
+    font-weight: 750;
+    line-height: 1.2;
+    white-space: normal;
+}
+
+.pm-section-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.pm-metric-card .card-body {
+    min-height: 118px;
+}
+
+.pm-disk-progress {
+    height: 0.75rem;
+    overflow: hidden;
+    background: var(--pm-primary-light);
+    border-radius: 999px;
+}
+
+.pm-disk-progress .progress-bar {
+    background: var(--pm-primary);
+}
+
+.pm-file-icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    color: var(--pm-primary);
+    background: var(--pm-primary-light);
+    border-radius: 0.55rem;
+}
+
+.pm-inline-filter {
+    width: min(100%, 24rem);
+    margin: 0;
+}
+
+.pm-audit-details summary {
+    color: var(--pm-primary);
+    cursor: pointer;
+    font-weight: 700;
+}
+
+.pm-audit-details summary:hover {
+    color: var(--pm-primary-dark);
+}
+
+.pm-audit-details dl {
+    display: grid;
+    grid-template-columns: minmax(6rem, auto) minmax(8rem, 1fr);
+    gap: 0.25rem 0.75rem;
+    min-width: 16rem;
+    font-size: 0.8rem;
+}
+
+.pm-audit-details dt,
+.pm-audit-details dd {
+    margin: 0;
+}
+
+.pm-pagination {
+    display: grid;
+    grid-template-columns: minmax(5rem, 1fr) auto minmax(5rem, 1fr);
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.pm-pagination > :first-child {
+    justify-self: start;
+}
+
+.pm-pagination > :last-child {
+    justify-self: end;
+}
+
 a {
     color: var(--pm-primary);
 }
@@ -602,7 +693,7 @@ a:hover {
 }
 
 @media (max-width: 575.98px) {
-    .table-responsive:has(.pm-responsive-table) {
+    .pm-table-card-wrapper {
         overflow: visible;
         border: 0;
         background: transparent;
@@ -916,6 +1007,19 @@ a:hover {
 
     .card-body {
         padding: 1rem !important;
+    }
+
+    .pm-section-heading {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .pm-inline-filter {
+        width: 100%;
+    }
+
+    .pm-audit-details dl {
+        min-width: 0;
     }
 }
 

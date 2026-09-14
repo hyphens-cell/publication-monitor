@@ -12,25 +12,34 @@
 {% endblock %}
 
 {% block content %}
-    <div class="alert alert-info pm-alert" role="status">
-        Пароль базы данных читается из DATABASE_URL или DB_PASSWORD и передаётся pg_dump только через окружение процесса.
+    <div class="alert alert-info pm-alert d-flex gap-3 align-items-start" role="status">
+        <span class="fs-5 lh-1" aria-hidden="true">ⓘ</span>
+        <div><strong class="d-block mb-1">Безопасное создание копии</strong><span>Пароль базы данных читается из DATABASE_URL или DB_PASSWORD и передаётся pg_dump только через окружение процесса.</span></div>
     </div>
-    <section class="card card-pm border-0">
+
+    <section class="card card-pm border-0" aria-labelledby="backup-list-title">
         <div class="card-body p-0">
-            <div class="p-4 border-bottom"><h2 class="h5 mb-1">Сохранённые копии</h2><p class="text-body-secondary mb-0">Доступ к файлам разрешён только техническому администратору.</p></div>
+            <div class="pm-section-heading p-3 p-lg-4 border-bottom">
+                <div><h2 class="h5 mb-1" id="backup-list-title">Сохранённые копии</h2><p class="small text-body-secondary mb-0">Доступ к файлам разрешён только техническому администратору.</p></div>
+                {% if backups %}<span class="badge rounded-pill badge-pm-primary">Всего: {{ backups|length }}</span>{% endif %}
+            </div>
             <div class="table-responsive">
-                <table class="table align-middle mb-0">
+                <table class="table table-pm align-middle mb-0">
                     <thead><tr><th>Имя файла</th><th>Размер</th><th>Дата создания</th><th class="text-end">Действия</th></tr></thead>
                     <tbody>
                         {% for backup in backups %}
                             <tr>
-                                <td class="fw-semibold text-break">{{ backup.filename }}</td>
+                                <td><div class="d-flex align-items-center gap-2 min-w-0"><span class="pm-file-icon" aria-hidden="true">▤</span><span class="fw-semibold text-break min-w-0">{{ backup.filename }}</span></div></td>
                                 <td>{{ filesize(backup.size) }}</td>
                                 <td>{{ backup.created_at[:19]|replace('T', ' ') }}</td>
                                 <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{{ url_for('admin.download_backup', filename=backup.filename) }}">Скачать</a></td>
                             </tr>
                         {% else %}
-                            <tr><td colspan="4" class="pm-table-empty-cell text-center py-5"><div class="pm-empty-icon" aria-hidden="true">▤</div><h3 class="h6 mt-2">Резервных копий пока нет</h3><p class="text-body-secondary mb-0">Создайте первую резервную копию базы данных.</p></td></tr>
+                            <tr><td colspan="4" class="pm-table-empty-cell text-center py-5">
+                                <div class="pm-empty-state"><div class="pm-empty-icon" aria-hidden="true">▤</div><h3 class="h6">Резервных копий пока нет</h3><p class="text-body-secondary mb-3">Создайте первую резервную копию базы данных.</p>
+                                    <form method="post" action="{{ url_for('admin.create_backup') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="next" value="{{ url_for('admin.backups_page') }}"><button class="btn btn-pm-primary" type="submit">Создать резервную копию</button></form>
+                                </div>
+                            </td></tr>
                         {% endfor %}
                     </tbody>
                 </table>

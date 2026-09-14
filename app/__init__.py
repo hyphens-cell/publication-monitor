@@ -1,10 +1,11 @@
-from flask import Flask, render_template
+from flask import Flask, current_app, render_template
 
 from app.admin import admin_bp
 from app.auth import auth_bp
 from app.config import Config
 from app.extensions import bcrypt, csrf, db, login_manager, migrate
 from app.i18n import (
+    audit_action_label,
     ATTACHMENT_STATUS_LABELS,
     PLAN_STATUS_LABELS,
     PUBLICATION_STATUS_LABELS,
@@ -40,6 +41,7 @@ def create_app():
     csrf.init_app(app)
     app.jinja_env.add_extension(TemplateTranslationExtension)
     app.jinja_env.globals.update(
+        audit_action_label=audit_action_label,
         tr=translate,
         current_language=current_language,
         filesize=format_file_size,
@@ -86,6 +88,7 @@ def create_app():
 
     @app.errorhandler(500)
     def internal_error(error):
+        current_app.logger.exception("Unhandled application error")
         db.session.rollback()
         return render_template("errors/error.html", status_code=500, title="Ошибка сервера", message="Не удалось обработать запрос. Попробуйте ещё раз позже."), 500
     @app.cli.command("seed-reference-values")

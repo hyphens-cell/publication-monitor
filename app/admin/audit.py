@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from flask import jsonify, render_template, request
+from flask import abort, jsonify, render_template, request
 from sqlalchemy import func, select
 
 from app.admin import admin_bp
@@ -35,13 +35,18 @@ def _serialize_audit(log):
 
 
 @admin_bp.route("/audit", methods=["GET"])
+@admin_bp.route("/api/audit", methods=["GET"], endpoint="audit_api")
 @technical_admin_required
 def audit_list():
+    is_api = request.endpoint == "admin.audit_api"
     try:
         limit = int(request.args.get("limit", "100"))
         offset = int(request.args.get("offset", "0"))
     except ValueError:
-        return jsonify({"error": "limit и offset должны быть числами."}), 400
+        message = "limit и offset должны быть числами."
+        if is_api:
+            return jsonify({"error": message}), 400
+        abort(400, description=message)
 
     limit = min(max(limit, 1), 500)
     offset = max(offset, 0)
@@ -97,6 +102,6 @@ def audit_list():
         "limit": limit,
         "offset": offset,
     }
-    if request.args.get("view") == "1":
-        return render_template("admin/audit.html", logs=logs, total=payload["total"])
-    return jsonify(payload)
+    if is_api:
+        return jsonify(payload)
+    return render_template("admin/audit.html", logs=logs, total=payload["total"])

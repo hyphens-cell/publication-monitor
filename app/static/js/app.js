@@ -27,7 +27,7 @@
         try {
             return JSON.parse(element.textContent || "{}");
         } catch (error) {
-            console.error("Ошибка данных аналитики:", error);
+            console.error(window.pmMessages?.analyticsDataError, error);
             return null;
         }
     };
@@ -53,9 +53,12 @@
         new Chart(canvas, {
             type: "bar",
             data: {
-                labels: ["План", "Факт"],
+                labels: [
+                    window.pmMessages?.plan || "",
+                    window.pmMessages?.fact || ""
+                ],
                 datasets: [{
-                    label: "Количество",
+                    label: window.pmMessages?.quantity || "",
                     data: [
                         Number(data.summary?.planned || 0),
                         Number(data.summary?.actual || 0)
@@ -108,11 +111,11 @@
             type: "bar",
             data: {
                 labels: departments.map(
-                    (item) => item.name || "Без названия"
+                    (item) => item.name || window.pmMessages?.untitled || ""
                 ),
                 datasets: [
                     {
-                        label: "План",
+                        label: window.pmMessages?.plan || "",
                         data: departments.map(
                             (item) => Number(item.planned_count || 0)
                         ),
@@ -121,7 +124,7 @@
                         borderSkipped: false
                     },
                     {
-                        label: "Факт",
+                        label: window.pmMessages?.fact || "",
                         data: departments.map(
                             (item) => Number(item.actual_count || 0)
                         ),
@@ -161,10 +164,16 @@
 
     const getPublicationTypeLabel = (item, language) => {
         if (language === "kk") {
-            return item.name_kk || item.name_ru || "Без названия";
+            return item.name_kk
+                || item.name_ru
+                || window.pmMessages?.untitled
+                || "";
         }
 
-        return item.name_ru || item.name_kk || "Без названия";
+        return item.name_ru
+            || item.name_kk
+            || window.pmMessages?.untitled
+            || "";
     };
 
     const initializePublicationTypeChart = (data) => {
@@ -191,7 +200,7 @@
                 ),
                 datasets: [
                     {
-                        label: "План",
+                        label: window.pmMessages?.plan || "",
                         data: publicationTypes.map(
                             (item) => Number(item.planned_count || 0)
                         ),
@@ -200,7 +209,7 @@
                         borderSkipped: false
                     },
                     {
-                        label: "Факт",
+                        label: window.pmMessages?.fact || "",
                         data: publicationTypes.map(
                             (item) => Number(item.actual_count || 0)
                         ),
@@ -244,12 +253,8 @@
             return;
         }
 
-        initializeProgressBars();
-
         if (typeof Chart === "undefined") {
-            console.error(
-                "Chart.js не загружен. Подключите его перед app.js."
-            );
+            console.error(window.pmMessages?.chartUnavailable);
             return;
         }
 
@@ -403,7 +408,7 @@
             }
 
             form.addEventListener("submit", (event) => {
-                if (!window.confirm(window.pmMessages?.confirmDestructive || "Confirm destructive action.")) {
+                if (!window.confirm(window.pmMessages?.confirmDestructive || "")) {
                     event.preventDefault();
                 }
             });
@@ -440,6 +445,9 @@
             }
 
             table.classList.add("pm-responsive-table");
+            table.closest(".table-responsive")?.classList.add(
+                "pm-table-card-wrapper"
+            );
             table.querySelectorAll("tbody tr").forEach((row) => {
                 Array.from(row.children).forEach((cell, index) => {
                     if (cell.hasAttribute("colspan")) {
@@ -453,6 +461,7 @@
     };
 
     const initializeApplication = () => {
+        initializeProgressBars();
         initializeAnalytics();
         initializeDropdownPortals();
         initializeDestructiveActionConfirmation();

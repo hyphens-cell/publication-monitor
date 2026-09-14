@@ -30,6 +30,7 @@ def _payload():
 
 
 @admin_bp.route("/references", methods=["GET"])
+@admin_bp.route("/api/references", methods=["GET"], endpoint="references_api")
 @technical_admin_required
 def list_references():
     reference_type = request.args.get("type", "").strip()
@@ -45,9 +46,9 @@ def list_references():
 
     values = db.session.scalars(query).all()
 
-    if request.args.get("view") == "1":
-        return render_template("admin/references.html", values=values)
-    return jsonify({"items": [_serialize_reference(item) for item in values]})
+    if request.endpoint == "admin.references_api":
+        return jsonify({"items": [_serialize_reference(item) for item in values]})
+    return render_template("admin/references.html", values=values)
 
 
 @admin_bp.route("/references", methods=["POST"])
@@ -67,14 +68,14 @@ def create_reference():
         if request.is_json:
             return jsonify({"error": message}), 400
         flash(message, "danger")
-        return redirect(url_for("admin.list_references", view=1))
+        return redirect(url_for("admin.list_references"))
 
     if not reference_type or not code or not name_ru or not name_kk:
         message = "type, code, name_ru и name_kk обязательны."
         if request.is_json:
             return jsonify({"error": message}), 400
         flash(message, "danger")
-        return redirect(url_for("admin.list_references", view=1))
+        return redirect(url_for("admin.list_references"))
 
     existing = db.session.scalar(
         select(ReferenceValue).where(
@@ -88,7 +89,7 @@ def create_reference():
         if request.is_json:
             return jsonify({"error": message}), 409
         flash(message, "danger")
-        return redirect(url_for("admin.list_references", view=1))
+        return redirect(url_for("admin.list_references"))
 
     item = ReferenceValue(
         type=reference_type,
@@ -114,7 +115,7 @@ def create_reference():
     if request.is_json:
         return jsonify(_serialize_reference(item)), 201
     flash("Справочное значение добавлено.", "success")
-    return redirect(url_for("admin.list_references", view=1))
+    return redirect(url_for("admin.list_references"))
 
 
 @admin_bp.route("/references/<int:reference_id>", methods=["PUT", "PATCH"])

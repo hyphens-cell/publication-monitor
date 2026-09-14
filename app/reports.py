@@ -117,11 +117,16 @@ def get_report_departments():
 
 
 def get_report_years():
-    return db.session.scalars(
-        select(Plan.year)
-        .where(
-            Plan.status == REPORT_PLAN_STATUS,
+    query = select(Plan.year).where(
+        Plan.status == REPORT_PLAN_STATUS,
+    )
+    if current_user.role == ROLE_DEPARTMENT_HEAD:
+        query = query.where(
+            Plan.department_id == current_user.department_id,
         )
+
+    return db.session.scalars(
+        query
         .distinct()
         .order_by(
             Plan.year.desc(),

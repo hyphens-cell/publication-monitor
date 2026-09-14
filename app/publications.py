@@ -26,6 +26,7 @@ from app.models import (
     Comment,
     Department,
     Plan,
+    PlanItem,
     Publication,
     PublicationAuthor,
     PublicationHistory,
@@ -320,6 +321,9 @@ def publications():
 
         query = query.join(
             Publication.plan_item
+        ).join(
+            Plan,
+            Plan.id == PlanItem.plan_id,
         ).filter(
             Plan.year == plan_year_value
         )
@@ -328,6 +332,12 @@ def publications():
         Publication.created_at.desc(),
         Publication.id.desc(),
     ).all()
+
+    plan_years_query = select(Plan.year)
+    if current_user.role == ROLE_DEPARTMENT_HEAD:
+        plan_years_query = plan_years_query.where(
+            Plan.department_id == current_user.department_id,
+        )
 
     return render_template(
         "publications/list.html",
@@ -342,7 +352,9 @@ def publications():
             else []
         ),
         plan_years=db.session.scalars(
-            select(Plan.year).distinct().order_by(Plan.year.desc())
+            plan_years_query
+            .distinct()
+            .order_by(Plan.year.desc())
         ).all(),
         verification_statuses=PUBLICATION_VERIFICATION_STATUSES,
         selected_verification_status=verification_status,
