@@ -1,5 +1,5 @@
 from app.extensions import db
-from app.models import Department, Employee, Plan, PlanItem, Publication, ReferenceValue, User
+from app.models import Department, Plan, PlanItem, Publication, ReferenceValue, User
 
 
 def make_user(username, role, department_id=None):
@@ -30,11 +30,23 @@ def make_plan(department_id, creator_id, status="DRAFT", with_item=True):
     db.session.flush()
     if with_item:
         publication_type = ReferenceValue(
-            type="PUBLICATION_TYPE", code="SCOPUS", name_ru="Scopus", name_kk="Scopus", sort_order=1, is_active=True
+            type="PUBLICATION_TYPE",
+            code="SCOPUS",
+            name_ru="Scopus",
+            name_kk="Scopus",
+            sort_order=1,
+            is_active=True,
         )
         db.session.add(publication_type)
         db.session.flush()
-        db.session.add(PlanItem(plan_id=plan.id, title="Publication", publication_type_id=publication_type.id, status="PLANNED"))
+        db.session.add(
+            PlanItem(
+                plan_id=plan.id,
+                title="Publication",
+                publication_type_id=publication_type.id,
+                status="PLANNED",
+            )
+        )
     db.session.commit()
     return plan
 

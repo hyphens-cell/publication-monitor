@@ -1,413 +1,82 @@
+{% from 'shared/ui.html' import icon, nav_link with context %}
 <!doctype html>
 <html lang="{{ current_language() }}">
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#5314CD">
-
-    <title>{% block title %}Publication Monitor{% endblock %}</title>
-
-    <link
-        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
-        rel="stylesheet"
-    >
-
-    <link
-        rel="stylesheet"
-        href="{{ url_for('static', filename='css/app.css') }}"
-    >
-
-    {% block head %}{% endblock %}
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#245bc4">
+  <title>{% block title %}Publication Monitor{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap/bootstrap.min.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+  {% block head %}{% endblock %}
 </head>
-
 <body>
-    <div class="pm-app">
-        <header class="navbar navbar-expand-lg pm-topbar sticky-top">
-            <div class="container-fluid px-3 px-lg-4">
-                <button
-                    class="btn pm-menu-button d-lg-none me-2"
-                    type="button"
-                    data-bs-toggle="offcanvas"
-                    data-bs-target="#pmSidebar"
-                    aria-controls="pmSidebar"
-                    aria-label="{{ tr('Открыть меню') }}"
-                >
-                    <span class="pm-menu-icon">☰</span>
-                </button>
-
-                <a
-                    class="navbar-brand pm-brand"
-                    href="{{ url_for('main.index') }}"
-                >
-                    <span class="pm-brand-mark">P</span>
-                    <span class="pm-brand-name">Publication Monitor</span>
-                </a>
-
-                <div class="d-flex align-items-center gap-2 ms-auto">
-                    <div class="dropdown">
-                        <button
-                            class="btn pm-language-button dropdown-toggle"
-                            type="button"
-                            data-bs-toggle="dropdown"
-                            aria-expanded="false"
-                        >
-                            {% if current_language() == "kk" %}ҚАЗ{% else %}RU{% endif %}
-                        </button>
-
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li>
-                                <form method="post" action="{{ url_for('auth.change_language') }}">
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                    <input type="hidden" name="language" value="ru">
-                                    <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
-                                    <button class="dropdown-item{% if current_language() == 'ru' %} active{% endif %}" type="submit">{{ tr("Русский") }}</button>
-                                </form>
-                            </li>
-                            <li>
-                                <form method="post" action="{{ url_for('auth.change_language') }}">
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                    <input type="hidden" name="language" value="kk">
-                                    <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
-                                    <button class="dropdown-item{% if current_language() == 'kk' %} active{% endif %}" type="submit">Қазақша</button>
-                                </form>
-                            </li>
-                        </ul>
-                    </div>
-
-                    <div class="dropdown">
-                        <button
-                            class="btn pm-user-button dropdown-toggle"
-                            type="button"
-                            data-bs-toggle="dropdown"
-                            aria-expanded="false"
-                        >
-                            <span class="pm-avatar">
-                                {{
-                                    (
-                                        current_user.full_name
-                                        or current_user.username
-                                    )[0] | upper
-                                }}
-                            </span>
-                            <span class="d-none d-md-inline">
-                                {{ current_user.full_name or current_user.username }}
-                            </span>
-                        </button>
-
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li>
-                                <span class="dropdown-item-text">
-                                    {% if current_user.role == "TECH_ADMIN" %}
-                                        {{ role_label("TECH_ADMIN") }}
-                                    {% elif current_user.role == "ADMIN" %}
-                                        {{ role_label("ADMIN") }}
-                                    {% elif current_user.role == "DEPARTMENT_HEAD" %}
-                                        {{ role_label("DEPARTMENT_HEAD") }}
-                                    {% else %}
-                                        {{ tr("Пользователь") }}
-                                    {% endif %}
-                                </span>
-                            </li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li>
-                                <form
-                                    method="post"
-                                    action="{{ url_for('auth.logout') }}"
-                                    class="m-0"
-                                >
-                                    <input
-                                        type="hidden"
-                                        name="csrf_token"
-                                        value="{{ csrf_token() }}"
-                                    >
-                                    <button
-                                        type="submit"
-                                        class="dropdown-item pm-logout-item"
-                                    >
-                                        {{ tr("Выйти") }}
-                                    </button>
-                                </form>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        </header>
-
-        <div class="d-flex">
-            <aside
-                class="offcanvas-lg offcanvas-start pm-sidebar"
-                tabindex="-1"
-                id="pmSidebar"
-                aria-labelledby="pmSidebarLabel"
-            >
-                <div class="offcanvas-header d-lg-none">
-                    <h5 class="offcanvas-title" id="pmSidebarLabel">{{ tr("Меню") }}</h5>
-                    <button
-                        type="button"
-                        class="btn-close"
-                        data-bs-dismiss="offcanvas"
-                        data-bs-target="#pmSidebar"
-                        aria-label="{{ tr('Закрыть') }}"
-                    ></button>
-                </div>
-
-                <div class="offcanvas-body d-flex flex-column p-3">
-                    <nav class="pm-navigation">
-                        <a
-                            class="pm-nav-link {% if request.endpoint == 'main.index' %}active{% endif %}"
-                            href="{{ url_for('main.index') }}"
-                        >
-                            <span class="pm-nav-icon">⌂</span>
-                            <span>{{ tr("Главная") }}</span>
-                        </a>
-
-                        {% if current_user.role == "ADMIN" %}
-                            <div class="pm-nav-heading">{{ tr("Публикационная деятельность") }}</div>
-
-                            <a
-                                class="pm-nav-link {% if request.endpoint and request.endpoint.startswith('plans.') %}active{% endif %}"
-                                href="{{ url_for('plans.plans') }}"
-                            >
-                                <span class="pm-nav-icon">▣</span>
-                                <span>{{ tr("Планы") }}</span>
-                            </a>
-
-                            <a
-                                class="pm-nav-link {% if request.endpoint and request.endpoint.startswith('publications.') and request.args.get('verification_status') != 'PENDING' %}active{% endif %}"
-                                href="{{ url_for('publications.publications') }}"
-                            >
-                                <span class="pm-nav-icon">◈</span>
-                                <span>{{ tr("Публикации") }}</span>
-                            </a>
-
-                            <a
-                                class="pm-nav-link {% if request.endpoint == 'publications.publications' and request.args.get('verification_status') == 'PENDING' %}active{% endif %}"
-                                href="{{ url_for('publications.publications', verification_status='PENDING') }}"
-                            >
-                                <span class="pm-nav-icon">✓</span>
-                                <span>{{ tr("Проверка") }}</span>
-                            </a>
-
-                            <a
-                                class="pm-nav-link {% if request.endpoint and request.endpoint.startswith('monitoring.') %}active{% endif %}"
-                                href="{{ url_for('monitoring.dashboard') }}"
-                            >
-                                <span class="pm-nav-icon">◉</span>
-                                <span>{{ tr("Мониторинг") }}</span>
-                            </a>
-
-                            <a
-                                class="pm-nav-link {% if request.endpoint and request.endpoint.startswith('reports.') %}active{% endif %}"
-                                href="{{ url_for('reports.publications_report') }}"
-                            >
-                                <span class="pm-nav-icon">▤</span>
-                                <span>{{ tr("Отчёты") }}</span>
-                            </a>
-
-                            <a
-                                class="pm-nav-link {% if request.endpoint and request.endpoint.startswith('analytics.') %}active{% endif %}"
-                                href="{{ url_for('analytics.dashboard') }}"
-                            >
-                                <span class="pm-nav-icon">▥</span>
-                                <span>{{ tr("Аналитика") }}</span>
-                            </a>
-
-                        {% elif current_user.role == "DEPARTMENT_HEAD" %}
-                            <div class="pm-nav-heading">{{ tr("Моя кафедра") }}</div>
-
-                            <a
-                                class="pm-nav-link {% if request.endpoint and request.endpoint.startswith('plans.') %}active{% endif %}"
-                                href="{{ url_for('plans.plans') }}"
-                            >
-                                <span class="pm-nav-icon">▣</span>
-                                <span>{{ tr("Планы") }}</span>
-                            </a>
-
-                            <a
-                                class="pm-nav-link {% if request.endpoint and request.endpoint.startswith('publications.') %}active{% endif %}"
-                                href="{{ url_for('publications.publications') }}"
-                            >
-                                <span class="pm-nav-icon">◈</span>
-                                <span>{{ tr("Публикации") }}</span>
-                            </a>
-
-                            <a
-                                class="pm-nav-link {% if request.endpoint and request.endpoint.startswith('employees.') %}active{% endif %}"
-                                href="{{ url_for('employees.employees') }}"
-                            >
-                                <span class="pm-nav-icon">♙</span>
-                                <span>{{ tr("Сотрудники") }}</span>
-                            </a>
-
-                            <a
-                                class="pm-nav-link {% if request.endpoint and request.endpoint.startswith('reports.') %}active{% endif %}"
-                                href="{{ url_for('reports.publications_report') }}"
-                            >
-                                <span class="pm-nav-icon">▤</span>
-                                <span>{{ tr("Отчёты") }}</span>
-                            </a>
-
-                            <a
-                                class="pm-nav-link {% if request.endpoint and request.endpoint.startswith('analytics.') %}active{% endif %}"
-                                href="{{ url_for('analytics.dashboard') }}"
-                            >
-                                <span class="pm-nav-icon">▥</span>
-                                <span>{{ tr("Аналитика") }}</span>
-                            </a>
-
-                        {% elif current_user.role == "TECH_ADMIN" %}
-                            <div class="pm-nav-heading">{{ tr("Система") }}</div>
-
-                            <a
-                                class="pm-nav-link {% if request.endpoint and request.endpoint.startswith('admin.users') %}active{% endif %}"
-                                href="{{ url_for('admin.users') }}"
-                            >
-                                <span class="pm-nav-icon">♚</span>
-                                <span>{{ tr("Пользователи") }}</span>
-                            </a>
-
-                            <a
-                                class="pm-nav-link {% if request.endpoint and request.endpoint.startswith('admin.departments') %}active{% endif %}"
-                                href="{{ url_for('admin.departments') }}"
-                            >
-                                <span class="pm-nav-icon">⌂</span>
-                                <span>{{ tr("Кафедры") }}</span>
-                            </a>
-
-                            <a
-                                class="pm-nav-link {% if request.endpoint == 'admin.list_references' %}active{% endif %}"
-                                href="{{ url_for('admin.list_references') }}"
-                            >
-                                <span class="pm-nav-icon">≡</span>
-                                <span>{{ tr("Справочники") }}</span>
-                            </a>
-
-                            <a
-                                class="pm-nav-link {% if request.endpoint == 'admin.audit_list' %}active{% endif %}"
-                                href="{{ url_for('admin.audit_list') }}"
-                            >
-                                <span class="pm-nav-icon">▤</span>
-                                <span>{{ tr("Журнал действий") }}</span>
-                            </a>
-
-                            <a
-                                class="pm-nav-link {% if request.endpoint in ['admin.system_dashboard', 'admin.system_status'] %}active{% endif %}"
-                                href="{{ url_for('admin.system_dashboard') }}"
-                            >
-                                <span class="pm-nav-icon">⚙</span>
-                                <span>{{ tr("Состояние системы") }}</span>
-                            </a>
-
-                            <a
-                                class="pm-nav-link {% if request.endpoint in ['admin.backups_page', 'admin.list_backups', 'admin.download_backup'] %}active{% endif %}"
-                                href="{{ url_for('admin.backups_page') }}"
-                            >
-                                <span class="pm-nav-icon">▱</span>
-                                <span>{{ tr("Резервные копии") }}</span>
-                            </a>
-                        {% endif %}
-                    </nav>
-
-                    <div class="pm-sidebar-footer mt-auto">
-                        <div class="pm-role-card">
-                            <span class="pm-avatar pm-avatar-small">
-                                {{
-                                    (
-                                        current_user.full_name
-                                        or current_user.username
-                                    )[0] | upper
-                                }}
-                            </span>
-
-                            <div class="min-w-0">
-                                <div class="pm-role-name text-truncate">
-                                    {{ current_user.full_name or current_user.username }}
-                                </div>
-                                <div class="pm-role-description text-truncate">
-                                    {% if current_user.role == "TECH_ADMIN" %}
-                                        {{ role_label("TECH_ADMIN") }}
-                                    {% elif current_user.role == "ADMIN" %}
-                                        {{ role_label("ADMIN") }}
-                                    {% elif current_user.role == "DEPARTMENT_HEAD" %}
-                                        {{ role_label("DEPARTMENT_HEAD") }}
-                                    {% else %}
-                                        {{ tr("Пользователь") }}
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </aside>
-
-            <main class="pm-main flex-grow-1">
-                <div class="container-fluid px-3 px-lg-4 py-4">
-                    {% with messages = get_flashed_messages(with_categories=true) %}
-                        {% if messages %}
-                            <div class="mb-4">
-                                {% for category, message in messages %}
-                                    <div
-                                        class="alert alert-{{ category if category in ['success', 'danger', 'warning', 'info'] else 'info' }} pm-alert alert-dismissible fade show"
-                                        role="alert"
-                                    >
-                                        {{ tr(message) }}
-                                        <button
-                                            type="button"
-                                            class="btn-close"
-                                            data-bs-dismiss="alert"
-                                            aria-label="{{ tr('Закрыть') }}"
-                                        ></button>
-                                    </div>
-                                {% endfor %}
-                            </div>
-                        {% endif %}
-                    {% endwith %}
-
-                    {% if request.endpoint != 'main.index' %}
-                        <nav class="pm-breadcrumb" aria-label="{{ tr('Навигационная цепочка') }}">
-                            <ol class="breadcrumb mb-3">
-                                <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">{{ tr("Главная") }}</a></li>
-                                <li class="breadcrumb-item active" aria-current="page">{{ self.page_title() }}</li>
-                            </ol>
-                        </nav>
-                    {% endif %}
-
-                    <div class="pm-page-header">
-                        <div>
-                            <h1 class="pm-page-title">
-                                {% block page_title %}Publication Monitor{% endblock %}
-                            </h1>
-
-                            {% block page_subtitle %}{% endblock %}
-                        </div>
-
-                        {% block page_actions %}{% endblock %}
-                    </div>
-
-                    {% block content %}{% endblock %}
-                </div>
-            </main>
+<a class="pm-skip-link" href="#main-content">{{ tr('Перейти к содержимому') }}</a>
+<div class="pm-app">
+  <header class="navbar pm-topbar sticky-top">
+    <div class="pm-topbar-inner">
+      <button class="btn pm-menu-button d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#pmSidebar" aria-controls="pmSidebar" aria-label="{{ tr('Открыть меню') }}">{{ icon('menu') }}</button>
+      <a class="pm-brand" href="{{ url_for('main.index') }}" aria-label="Publication Monitor"><span class="pm-brand-mark" aria-hidden="true">P</span><span class="pm-brand-name">Publication Monitor</span><span class="pm-product-version">2.0</span></a>
+      <span class="pm-topbar-context">{{ tr('Публикационная деятельность') }}</span>
+      <div class="pm-topbar-actions">
+        {% if current_user.role in ['ADMIN', 'DEPARTMENT_HEAD'] %}
+        <a class="btn pm-icon-button position-relative" href="{{ url_for('discussion.notifications') }}" aria-label="{{ tr('Уведомления') }}{% if unread_notification_count %}: {{ unread_notification_count }}{% endif %}">{{ icon('bell') }}{% if unread_notification_count %}<span class="badge badge-pm-warning">{{ unread_notification_count }}</span>{% endif %}</a>
+        {% endif %}
+        <div class="dropdown">
+          <button class="btn pm-language-button dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="{{ tr('Язык интерфейса') }}">{{ 'ҚАЗ' if current_language() == 'kk' else 'RU' }}</button>
+          <ul class="dropdown-menu dropdown-menu-end">
+            {% for code, label in [('ru', 'Русский'), ('kk', 'Қазақша')] %}
+            <li><form method="post" action="{{ url_for('auth.change_language') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="language" value="{{ code }}"><input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}"><button class="dropdown-item{% if current_language() == code %} active{% endif %}" type="submit">{{ tr(label) }}</button></form></li>
+            {% endfor %}
+          </ul>
         </div>
+        <div class="dropdown">
+          <button class="btn pm-user-button dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="{{ tr('Меню пользователя') }}"><span class="pm-avatar">{{ (current_user.full_name or current_user.username)[0]|upper }}</span><span class="pm-user-name d-none d-md-inline">{{ current_user.full_name or current_user.username }}</span></button>
+          <ul class="dropdown-menu dropdown-menu-end"><li><span class="dropdown-item-text small text-body-secondary">{{ role_label(current_user.role) }}</span></li><li><hr class="dropdown-divider"></li><li><form method="post" action="{{ url_for('auth.logout') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="dropdown-item pm-logout-item" type="submit">{{ tr('Выйти') }}</button></form></li></ul>
+        </div>
+      </div>
     </div>
-
-    <script
-        src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
-    ></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script>
-        window.pmMessages = {
-            confirmDestructive: {{ tr("Подтвердите выполнение необратимого действия.")|tojson }},
-            analyticsDataError: {{ tr("Не удалось прочитать данные аналитики.")|tojson }},
-            quantity: {{ tr("Количество")|tojson }},
-            plan: {{ tr("План")|tojson }},
-            fact: {{ tr("Факт")|tojson }},
-            untitled: {{ tr("Без названия")|tojson }},
-            chartUnavailable: {{ tr("Диаграммы временно недоступны.")|tojson }}
-        };
-    </script>
-    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
-
-    {% block scripts %}{% endblock %}
-</body>
-</html>
+  </header>
+  <div class="pm-shell">
+    <aside class="offcanvas-lg offcanvas-start pm-sidebar" tabindex="-1" id="pmSidebar" aria-label="{{ tr('Меню') }}">
+      <div class="offcanvas-header d-lg-none"><h2 class="offcanvas-title h5">{{ tr('Меню') }}</h2><button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#pmSidebar" aria-label="{{ tr('Закрыть') }}"></button></div>
+      <div class="offcanvas-body">
+        {% set endpoint = request.endpoint or '' %}
+        <nav class="pm-navigation" aria-label="{{ tr('Основная навигация') }}">
+          {{ nav_link('main.index', 'Главная', 'home', endpoint == 'main.index') }}
+          {% if current_user.role in ['ADMIN', 'DEPARTMENT_HEAD'] %}
+          <div class="pm-nav-heading">{{ tr('Рабочее пространство') }}</div>
+          {{ nav_link('plans.plans', 'Планы', 'plan', endpoint.startswith('plans.')) }}
+          {{ nav_link('publications.publications', 'Публикации', 'document', endpoint.startswith('publications.') and request.args.get('verification_status') != 'PENDING') }}
+          {% if current_user.role == 'ADMIN' %}
+          {{ nav_link('publications.publications', 'Проверка', 'check', endpoint == 'publications.publications' and request.args.get('verification_status') == 'PENDING', {'verification_status':'PENDING'}) }}
+          {{ nav_link('monitoring.dashboard', 'Мониторинг', 'monitor', endpoint.startswith('monitoring.')) }}
+          {% else %}{{ nav_link('employees.employees', 'Сотрудники', 'users', endpoint.startswith('employees.')) }}{% endif %}
+          <div class="pm-nav-heading">{{ tr('Показатели и отчёты') }}</div>
+          {{ nav_link('analytics.dashboard', 'Аналитика', 'chart', endpoint.startswith('analytics.')) }}
+          {{ nav_link('reports.publications_report', 'Отчёты', 'document', endpoint.startswith('reports.')) }}
+          {% if current_user.role == 'ADMIN' %}<div class="pm-nav-heading">{{ tr('Управление') }}</div>{{ nav_link('admin.list_references', 'Справочники', 'list', endpoint == 'admin.list_references') }}{{ nav_link('admin.audit_list', 'Журнал событий', 'clock', endpoint == 'admin.audit_list') }}{% endif %}
+          {{ nav_link('discussion.notifications', 'Уведомления', 'bell', endpoint.startswith('discussion.')) }}
+          {% elif current_user.role == 'TECH_ADMIN' %}
+          <div class="pm-nav-heading">{{ tr('Система') }}</div>
+          {{ nav_link('admin.users', 'Пользователи', 'users', endpoint in ['admin.users','admin.create_user','admin.edit_user']) }}
+          {{ nav_link('admin.departments', 'Кафедры', 'building', endpoint in ['admin.departments','admin.create_department','admin.edit_department']) }}
+          {{ nav_link('admin.audit_list', 'Журнал действий', 'clock', endpoint == 'admin.audit_list') }}
+          {{ nav_link('admin.system_dashboard', 'Состояние системы', 'monitor', endpoint in ['admin.system_dashboard','admin.system_status']) }}
+          {{ nav_link('admin.backups_page', 'Резервные копии', 'archive', endpoint in ['admin.backups_page','admin.list_backups','admin.download_backup']) }}
+          {% endif %}
+        </nav>
+        <div class="pm-sidebar-footer"><div class="pm-role-card"><span class="pm-avatar">{{ (current_user.full_name or current_user.username)[0]|upper }}</span><div class="min-w-0"><div class="pm-role-name text-truncate">{{ current_user.full_name or current_user.username }}</div><div class="pm-role-description">{{ role_label(current_user.role) }}</div></div></div><button class="btn btn-light border pm-sidebar-toggle d-none d-lg-inline-flex align-items-center justify-content-center gap-2" type="button" id="sidebar-toggle" aria-pressed="false" aria-label="{{ tr('Компактное меню') }}">{{ icon('panel') }}<span>{{ tr('Компактное меню') }}</span></button></div>
+      </div>
+    </aside>
+    <main class="pm-main" id="main-content" tabindex="-1"><div class="pm-content">
+      {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}<div class="mb-4" id="page-messages">{% for category, message in messages %}<div class="alert alert-{{ category if category in ['success','danger','warning','info'] else 'info' }} pm-alert alert-dismissible show" role="{{ 'alert' if category in ['danger','warning'] else 'status' }}">{{ tr(message) }}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="{{ tr('Закрыть') }}"></button></div>{% endfor %}</div>{% endif %}{% endwith %}
+      {% if endpoint != 'main.index' %}<nav class="pm-breadcrumb" aria-label="{{ tr('Навигационная цепочка') }}"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">{{ tr('Главная') }}</a></li><li class="breadcrumb-item active" aria-current="page">{{ self.page_title() }}</li></ol></nav>{% endif %}
+      <div class="pm-page-header"><div class="pm-page-heading"><h1 class="pm-page-title">{% block page_title %}Publication Monitor{% endblock %}</h1>{% block page_subtitle %}{% endblock %}</div><div class="pm-page-actions">{% block page_actions %}{% endblock %}</div></div>
+      {% block content %}{% endblock %}
+    </div></main>
+  </div>
+</div>
+<script id="pm-messages" type="application/json">{{ {'confirmDestructive':tr('Подтвердите выполнение необратимого действия.'), 'unsavedChanges':tr('Есть несохранённые изменения. Покинуть страницу?'), 'required':tr('Обязательное поле'), 'invalid':tr('Проверьте значение поля.'), 'table':tr('Таблица данных'), 'scrollTable':tr('Таблицу можно прокручивать по горизонтали.'), 'passwordMismatch':tr('Пароли не совпадают.')}|tojson }}</script>
+<script src="{{ url_for('static', filename='vendor/bootstrap/bootstrap.bundle.min.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
+{% block scripts %}{% endblock %}
+</body></html>

@@ -1,17 +1,24 @@
-from flask import Flask, current_app, render_template
+from hmac import compare_digest
+from pathlib import Path
+
+from flask import Flask, session
 
 from app.admin import admin_bp
+from app.analytics import analytics_bp
 from app.auth import auth_bp
-from app.config import Config
-from app.extensions import bcrypt, csrf, db, login_manager, migrate
+from app.config import configure_app
+from app.discussion import discussion_bp
+from app.employees import employees_bp
+from app.errors import register_error_handlers
+from app.extensions import bcrypt, csrf, db, limiter, login_manager, migrate
 from app.i18n import (
-    audit_action_label,
     ATTACHMENT_STATUS_LABELS,
     PLAN_STATUS_LABELS,
     PUBLICATION_STATUS_LABELS,
     ROLE_LABELS,
     VERIFICATION_STATUS_LABELS,
     TemplateTranslationExtension,
+    audit_action_label,
     current_language,
     format_file_size,
     localized_label,
@@ -19,26 +26,27 @@ from app.i18n import (
 )
 from app.main import main_bp
 from app.models import User
-
-import app.admin.users
-import app.admin.departments
-from app.employees import employees_bp
+from app.monitoring import monitoring_bp
 from app.plans import plans_bp
 from app.publications import publications_bp
-from app.seed_reference_values import seed_reference_values
-from app.monitoring import monitoring_bp
 from app.reports import reports_bp
-from app.analytics import analytics_bp
+from app.security import password_stamp, register_security_headers
+from app.seed_reference_values import seed_reference_values
 
-def create_app():
-    app = Flask(__name__)
-    app.config.from_object(Config)
+
+def create_app(config=None, *, instance_path=None):
+    app = Flask(__name__, instance_path=instance_path)
+    configure_app(app, config)
+    Path(app.instance_path).mkdir(parents=True, exist_ok=True)
 
     db.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
     bcrypt.init_app(app)
     csrf.init_app(app)
+    limiter.init_app(app)
+    register_security_headers(app)
+    register_error_handlers(app)
     app.jinja_env.add_extension(TemplateTranslationExtension)
     app.jinja_env.globals.update(
         audit_action_label=audit_action_label,
@@ -58,7 +66,18 @@ def create_app():
 
     @login_manager.user_loader
     def load_user(user_id):
-        return db.session.get(User, int(user_id))
+        try:
+            user = db.session.get(User, int(user_id))
+        except (TypeError, ValueError):
+            return None
+        if user is None or not user.is_active:
+            return None
+        stamp = session.get("auth_stamp")
+        if stamp is not None and (
+            not isinstance(stamp, str) or not compare_digest(stamp, password_stamp(user))
+        ):
+            return None
+        return user
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
@@ -69,34 +88,12 @@ def create_app():
     app.register_blueprint(monitoring_bp)
     app.register_blueprint(reports_bp)
     app.register_blueprint(analytics_bp)
+    app.register_blueprint(discussion_bp)
 
-    @app.errorhandler(400)
-    def bad_request(error):
-        return render_template("errors/error.html", status_code=400, title="Некорректный запрос", message="Проверьте введённые данные и повторите попытку."), 400
-
-    @app.errorhandler(403)
-    def forbidden(error):
-        return render_template("errors/error.html", status_code=403, title="Доступ запрещён", message="У вас нет прав для выполнения этого действия."), 403
-
-    @app.errorhandler(404)
-    def not_found(error):
-        return render_template("errors/error.html", status_code=404, title="Страница не найдена", message="Запрошенная страница или запись не существует."), 404
-
-    @app.errorhandler(413)
-    def request_too_large(error):
-        return render_template("errors/error.html", status_code=413, title="Файл слишком большой", message="Выберите файл меньшего размера и повторите загрузку."), 413
-
-    @app.errorhandler(500)
-    def internal_error(error):
-        current_app.logger.exception("Unhandled application error")
-        db.session.rollback()
-        return render_template("errors/error.html", status_code=500, title="Ошибка сервера", message="Не удалось обработать запрос. Попробуйте ещё раз позже."), 500
     @app.cli.command("seed-reference-values")
     def seed_reference_values_command():
         created_count = seed_reference_values()
 
-        print(
-            f"Создано справочных значений: {created_count}"
-        )
+        print(f"Создано справочных значений: {created_count}")
 
     return app

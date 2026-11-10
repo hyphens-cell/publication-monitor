@@ -89,7 +89,12 @@ def test_doi_normalization_handles_url_case_and_spaces():
 
 def test_technical_admin_routes_are_registered(app):
     endpoints = {rule.endpoint for rule in app.url_map.iter_rules()}
-    assert {"admin.audit_list", "admin.list_references", "admin.system_status", "admin.list_backups"} <= endpoints
+    assert {
+        "admin.audit_list",
+        "admin.list_references",
+        "admin.system_status",
+        "admin.list_backups",
+    } <= endpoints
 
 
 def test_technical_admin_can_open_audit_and_system_pages(client, app):
@@ -101,10 +106,9 @@ def test_technical_admin_can_open_audit_and_system_pages(client, app):
     references_response = client.get("/admin/references")
     assert audit_response.status_code == 200
     assert audit_response.content_type.startswith("text/html")
-    assert references_response.status_code == 200
-    assert references_response.content_type.startswith("text/html")
+    assert references_response.status_code == 302
     assert client.get("/admin/api/audit").is_json
-    assert client.get("/admin/api/references").is_json
+    assert client.get("/admin/api/references").status_code == 302
     system_response = client.get("/admin/system")
     backups_response = client.get("/admin/system/backups")
     assert system_response.status_code == 200
@@ -138,12 +142,14 @@ def test_department_head_list_routes_default_to_own_department(client, app):
         db.session.add_all([own, other])
         db.session.commit()
         head = make_user("head", "DEPARTMENT_HEAD", own.id)
-        db.session.add_all([
-            Publication(department_id=own.id, title="Visible", status="PREPARATION"),
-            Publication(department_id=other.id, title="Hidden", status="PREPARATION"),
-            Plan(department_id=own.id, year=2026, status="APPROVED", created_by=head.id),
-            Plan(department_id=other.id, year=2099, status="APPROVED", created_by=head.id),
-        ])
+        db.session.add_all(
+            [
+                Publication(department_id=own.id, title="Visible", status="PREPARATION"),
+                Publication(department_id=other.id, title="Hidden", status="PREPARATION"),
+                Plan(department_id=own.id, year=2026, status="APPROVED", created_by=head.id),
+                Plan(department_id=other.id, year=2099, status="APPROVED", created_by=head.id),
+            ]
+        )
         db.session.commit()
         own_id = own.id
         other_id = other.id

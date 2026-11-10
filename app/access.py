@@ -37,10 +37,7 @@ def ensure_department_access(department_id):
         if current_user.department_id is None:
             abort(403)
 
-        if (
-            department_id is not None
-            and department_id != current_user.department_id
-        ):
+        if department_id is not None and department_id != current_user.department_id:
             abort(403)
 
     return True

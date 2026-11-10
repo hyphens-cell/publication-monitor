@@ -1,0 +1,505 @@
+[
+  {
+    "rule": "/admin/departments/<int:department_id>/archive",
+    "endpoint": "admin.archive_department",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "rule": "/admin/api/audit",
+    "endpoint": "admin.audit_api",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "rule": "/admin/audit/export.csv",
+    "endpoint": "admin.audit_export",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "rule": "/admin/audit",
+    "endpoint": "admin.audit_list",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "rule": "/admin/system/backups",
+    "endpoint": "admin.backups_page",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "rule": "/admin/users/<int:user_id>/block",
+    "endpoint": "admin.block_user",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "rule": "/admin/references/<int:reference_id>/status",
+    "endpoint": "admin.change_reference_status",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "rule": "/admin/system/backup",
+    "endpoint": "admin.create_backup",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "rule": "/admin/departments/create",
+    "endpoint": "admin.create_department",
+    "methods": [
+      "GET",
+      "POST"
+    ]
+  },
+  {
+    "rule": "/admin/references",
+    "endpoint": "admin.create_reference",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "rule": "/admin/users/create",
+    "endpoint": "admin.create_user",
+    "methods": [
+      "GET",
+      "POST"
+    ]
+  },
+  {
+    "rule": "/admin/users/<int:user_id>/delete",
+    "endpoint": "admin.delete_user",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "rule": "/admin/departments",
+    "endpoint": "admin.departments",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "rule": "/admin/system/backups/<filename>",
+    "endpoint": "admin.download_backup",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "rule": "/admin/departments/<int:department_id>/edit",
+    "endpoint": "admin.edit_department",
+    "methods": [
+      "GET",
+      "POST"
+    ]
+  },
+  {
+    "rule": "/admin/users/<int:user_id>/edit",
+    "endpoint": "admin.edit_user",
+    "methods": [
+      "GET",
+      "POST"
+    ]
+  },
+  {
+    "rule": "/admin/system/api/backups",
+    "endpoint": "admin.list_backups",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "rule": "/admin/references",
+    "endpoint": "admin.list_references",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "rule": "/admin/api/references",
+    "endpoint": "admin.references_api",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "rule": "/admin/departments/<int:department_id>/restore",
+    "endpoint": "admin.restore_department",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "rule": "/admin/system",
+    "endpoint": "admin.system_dashboard",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "rule": "/admin/system/status",
+    "endpoint": "admin.system_status",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "rule": "/admin/users/<int:user_id>/unblock",
+    "endpoint": "admin.unblock_user",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "rule": "/admin/references/<int:reference_id>",
+    "endpoint": "admin.update_reference",
+    "methods": [
+      "PATCH",
+      "POST",
+      "PUT"
+    ]
+  },
+  {
+    "rule": "/admin/users",
+    "endpoint": "admin.users",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "rule": "/analytics/",
+    "endpoint": "analytics.dashboard",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "rule": "/analytics/export.xlsx",
+    "endpoint": "analytics.export_excel",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "rule": "/analytics/export.pdf",
+    "endpoint": "analytics.export_pdf",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "rule": "/auth/language",
+    "endpoint": "auth.change_language",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "rule": "/auth/login",
+    "endpoint": "auth.login",
+    "methods": [
+      "GET",
+      "POST"
+    ]
+  },
+  {
+    "rule": "/auth/logout",
+    "endpoint": "auth.logout",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "rule": "/comments/<entity_type>/<int:entity_id>",
+    "endpoint": "discussion.create_comment",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "rule": "/notifications",
+    "endpoint": "discussion.notifications",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "rule": "/notifications/<int:notification_id>/read",
+    "endpoint": "discussion.read_notification",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "rule": "/employees/<int:employee_id>/archive",
+    "endpoint": "employees.archive_employee",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "rule": "/employees/create",
+    "endpoint": "employees.create_employee",
+    "methods": [
+      "GET",
+      "POST"
+    ]
+  },
+  {
+    "rule": "/employees/<int:employee_id>/edit",
+    "endpoint": "employees.edit_employee",
+    "methods": [
+      "GET",
+      "POST"
+    ]
+  },
+  {
+    "rule": "/employees/",
+    "endpoint": "employees.employees",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "rule": "/employees/<int:employee_id>/restore",
+    "endpoint": "employees.restore_employee",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "rule": "/",
+    "endpoint": "main.index",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "rule": "/monitoring/",
+    "endpoint": "monitoring.dashboard",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "rule": "/plans/<int:plan_id>/approve",
+    "endpoint": "plans.approve_plan",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "rule": "/plans/<int:plan_id>/assessment",
+    "endpoint": "plans.assess_plan",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "rule": "/plans/create",
+    "endpoint": "plans.create_plan",
+    "methods": [
+      "GET",
+      "POST"
+    ]
+  },
+  {
+    "rule": "/plans/<int:plan_id>/items/create",
+    "endpoint": "plans.create_plan_item",
+    "methods": [
+      "GET",
+      "POST"
+    ]
+  },
+  {
+    "rule": "/plans/<int:plan_id>/decline-correction",
+    "endpoint": "plans.decline_correction",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "rule": "/plans/<int:plan_id>/items/<int:item_id>/delete",
+    "endpoint": "plans.delete_plan_item",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "rule": "/plans/<int:plan_id>/items/<int:item_id>/edit",
+    "endpoint": "plans.edit_plan_item",
+    "methods": [
+      "GET",
+      "POST"
+    ]
+  },
+  {
+    "rule": "/plans/<int:plan_id>",
+    "endpoint": "plans.plan_detail",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "rule": "/plans/<int:plan_id>/versions/<int:version_id>",
+    "endpoint": "plans.plan_version",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "rule": "/plans/",
+    "endpoint": "plans.plans",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "rule": "/plans/<int:plan_id>/request-correction",
+    "endpoint": "plans.request_correction",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "rule": "/plans/<int:plan_id>/return",
+    "endpoint": "plans.return_plan",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "rule": "/plans/<int:plan_id>/submit",
+    "endpoint": "plans.submit_plan",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "rule": "/publications/<int:publication_id>/attachments/<int:attachment_id>/approve",
+    "endpoint": "publications.approve_publication_attachment",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "rule": "/publications/<int:publication_id>/status",
+    "endpoint": "publications.change_publication_status",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "rule": "/publications/<int:publication_id>/attachments/<int:attachment_id>/delete",
+    "endpoint": "publications.delete_publication_attachment",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "rule": "/publications/<int:publication_id>/attachments/<int:attachment_id>/download",
+    "endpoint": "publications.download_publication_attachment",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "rule": "/publications/<int:publication_id>/edit",
+    "endpoint": "publications.edit_publication",
+    "methods": [
+      "GET",
+      "POST"
+    ]
+  },
+  {
+    "rule": "/publications/<int:publication_id>",
+    "endpoint": "publications.publication_detail",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "rule": "/publications/",
+    "endpoint": "publications.publications",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "rule": "/publications/<int:publication_id>/attachments/<int:attachment_id>/reject",
+    "endpoint": "publications.reject_publication_attachment",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "rule": "/publications/<int:publication_id>/resolve-doi",
+    "endpoint": "publications.resolve_doi_conflict",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "rule": "/publications/<int:publication_id>/return",
+    "endpoint": "publications.return_publication",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "rule": "/publications/<int:publication_id>/attachments",
+    "endpoint": "publications.upload_publication_attachment",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "rule": "/publications/<int:publication_id>/verify",
+    "endpoint": "publications.verify_publication",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "rule": "/reports/publications/export.xlsx",
+    "endpoint": "reports.export_publications_excel",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "rule": "/reports/publications/export.pdf",
+    "endpoint": "reports.export_publications_pdf",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "rule": "/reports/publications",
+    "endpoint": "reports.publications_report",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "rule": "/static/<path:filename>",
+    "endpoint": "static",
+    "methods": [
+      "GET"
+    ]
+  }
+]

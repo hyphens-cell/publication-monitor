@@ -30,6 +30,7 @@
 {% endblock %}
 
 {% block content %}
+{% include "plans/progress.html" %}
 
 {% if not monitor and plan.status in ["DRAFT", "RETURNED"] %}
 
@@ -609,7 +610,7 @@
                             <tr>
 
                                 <td class="ps-4 fw-semibold">
-                                    {{ version.version_number }}
+                                    <a href="{{ url_for('plans.plan_version', plan_id=plan.id, version_id=version.id) }}">{{ version.version_number }}</a>
                                 </td>
 
 
@@ -680,4 +681,5 @@
 
 </section>
 
+{% with entity_type='PLAN', entity_id=plan.id %}{% include 'shared/comments.html' %}{% endwith %}
 {% endblock %}

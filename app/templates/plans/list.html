@@ -98,6 +98,7 @@
 
                                     <span class="badge rounded-pill {% if plan.status == 'APPROVED' %}badge-pm-success{% elif plan.status == 'SUBMITTED' %}badge-pm-warning{% elif plan.status == 'RETURNED' %}badge-pm-danger{% else %}badge-pm-primary{% endif %}">
                                         {{ plan_status_label(plan.status) }}
+                                        {% if plan.correction_requested_at %} · {{ tr('Запрос на корректировку') }}{% endif %}
                                     </span>
 
                                 </td>

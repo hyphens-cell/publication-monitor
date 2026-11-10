@@ -1,9 +1,10 @@
 from datetime import datetime
 
 from flask_login import UserMixin
-from sqlalchemy import UniqueConstraint, Index, CheckConstraint
+from sqlalchemy import CheckConstraint, Index, UniqueConstraint
 
-from app.extensions import db, bcrypt
+from app.extensions import bcrypt, db
+
 
 class User(UserMixin, db.Model):
     __tablename__ = "users"
@@ -106,6 +107,9 @@ class Department(db.Model):
 
 class Employee(db.Model):
     __tablename__ = "employees"
+    __table_args__ = (
+        Index("ix_employees_department_active_name", "department_id", "is_active", "full_name"),
+    )
 
     id = db.Column(db.Integer, primary_key=True)
     department_id = db.Column(
@@ -161,6 +165,13 @@ class Plan(db.Model):
     )
     submitted_at = db.Column(db.DateTime, nullable=True)
     approved_at = db.Column(db.DateTime, nullable=True)
+    approved_snapshot = db.Column(db.JSON, nullable=True)
+    correction_requested_at = db.Column(db.DateTime, nullable=True)
+    manual_assessment = db.Column(db.String(30), nullable=True)
+    assessment_comment = db.Column(db.Text, nullable=True)
+    assessed_by = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    assessed_at = db.Column(db.DateTime, nullable=True)
+    assessor = db.relationship("User", foreign_keys=[assessed_by])
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     updated_at = db.Column(
         db.DateTime,
@@ -170,6 +181,7 @@ class Plan(db.Model):
     )
 
     __table_args__ = (
+        Index("ix_plans_year_status", "year", "status"),
         UniqueConstraint(
             "department_id",
             "year",
@@ -208,6 +220,7 @@ class Plan(db.Model):
 
 class PlanItem(db.Model):
     __tablename__ = "plan_items"
+    __table_args__ = (Index("ix_plan_items_plan", "plan_id"),)
 
     id = db.Column(db.Integer, primary_key=True)
     plan_id = db.Column(
@@ -346,7 +359,7 @@ class Publication(db.Model):
     )
 
     title = db.Column(db.String(1000), nullable=False)
-    doi = db.Column(db.String(500),  nullable=True)
+    doi = db.Column(db.String(500), nullable=True)
     url = db.Column(db.String(1000), nullable=True)
 
     journal = db.Column(db.String(500), nullable=True)
@@ -402,6 +415,8 @@ class Publication(db.Model):
 
     __table_args__ = (
         Index("ix_publications_department", "department_id"),
+        Index("ix_publications_department_created", "department_id", "created_at", "id"),
+        Index("ix_publications_verification_created", "verification_status", "created_at", "id"),
         Index("ix_publications_status", "status"),
         Index("ix_publications_year", "publication_year"),
         Index("ix_publications_title", "title"),
@@ -476,6 +491,7 @@ class PublicationAuthor(db.Model):
 
 class PublicationHistory(db.Model):
     __tablename__ = "publication_history"
+    __table_args__ = (Index("ix_publication_history_publication_changed", "publication_id", "changed_at"),)
 
     id = db.Column(db.Integer, primary_key=True)
     publication_id = db.Column(
@@ -505,6 +521,7 @@ class PublicationHistory(db.Model):
 
 class Attachment(db.Model):
     __tablename__ = "attachments"
+    __table_args__ = (Index("ix_attachments_publication", "publication_id"),)
 
     id = db.Column(db.Integer, primary_key=True)
     publication_id = db.Column(
@@ -609,6 +626,7 @@ class Notification(db.Model):
     read_at = db.Column(db.DateTime, nullable=True)
 
     __table_args__ = (
+        Index("ix_notifications_email_pending", "email_sent", "id"),
         Index(
             "ix_notifications_user_read",
             "user_id",

@@ -1,5 +1,5 @@
-import socket
 import os
+import socket
 
 import qrcode
 
@@ -14,15 +14,15 @@ def get_local_ip():
     try:
         sock.connect(("8.8.8.8", 80))
         return sock.getsockname()[0]
+    except OSError:
+        return "127.0.0.1"
     finally:
         sock.close()
 
 
 if __name__ == "__main__":
-    # The local helper serves plain HTTP for devices in the university network.
-    # A production WSGI deployment must use HTTPS and retain the secure default.
-    if not os.getenv("SESSION_COOKIE_SECURE"):
-        app.config["SESSION_COOKIE_SECURE"] = False
+    if app.config["APP_ENV"] == "production":
+        raise SystemExit("Use a production WSGI server behind HTTPS; see README.md.")
 
     ip = get_local_ip()
     url = f"http://{ip}:5000"
@@ -39,7 +39,7 @@ if __name__ == "__main__":
     print(f"\nОткрой на телефоне: {url}\n")
 
     app.run(
-        host="0.0.0.0",
+        host=os.getenv("HOST", "127.0.0.1"),
         port=5000,
         debug=False,
         use_reloader=False,

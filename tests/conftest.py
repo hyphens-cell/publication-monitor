@@ -1,4 +1,9 @@
 import os
+from pathlib import Path
+
+_test_temp = Path(__file__).resolve().parents[1] / "instance" / "pytest-temp"
+_test_temp.mkdir(parents=True, exist_ok=True)
+os.environ.setdefault("PYTEST_DEBUG_TEMPROOT", str(_test_temp))
 
 import pytest
 
@@ -11,9 +16,8 @@ from app.extensions import db
 
 
 @pytest.fixture
-def app():
-    application = create_app()
-    application.config.update(TESTING=True, WTF_CSRF_ENABLED=False)
+def app(tmp_path):
+    application = create_app("testing", instance_path=str(tmp_path))
 
     with application.app_context():
         db.create_all()

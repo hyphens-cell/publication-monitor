@@ -1,9 +1,9 @@
-from flask import flash, jsonify, redirect, render_template, request, url_for
+from flask import abort, flash, jsonify, redirect, render_template, request, url_for
 from sqlalchemy import select
 
 from app.admin import admin_bp
 from app.audit import audit
-from app.auth import technical_admin_required
+from app.auth import admin_required
 from app.extensions import db
 from app.models import ReferenceValue
 
@@ -23,15 +23,28 @@ def _serialize_reference(item):
 def _payload():
     data = request.get_json(silent=True)
 
-    if data is None:
+    if request.is_json:
+        if not isinstance(data, dict):
+            abort(400)
+    else:
         data = request.form
-
+    for key, maximum in (("type", 100), ("code", 100), ("name_ru", 255), ("name_kk", 255)):
+        if key in data and (
+            not isinstance(data[key], str) or not data[key].strip() or len(data[key].strip()) > maximum
+        ):
+            abort(400)
+    if "sort_order" in data:
+        try:
+            if isinstance(data["sort_order"], bool) or not -(2**31) <= int(data["sort_order"]) < 2**31:
+                abort(400)
+        except (ValueError, TypeError):
+            abort(400)
     return data
 
 
 @admin_bp.route("/references", methods=["GET"])
 @admin_bp.route("/api/references", methods=["GET"], endpoint="references_api")
-@technical_admin_required
+@admin_required
 def list_references():
     reference_type = request.args.get("type", "").strip()
 
@@ -52,7 +65,7 @@ def list_references():
 
 
 @admin_bp.route("/references", methods=["POST"])
-@technical_admin_required
+@admin_required
 def create_reference():
     data = _payload()
 
@@ -118,8 +131,8 @@ def create_reference():
     return redirect(url_for("admin.list_references"))
 
 
-@admin_bp.route("/references/<int:reference_id>", methods=["PUT", "PATCH"])
-@technical_admin_required
+@admin_bp.route("/references/<int:reference_id>", methods=["PUT", "PATCH", "POST"])
+@admin_required
 def update_reference(reference_id):
     item = db.session.get(ReferenceValue, reference_id)
 
@@ -139,11 +152,7 @@ def update_reference(reference_id):
         return jsonify({"error": "sort_order должен быть числом."}), 400
 
     if not reference_type or not code or not name_ru or not name_kk:
-        return jsonify(
-            {
-                "error": "type, code, name_ru и name_kk обязательны."
-            }
-        ), 400
+        return jsonify({"error": "type, code, name_ru и name_kk обязательны."}), 400
 
     duplicate = db.session.scalar(
         select(ReferenceValue).where(
@@ -154,10 +163,10 @@ def update_reference(reference_id):
     )
 
     if duplicate is not None:
-        return jsonify(
-            {"error": "Справочное значение с таким type и code уже существует."}
-        ), 409
+        return jsonify({"error": "Справочное значение с таким type и code уже существует."}), 409
 
+    if reference_type != item.type or code != item.code:
+        return jsonify({"error": "Тип и код существующего значения изменять нельзя."}), 400
     item.type = reference_type
     item.code = code
     item.name_ru = name_ru
@@ -173,11 +182,14 @@ def update_reference(reference_id):
 
     db.session.commit()
 
+    if not request.is_json:
+        flash("Справочное значение сохранено.", "success")
+        return redirect(url_for("admin.list_references"))
     return jsonify(_serialize_reference(item))
 
 
 @admin_bp.route("/references/<int:reference_id>/status", methods=["POST"])
-@technical_admin_required
+@admin_required
 def change_reference_status(reference_id):
     item = db.session.get(ReferenceValue, reference_id)
 
@@ -190,6 +202,8 @@ def change_reference_status(reference_id):
     if isinstance(value, bool):
         is_active = value
     else:
+        if str(value).strip().lower() not in {"0", "false", "no", "off", "1", "true", "yes", "on"}:
+            abort(400)
         is_active = str(value).strip().lower() in {
             "1",
             "true",
@@ -212,4 +226,7 @@ def change_reference_status(reference_id):
 
     db.session.commit()
 
+    if not request.is_json:
+        flash("Справочное значение сохранено.", "success")
+        return redirect(url_for("admin.list_references"))
     return jsonify(_serialize_reference(item))

@@ -1,0 +1,55 @@
+{% if plan.status == 'APPROVED' or plan.approved_snapshot %}
+<section class="card card-pm border-0 mb-4">
+  <div class="card-body p-4">
+    <h2 class="h5">{{ tr('Выполнение утверждённого плана') }}</h2>
+    <p class="mb-2">{{ tr('План') }}: <strong>{{ progress.planned_count }}</strong> · {{ tr('Факт') }}: <strong>{{ progress.actual_count }}</strong> · <strong>{{ progress.progress }}%</strong></p>
+    <p class="small text-body-secondary">{{ tr('Учитываются опубликованные и подтверждённые работы за год плана. Во время корректировки действует последняя утверждённая версия.') }}</p>
+    <span class="badge {{ 'badge-pm-success' if progress.assessment == 'COMPLETE' else 'badge-pm-danger' if progress.assessment == 'RISK' else 'badge-pm-warning' }}">{{ tr(assessments[progress.assessment]) }}</span>
+    <p class="small mt-2 mb-0">{{ tr('Автоматическая оценка') }}: {{ tr(assessments[progress.automatic_assessment]) }}. {{ tr('Просроченных работ') }}: {{ progress.overdue_count }}.</p>
+    {% if plan.assessment_comment %}<p class="mt-2 text-break">{{ plan.assessment_comment }} — {{ plan.assessor.full_name if plan.assessor else tr('Монитор') }}</p>{% endif %}
+    {% if monitor %}
+    <details class="mt-3"><summary>{{ tr('Изменить оценку') }}</summary>
+      <form method="post" action="{{ url_for('plans.assess_plan', plan_id=plan.id) }}" class="mt-3">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label for="assessment" class="form-label">{{ tr('Оценка') }}</label>
+        <select id="assessment" name="assessment" class="form-select mb-3">
+          <option value="AUTO">{{ tr('Автоматическая оценка') }}</option>
+          {% for code, label in assessments.items() %}<option value="{{ code }}" {% if plan.manual_assessment == code %}selected{% endif %}>{{ tr(label) }}</option>{% endfor %}
+        </select>
+        <label for="assessment-comment" class="form-label">{{ tr('Пояснение решения') }}</label>
+        <textarea id="assessment-comment" name="comment" class="form-control mb-3" rows="2" required maxlength="5000"></textarea>
+        <button type="submit" class="btn btn-pm-primary">{{ tr('Сохранить оценку') }}</button>
+      </form>
+    </details>
+    {% endif %}
+  </div>
+</section>
+{% endif %}
+{% if plan.status == 'APPROVED' %}
+<section class="card card-pm border-0 mb-4">
+  <div class="card-body p-4">
+    <h2 class="h5">{{ tr('Корректировка плана') }}</h2>
+    {% if plan.correction_requested_at %}
+      <p class="text-warning-emphasis">{{ tr('Запрос на корректировку ожидает решения монитора. План остаётся заблокированным.') }}</p>
+      {% if monitor %}
+      <form method="post" action="{{ url_for('plans.return_plan', plan_id=plan.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label for="correction-decision" class="form-label">{{ tr('Пояснение решения') }}</label>
+        <textarea id="correction-decision" name="comment" class="form-control mb-3" rows="3" required maxlength="5000"></textarea>
+        <div class="d-flex flex-wrap gap-2">
+          <button type="submit" class="btn btn-pm-primary">{{ tr('Разрешить корректировку') }}</button>
+          <button type="submit" class="btn btn-light border" formaction="{{ url_for('plans.decline_correction', plan_id=plan.id) }}">{{ tr('Отклонить запрос') }}</button>
+        </div>
+      </form>
+      {% endif %}
+    {% elif not monitor %}
+      <form method="post" action="{{ url_for('plans.request_correction', plan_id=plan.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label for="correction-reason" class="form-label">{{ tr('Причина корректировки') }}</label>
+        <textarea id="correction-reason" name="comment" class="form-control mb-3" rows="3" required maxlength="5000"></textarea>
+        <button class="btn btn-light border" type="submit">{{ tr('Запросить корректировку') }}</button>
+      </form>
+    {% else %}<p class="mb-0 text-body-secondary">{{ tr('Запросов на корректировку нет.') }}</p>{% endif %}
+  </div>
+</section>
+{% endif %}

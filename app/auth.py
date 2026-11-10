@@ -2,6 +2,7 @@ from functools import wraps
 
 from flask import (
     Blueprint,
+    current_app,
     flash,
     redirect,
     render_template,
@@ -17,10 +18,10 @@ from flask_login import (
 )
 from sqlalchemy import select
 
-from app.extensions import db
 from app.audit import audit
+from app.extensions import db, limiter
 from app.models import User
-
+from app.security import password_stamp, safe_local_redirect
 
 auth_bp = Blueprint(
     "auth",
@@ -42,11 +43,10 @@ VALID_ROLES = {
 
 
 @auth_bp.route("/login", methods=["GET", "POST"])
+@limiter.limit(lambda: current_app.config["LOGIN_RATE_LIMIT"], methods=["POST"])
 def login():
     if current_user.is_authenticated:
-        return redirect(
-            url_for("main.index")
-        )
+        return redirect(url_for("main.index"))
 
     if request.method == "POST":
         username = request.form.get(
@@ -59,21 +59,15 @@ def login():
             "",
         )
 
-        if not username or not password:
+        if not username or not password or len(username) > 100 or len(password.encode("utf-8")) > 72:
             flash(
                 "Введите логин и пароль.",
                 "warning",
             )
 
-            return render_template(
-                "auth/login.html"
-            )
+            return render_template("auth/login.html")
 
-        user = db.session.scalar(
-            select(User).where(
-                User.username == username
-            )
-        )
+        user = db.session.scalar(select(User).where(User.username == username))
 
         if user is None or not user.is_active:
             flash(
@@ -81,9 +75,7 @@ def login():
                 "danger",
             )
 
-            return render_template(
-                "auth/login.html"
-            )
+            return render_template("auth/login.html")
 
         if not user.check_password(password):
             flash(
@@ -91,33 +83,24 @@ def login():
                 "danger",
             )
 
-            return render_template(
-                "auth/login.html"
-            )
+            return render_template("auth/login.html")
 
         # Drop any anonymous session state before issuing the authenticated session.
         session.clear()
         session.permanent = True
         login_user(user)
+        session["auth_stamp"] = password_stamp(user)
         audit("USER_LOGGED_IN", entity_type="User", entity_id=user.id, details={"username": user.username})
         db.session.commit()
 
         next_url = request.args.get("next")
 
-        if (
-            next_url
-            and next_url.startswith("/")
-            and not next_url.startswith("//")
-        ):
+        if safe_local_redirect(next_url):
             return redirect(next_url)
 
-        return redirect(
-            url_for("main.index")
-        )
+        return redirect(url_for("main.index"))
 
-    return render_template(
-        "auth/login.html"
-    )
+    return render_template("auth/login.html")
 
 
 @auth_bp.route("/logout", methods=["POST"])
@@ -135,9 +118,7 @@ def logout():
         "success",
     )
 
-    return redirect(
-        url_for("auth.login")
-    )
+    return redirect(url_for("auth.login"))
 
 
 @auth_bp.route("/language", methods=["POST"])
@@ -153,7 +134,7 @@ def change_language():
             current_user.language = language
             db.session.commit()
 
-    if next_url.startswith("/") and not next_url.startswith("//"):
+    if safe_local_redirect(next_url):
         return redirect(next_url)
     return redirect(url_for("main.index"))
 
@@ -161,15 +142,10 @@ def change_language():
 def roles_required(*roles):
     allowed_roles = set(roles)
 
-    unknown_roles = (
-        allowed_roles - VALID_ROLES
-    )
+    unknown_roles = allowed_roles - VALID_ROLES
 
     if unknown_roles:
-        raise ValueError(
-            "Неизвестные роли: "
-            + ", ".join(sorted(unknown_roles))
-        )
+        raise ValueError("Неизвестные роли: " + ", ".join(sorted(unknown_roles)))
 
     def decorator(view):
         @wraps(view)
@@ -181,9 +157,7 @@ def roles_required(*roles):
                     "danger",
                 )
 
-                return redirect(
-                    url_for("main.index")
-                )
+                return redirect(url_for("main.index"))
 
             return view(
                 *args,

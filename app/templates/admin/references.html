@@ -18,12 +18,25 @@
                     </div>
                     <div class="table-responsive">
                         <table class="table table-pm align-middle mb-0">
-                            <thead><tr><th>Тип</th><th>Код</th><th>Русский</th><th>Қазақша</th><th>Порядок</th><th>Статус</th></tr></thead>
+                            <thead><tr><th>Тип</th><th>Код</th><th>Русский</th><th>Қазақша</th><th>Порядок</th><th>Статус</th><th>{{ tr("Действия") }}</th></tr></thead>
                             <tbody>
                                 {% for value in values %}
-                                    <tr><td><code class="pm-code">{{ value.type }}</code></td><td><code class="pm-code">{{ value.code }}</code></td><td>{{ value.name_ru }}</td><td>{{ value.name_kk }}</td><td>{{ value.sort_order }}</td><td><span class="badge rounded-pill {{ 'badge-pm-success' if value.is_active else 'badge-pm-warning' }}">{{ tr('Активен') if value.is_active else tr('Архивирован') }}</span></td></tr>
+                                    <tr><td><code class="pm-code">{{ value.type }}</code></td><td><code class="pm-code">{{ value.code }}</code></td><td>{{ value.name_ru }}</td><td>{{ value.name_kk }}</td><td>{{ value.sort_order }}</td><td><span class="badge rounded-pill {{ 'badge-pm-success' if value.is_active else 'badge-pm-warning' }}">{{ tr('Активен') if value.is_active else tr('Архивирован') }}</span></td><td>
+  <details><summary>{{ tr('Изменить') }}</summary>
+  <form method="post" action="{{ url_for('admin.update_reference', reference_id=value.id) }}" class="mt-2">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label for="ref-ru-{{ value.id }}">{{ tr('Название на русском') }}</label><input id="ref-ru-{{ value.id }}" class="form-control mb-2" name="name_ru" value="{{ value.name_ru }}" required maxlength="255">
+    <label for="ref-kk-{{ value.id }}">Қазақша атауы</label><input id="ref-kk-{{ value.id }}" class="form-control mb-2" name="name_kk" value="{{ value.name_kk }}" required maxlength="255">
+    <label for="ref-sort-{{ value.id }}">{{ tr('Порядок') }}</label><input id="ref-sort-{{ value.id }}" class="form-control mb-2" type="number" name="sort_order" value="{{ value.sort_order }}">
+    <button type="submit" class="btn btn-sm btn-pm-primary">{{ tr('Сохранить') }}</button>
+  </form>
+  <form method="post" action="{{ url_for('admin.change_reference_status', reference_id=value.id) }}" class="mt-2">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="is_active" value="{{ 'false' if value.is_active else 'true' }}">
+    <button type="submit" class="btn btn-sm btn-light border">{{ tr('Архивировать') if value.is_active else tr('Восстановить') }}</button>
+  </form></details>
+</td></tr>
                                 {% else %}
-                                    <tr><td colspan="6" class="pm-table-empty-cell text-center py-5"><div class="pm-empty-state"><div class="pm-empty-icon" aria-hidden="true">≡</div><h3 class="h6">Справочные значения не найдены</h3><p class="text-body-secondary mb-0">Добавьте новое значение или измените фильтр.</p></div></td></tr>
+                                    <tr><td colspan="7" class="pm-table-empty-cell text-center py-5"><div class="pm-empty-state"><div class="pm-empty-icon" aria-hidden="true">≡</div><h3 class="h6">Справочные значения не найдены</h3><p class="text-body-secondary mb-0">Добавьте новое значение или измените фильтр.</p></div></td></tr>
                                 {% endfor %}
                             </tbody>
                         </table>

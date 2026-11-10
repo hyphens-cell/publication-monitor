@@ -1,6 +1,7 @@
+import os
 import shutil
 import subprocess
-import os
+import uuid
 from datetime import datetime
 from pathlib import Path
 
@@ -17,6 +18,7 @@ from flask import (
 )
 from sqlalchemy import func, select, text
 from sqlalchemy.engine import make_url
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.admin import admin_bp
 from app.audit import audit
@@ -26,10 +28,8 @@ from app.models import AuditLog, Department, Employee, Plan, Publication, User
 
 
 def _database_host():
-    url = current_app.config.get("SQLALCHEMY_DATABASE_URI", "")
-    if "@" not in url:
-        return None
-    return url.rsplit("@", 1)[1]
+    url = make_url(current_app.config["SQLALCHEMY_DATABASE_URI"])
+    return f"{url.host}:{url.port or 5432}/{url.database}" if url.host else None
 
 
 def _backup_directory() -> Path:
@@ -42,8 +42,9 @@ def _backup_path(filename: str) -> Path:
     if not filename or Path(filename).name != filename or not filename.endswith(".dump"):
         abort(404)
 
-    path = _backup_directory() / filename
-    if not path.is_file():
+    root = _backup_directory().resolve()
+    path = (root / filename).resolve()
+    if not path.is_relative_to(root) or not path.is_file():
         abort(404)
     return path
 
@@ -101,9 +102,9 @@ def _system_status_payload():
     try:
         db.session.execute(text("SELECT 1"))
         database_ok = True
-    except Exception as exc:
+    except SQLAlchemyError:
         db.session.rollback()
-        database_error = str(exc)
+        database_error = "Соединение с базой данных недоступно."
 
     upload_root = Path(
         current_app.instance_path,
@@ -111,11 +112,7 @@ def _system_status_payload():
     )
 
     if upload_root.exists():
-        upload_size = sum(
-            path.stat().st_size
-            for path in upload_root.rglob("*")
-            if path.is_file()
-        )
+        upload_size = sum(path.stat().st_size for path in upload_root.rglob("*") if path.is_file())
     else:
         upload_size = 0
 
@@ -141,30 +138,32 @@ def _system_status_payload():
             "used_percent": round((disk.used / disk.total) * 100, 1) if disk.total else 0,
         },
         "counts": {
-            "users": db.session.scalar(
-                select(func.count()).select_from(User)
-            ),
+            "users": db.session.scalar(select(func.count()).select_from(User)),
             "active_users": db.session.scalar(
                 select(func.count()).select_from(User).where(User.is_active.is_(True))
             ),
-            "departments": db.session.scalar(
-                select(func.count()).select_from(Department)
-            ),
+            "departments": db.session.scalar(select(func.count()).select_from(Department)),
             "active_departments": db.session.scalar(
                 select(func.count()).select_from(Department).where(Department.is_active.is_(True))
             ),
-            "employees": db.session.scalar(
-                select(func.count()).select_from(Employee)
-            ),
-            "plans": db.session.scalar(
-                select(func.count()).select_from(Plan)
-            ),
-            "publications": db.session.scalar(
-                select(func.count()).select_from(Publication)
-            ),
-            "audit_logs": db.session.scalar(
-                select(func.count()).select_from(AuditLog)
-            ),
+            "employees": db.session.scalar(select(func.count()).select_from(Employee)),
+            "plans": db.session.scalar(select(func.count()).select_from(Plan)),
+            "publications": db.session.scalar(select(func.count()).select_from(Publication)),
+            "audit_logs": db.session.scalar(select(func.count()).select_from(AuditLog)),
+        }
+        if database_ok
+        else {
+            key: None
+            for key in (
+                "users",
+                "active_users",
+                "departments",
+                "active_departments",
+                "employees",
+                "plans",
+                "publications",
+                "audit_logs",
+            )
         },
     }
 
@@ -176,13 +175,13 @@ def _system_status_payload():
 def create_backup():
     database_url = current_app.config.get("SQLALCHEMY_DATABASE_URI", "")
 
-    if not database_url.startswith("postgresql"):
+    if make_url(database_url).get_backend_name() != "postgresql":
         return _backup_error("Резервное копирование поддерживает только PostgreSQL.", 500)
 
     backup_directory = _backup_directory()
 
     timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-    backup_path = backup_directory / f"publication_monitor_{timestamp}.dump"
+    backup_path = backup_directory / f"publication_monitor_{timestamp}_{uuid.uuid4().hex[:8]}.dump"
 
     try:
         command, process_env = _pg_dump_command(database_url, backup_path)
@@ -253,13 +252,17 @@ def list_backups():
 
 def _backup_items():
     files = []
-    for path in sorted(_backup_directory().glob("*.dump"), key=lambda item: item.stat().st_mtime, reverse=True):
+    for path in sorted(
+        _backup_directory().glob("*.dump"), key=lambda item: item.stat().st_mtime, reverse=True
+    ):
         stat = path.stat()
-        files.append({
-            "filename": path.name,
-            "size": stat.st_size,
-            "created_at": datetime.utcfromtimestamp(stat.st_mtime).isoformat(),
-        })
+        files.append(
+            {
+                "filename": path.name,
+                "size": stat.st_size,
+                "created_at": datetime.utcfromtimestamp(stat.st_mtime).isoformat(),
+            }
+        )
     return files
 
 

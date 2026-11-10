@@ -1,8 +1,9 @@
 from datetime import date, datetime
 
-from flask import Blueprint, flash, redirect, render_template, request, url_for
+from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
 from flask_login import current_user
-from sqlalchemy import func, select
+from sqlalchemy import select
+from sqlalchemy.orm import joinedload, selectinload
 
 from app.access import ensure_department_access
 from app.audit import audit
@@ -13,11 +14,24 @@ from app.auth import (
     department_head_required,
     roles_required,
 )
+from app.discussion import add_comment, comments_for, notify_participants
 from app.extensions import db
-from app.models import Comment, Employee, Plan, PlanItem, PlanItemAuthor, PlanVersion, ReferenceValue
-from app.publications import create_publications_from_plan
-
-
+from app.models import Employee, Plan, PlanItem, PlanItemAuthor, PlanVersion
+from app.progress import ASSESSMENTS, plan_progress
+from app.services.catalogue import get_reference_values
+from app.services.listing import paginate, search_term, sort_order
+from app.services.loading import plan_detail_options
+from app.services.plan_workflow import (
+    create_plan_version as create_plan_version,
+)
+from app.services.plan_workflow import (
+    get_next_version_number as get_next_version_number,
+)
+from app.services.plan_workflow import (
+    serialize_plan as serialize_plan,
+)
+from app.services.publication_workflow import create_publications_from_plan
+from app.services.validation import validate_plan_item
 
 plans_bp = Blueprint(
     "plans",
@@ -43,33 +57,22 @@ def next_plan_year():
     return date.today().year + 1
 
 
-def get_reference_values(reference_type):
-    return db.session.scalars(
-        select(ReferenceValue)
-        .where(
-            ReferenceValue.type == reference_type,
-            ReferenceValue.is_active.is_(True),
-        )
-        .order_by(
-            ReferenceValue.sort_order,
-            ReferenceValue.name_ru,
-        )
-    ).all()
-
-
-def get_department_employees(department_id):
+def get_department_employees(department_id, selected_ids=()):
     return db.session.scalars(
         select(Employee)
         .where(
             Employee.department_id == department_id,
-            Employee.is_active.is_(True),
+            Employee.is_active.is_(True) | Employee.id.in_(selected_ids),
         )
         .order_by(Employee.full_name)
     ).all()
 
 
 def get_plan(plan_id):
-    plan = db.session.get(Plan, plan_id)
+    query = select(Plan).where(Plan.id == plan_id).options(*plan_detail_options())
+    if request.method == "POST":
+        query = query.with_for_update(of=Plan)
+    plan = db.session.scalar(query)
 
     if plan is None:
         flash("План не найден.", "danger")
@@ -87,89 +90,6 @@ def get_accessible_plan(plan_id):
     ensure_department_access(plan.department_id)
 
     return plan
-
-def get_next_version_number(plan):
-    current_max = db.session.scalar(
-        select(func.max(PlanVersion.version_number))
-        .where(PlanVersion.plan_id == plan.id)
-    )
-
-    return (current_max or 0) + 1
-
-
-def serialize_plan(plan):
-    return {
-        "id": plan.id,
-        "department_id": plan.department_id,
-        "department_name": plan.department.name,
-        "year": plan.year,
-        "status": plan.status,
-        "created_by": plan.created_by,
-        "created_by_name": plan.creator.full_name,
-        "submitted_at": (
-            plan.submitted_at.isoformat()
-            if plan.submitted_at
-            else None
-        ),
-        "approved_at": (
-            plan.approved_at.isoformat()
-            if plan.approved_at
-            else None
-        ),
-        "items": [
-            {
-                "id": item.id,
-                "title": item.title,
-                "publication_type": {
-                    "id": item.publication_type.id,
-                    "code": item.publication_type.code,
-                    "name_ru": item.publication_type.name_ru,
-                    "name_kk": item.publication_type.name_kk,
-                },
-                "journal": item.journal,
-                "quartile": (
-                    {
-                        "id": item.quartile.id,
-                        "code": item.quartile.code,
-                        "name_ru": item.quartile.name_ru,
-                        "name_kk": item.quartile.name_kk,
-                    }
-                    if item.quartile
-                    else None
-                ),
-                "planned_date": (
-                    item.planned_date.isoformat()
-                    if item.planned_date
-                    else None
-                ),
-                "status": item.status,
-                "authors": [
-                    {
-                        "id": link.employee.id,
-                        "full_name": link.employee.full_name,
-                        "position": link.employee.position,
-                    }
-                    for link in item.author_links
-                ],
-            }
-            for item in plan.items
-        ],
-    }
-
-
-def create_plan_version(plan, status, comment=None):
-    version = PlanVersion(
-        plan_id=plan.id,
-        version_number=get_next_version_number(plan),
-        created_by=current_user.id,
-        status=status,
-        comment=comment,
-        data=serialize_plan(plan),
-    )
-
-    db.session.add(version)
-
-    return version
 
 
 def editable_plan_required(plan):
@@ -201,20 +121,27 @@ def plans():
     query = select(Plan)
 
     if department_id is not None:
-        query = query.where(
-            Plan.department_id == department_id
-        )
+        query = query.where(Plan.department_id == department_id)
 
-    plans_list = db.session.scalars(
-        query.order_by(
-            Plan.year.desc(),
-            Plan.department_id,
-        )
-    ).all()
+    term = search_term(request.args)
+    if term:
+        query = query.where(Plan.items.any(PlanItem.title.ilike(f"%{term}%", escape="\\")))
+    order = sort_order(
+        request.args,
+        {"year_desc": Plan.year.desc(), "year": Plan.year.asc(), "status": Plan.status.asc()},
+        "year_desc",
+    )
+    pagination = paginate(
+        query.options(joinedload(Plan.department), selectinload(Plan.items)).order_by(
+            order, Plan.department_id, Plan.id
+        ),
+        request.args,
+    )
 
     return render_template(
         "plans/list.html",
-        plans=plans_list,
+        plans=pagination.items,
+        pagination=pagination,
         monitor=current_user.role == ROLE_ADMIN,
     )
 
@@ -302,6 +229,7 @@ def plan_detail(plan_id):
 
     versions = db.session.scalars(
         select(PlanVersion)
+        .options(joinedload(PlanVersion.creator))
         .where(
             PlanVersion.plan_id == plan.id,
         )
@@ -315,6 +243,9 @@ def plan_detail(plan_id):
         plan=plan,
         versions=versions,
         monitor=current_user.role == ROLE_ADMIN,
+        comments=comments_for("PLAN", plan.id),
+        progress=plan_progress(plan),
+        assessments=ASSESSMENTS,
     )
 
 
@@ -339,119 +270,18 @@ def create_plan_item(plan_id):
 
     publication_types = get_reference_values("PUBLICATION_TYPE")
     quartiles = get_reference_values("QUARTILE")
-    employees = get_department_employees(
-        current_user.department_id
-    )
+    employees = get_department_employees(current_user.department_id)
 
     if request.method == "POST":
-        title = request.form.get("title", "").strip()
-        publication_type_id = request.form.get(
-            "publication_type_id",
-            "",
-        ).strip()
-        journal = request.form.get("journal", "").strip()
-        quartile_id = request.form.get(
-            "quartile_id",
-            "",
-        ).strip()
-        planned_date = request.form.get(
-            "planned_date",
-            "",
-        ).strip()
-
-        author_ids = request.form.getlist("author_ids")
-
-        errors = []
-
-        if not title:
-            errors.append(
-                "Введите название публикации."
-            )
-
-        try:
-            publication_type_id_value = int(
-                publication_type_id
-            )
-        except ValueError:
-            publication_type_id_value = None
-            errors.append(
-                "Выберите тип публикации."
-            )
-
-        publication_type = None
-
-        if publication_type_id_value is not None:
-            publication_type = db.session.scalar(
-                select(ReferenceValue).where(
-                    ReferenceValue.id == publication_type_id_value,
-                    ReferenceValue.type == "PUBLICATION_TYPE",
-                    ReferenceValue.is_active.is_(True),
-                )
-            )
-
-            if publication_type is None:
-                errors.append(
-                    "Выбран некорректный тип публикации."
-                )
-
-        quartile = None
-
-        if quartile_id:
-            try:
-                quartile_id_value = int(quartile_id)
-            except ValueError:
-                quartile_id_value = None
-                errors.append(
-                    "Выбран некорректный квартиль."
-                )
-
-            if quartile_id_value is not None:
-                quartile = db.session.scalar(
-                    select(ReferenceValue).where(
-                        ReferenceValue.id == quartile_id_value,
-                        ReferenceValue.type == "QUARTILE",
-                        ReferenceValue.is_active.is_(True),
-                    )
-                )
-
-                if quartile is None:
-                    errors.append(
-                        "Выбран некорректный квартиль."
-                    )
-
-        planned_date_value = None
-
-        if planned_date:
-            try:
-                planned_date_value = date.fromisoformat(
-                    planned_date
-                )
-            except ValueError:
-                errors.append(
-                    "Введите корректную планируемую дату."
-                )
-
-        selected_employee_ids = set()
-
-        for author_id in author_ids:
-            try:
-                selected_employee_ids.add(int(author_id))
-            except ValueError:
-                errors.append(
-                    "Выбран некорректный автор."
-                )
-
-        employees_by_id = {
-            employee.id: employee
-            for employee in employees
-        }
-
-        for employee_id in selected_employee_ids:
-            if employee_id not in employees_by_id:
-                errors.append(
-                    "Нельзя выбрать сотрудника другой кафедры."
-                )
-                break
+        values, errors = validate_plan_item(request.form, publication_types, quartiles, employees)
+        title = values.title
+        journal = values.journal
+        planned_date_value = values.planned_date
+        selected_employee_ids = set(values.author_ids)
+        publication_type = next(
+            (item for item in publication_types if item.id == values.publication_type_id), None
+        )
+        quartile = next((item for item in quartiles if item.id == values.quartile_id), None)
 
         if errors:
             for error in errors:
@@ -472,11 +302,7 @@ def create_plan_item(plan_id):
             title=title,
             publication_type_id=publication_type.id,
             journal=journal or None,
-            quartile_id=(
-                quartile.id
-                if quartile
-                else None
-            ),
+            quartile_id=(quartile.id if quartile else None),
             planned_date=planned_date_value,
             status=PLAN_ITEM_STATUS_PLANNED,
         )
@@ -501,11 +327,7 @@ def create_plan_item(plan_id):
                 "title": item.title,
                 "publication_type_id": item.publication_type_id,
                 "quartile_id": item.quartile_id,
-                "planned_date": (
-                    item.planned_date.isoformat()
-                    if item.planned_date
-                    else None
-                ),
+                "planned_date": (item.planned_date.isoformat() if item.planned_date else None),
                 "author_ids": sorted(selected_employee_ids),
             },
         )
@@ -571,118 +393,19 @@ def edit_plan_item(plan_id, item_id):
     publication_types = get_reference_values("PUBLICATION_TYPE")
     quartiles = get_reference_values("QUARTILE")
     employees = get_department_employees(
-        current_user.department_id
+        current_user.department_id, [link.employee_id for link in item.author_links]
     )
 
     if request.method == "POST":
-        title = request.form.get("title", "").strip()
-        publication_type_id = request.form.get(
-            "publication_type_id",
-            "",
-        ).strip()
-        journal = request.form.get("journal", "").strip()
-        quartile_id = request.form.get(
-            "quartile_id",
-            "",
-        ).strip()
-        planned_date = request.form.get(
-            "planned_date",
-            "",
-        ).strip()
-
-        author_ids = request.form.getlist("author_ids")
-
-        errors = []
-
-        if not title:
-            errors.append(
-                "Введите название публикации."
-            )
-
-        try:
-            publication_type_id_value = int(
-                publication_type_id
-            )
-        except ValueError:
-            publication_type_id_value = None
-            errors.append(
-                "Выберите тип публикации."
-            )
-
-        publication_type = None
-
-        if publication_type_id_value is not None:
-            publication_type = db.session.scalar(
-                select(ReferenceValue).where(
-                    ReferenceValue.id == publication_type_id_value,
-                    ReferenceValue.type == "PUBLICATION_TYPE",
-                    ReferenceValue.is_active.is_(True),
-                )
-            )
-
-            if publication_type is None:
-                errors.append(
-                    "Выбран некорректный тип публикации."
-                )
-
-        quartile = None
-
-        if quartile_id:
-            try:
-                quartile_id_value = int(quartile_id)
-            except ValueError:
-                quartile_id_value = None
-                errors.append(
-                    "Выбран некорректный квартиль."
-                )
-
-            if quartile_id_value is not None:
-                quartile = db.session.scalar(
-                    select(ReferenceValue).where(
-                        ReferenceValue.id == quartile_id_value,
-                        ReferenceValue.type == "QUARTILE",
-                        ReferenceValue.is_active.is_(True),
-                    )
-                )
-
-                if quartile is None:
-                    errors.append(
-                        "Выбран некорректный квартиль."
-                    )
-
-        planned_date_value = None
-
-        if planned_date:
-            try:
-                planned_date_value = date.fromisoformat(
-                    planned_date
-                )
-            except ValueError:
-                errors.append(
-                    "Введите корректную планируемую дату."
-                )
-
-        selected_employee_ids = set()
-
-        for author_id in author_ids:
-            try:
-                selected_employee_ids.add(int(author_id))
-            except ValueError:
-                errors.append(
-                    "Выбран некорректный автор."
-                )
-
-        employees_by_id = {
-            employee.id: employee
-            for employee in employees
-        }
-
-        for employee_id in selected_employee_ids:
-            if employee_id not in employees_by_id:
-                errors.append(
-                    "Нельзя выбрать сотрудника другой кафедры."
-                )
-                break
+        values, errors = validate_plan_item(request.form, publication_types, quartiles, employees)
+        title = values.title
+        journal = values.journal
+        planned_date_value = values.planned_date
+        selected_employee_ids = set(values.author_ids)
+        publication_type = next(
+            (item for item in publication_types if item.id == values.publication_type_id), None
+        )
+        quartile = next((item for item in quartiles if item.id == values.quartile_id), None)
 
         if errors:
             for error in errors:
@@ -701,11 +424,7 @@ def edit_plan_item(plan_id, item_id):
         item.title = title
         item.publication_type_id = publication_type.id
         item.journal = journal or None
-        item.quartile_id = (
-            quartile.id
-            if quartile
-            else None
-        )
+        item.quartile_id = quartile.id if quartile else None
         item.planned_date = planned_date_value
 
         item.author_links.clear()
@@ -726,11 +445,7 @@ def edit_plan_item(plan_id, item_id):
                 "title": item.title,
                 "publication_type_id": item.publication_type_id,
                 "quartile_id": item.quartile_id,
-                "planned_date": (
-                    item.planned_date.isoformat()
-                    if item.planned_date
-                    else None
-                ),
+                "planned_date": (item.planned_date.isoformat() if item.planned_date else None),
                 "author_ids": sorted(selected_employee_ids),
             },
         )
@@ -749,10 +464,7 @@ def edit_plan_item(plan_id, item_id):
             )
         )
 
-    selected_author_ids = {
-        link.employee_id
-        for link in item.author_links
-    }
+    selected_author_ids = {link.employee_id for link in item.author_links}
 
     return render_template(
         "plans/item_form.html",
@@ -871,6 +583,7 @@ def submit_plan(plan_id):
         plan=plan,
         status=PLAN_STATUS_SUBMITTED,
     )
+    notify_participants(plan, "PLAN", "План на согласовании", str(plan.year), audience="monitor")
 
     audit(
         "PLAN_SUBMITTED",
@@ -880,11 +593,7 @@ def submit_plan(plan_id):
             "department_id": plan.department_id,
             "year": plan.year,
             "status": plan.status,
-            "submitted_at": (
-                plan.submitted_at.isoformat()
-                if plan.submitted_at
-                else None
-            ),
+            "submitted_at": (plan.submitted_at.isoformat() if plan.submitted_at else None),
         },
     )
 
@@ -929,15 +638,19 @@ def approve_plan(plan_id):
     plan.status = PLAN_STATUS_APPROVED
     plan.approved_at = datetime.utcnow()
 
-    create_plan_version(
-        plan=plan,
-        status=PLAN_STATUS_APPROVED,
-    )
-
     create_publications_from_plan(
         plan=plan,
         user_id=current_user.id,
     )
+    db.session.flush()
+    plan.approved_snapshot = serialize_plan(plan)
+    plan.correction_requested_at = None
+    plan.manual_assessment = None
+    plan.assessment_comment = None
+    plan.assessed_by = None
+    plan.assessed_at = None
+    create_plan_version(plan=plan, status=PLAN_STATUS_APPROVED)
+    notify_participants(plan, "PLAN", "План одобрен.", str(plan.year), "success", audience="head")
 
     audit(
         "PLAN_APPROVED",
@@ -947,11 +660,7 @@ def approve_plan(plan_id):
             "department_id": plan.department_id,
             "year": plan.year,
             "status": plan.status,
-            "approved_at": (
-                plan.approved_at.isoformat()
-                if plan.approved_at
-                else None
-            ),
+            "approved_at": (plan.approved_at.isoformat() if plan.approved_at else None),
         },
     )
 
@@ -981,7 +690,9 @@ def return_plan(plan_id):
     if plan is None:
         return redirect(url_for("plans.plans"))
 
-    if plan.status != PLAN_STATUS_SUBMITTED:
+    if plan.status != PLAN_STATUS_SUBMITTED and not (
+        plan.status == PLAN_STATUS_APPROVED and plan.correction_requested_at
+    ):
         flash(
             "На доработку можно вернуть только план, находящийся на рассмотрении.",
             "danger",
@@ -1009,6 +720,7 @@ def return_plan(plan_id):
 
     plan.status = PLAN_STATUS_RETURNED
     plan.approved_at = None
+    plan.correction_requested_at = None
 
     create_plan_version(
         plan=plan,
@@ -1016,14 +728,7 @@ def return_plan(plan_id):
         comment=comment,
     )
 
-    db.session.add(
-        Comment(
-            user_id=current_user.id,
-            entity_type="PLAN",
-            entity_id=plan.id,
-            text=comment,
-        )
-    )
+    add_comment(plan, "PLAN", comment, "План возвращён на доработку")
 
     audit(
         "PLAN_RETURNED",
@@ -1050,3 +755,89 @@ def return_plan(plan_id):
             plan_id=plan.id,
         )
     )
+
+
+@plans_bp.post("/<int:plan_id>/request-correction")
+@department_head_required
+def request_correction(plan_id):
+    plan = get_accessible_plan(plan_id)
+    if plan is None:
+        abort(404)
+    comment = request.form.get("comment", "").strip()
+    if plan.status != PLAN_STATUS_APPROVED or plan.correction_requested_at:
+        flash("Запрос на корректировку уже отправлен или план не утверждён.", "warning")
+    elif not comment or len(comment) > 5000:
+        flash("Введите комментарий длиной от 1 до 5000 символов.", "danger")
+    else:
+        # Older approved plans may not yet have a persisted snapshot.
+        if plan.approved_snapshot is None:
+            plan.approved_snapshot = serialize_plan(plan)
+        plan.correction_requested_at = datetime.utcnow()
+        create_plan_version(plan, "CORRECTION_REQUESTED", comment)
+        add_comment(plan, "PLAN", comment, "Запрос на корректировку плана")
+        audit(
+            "PLAN_CORRECTION_REQUESTED", entity_type="Plan", entity_id=plan.id, details={"comment": comment}
+        )
+        db.session.commit()
+        flash("Запрос на корректировку отправлен монитору.", "success")
+    return redirect(url_for("plans.plan_detail", plan_id=plan.id))
+
+
+@plans_bp.post("/<int:plan_id>/decline-correction")
+@admin_required
+def decline_correction(plan_id):
+    plan = get_plan(plan_id)
+    if plan is None:
+        abort(404)
+    comment = request.form.get("comment", "").strip()
+    if plan.status != PLAN_STATUS_APPROVED or not plan.correction_requested_at:
+        abort(400)
+    if not comment or len(comment) > 5000:
+        flash("Введите комментарий длиной от 1 до 5000 символов.", "danger")
+    else:
+        plan.correction_requested_at = None
+        create_plan_version(plan, "CORRECTION_DECLINED", comment)
+        add_comment(plan, "PLAN", comment, "Запрос на корректировку отклонён")
+        audit("PLAN_CORRECTION_DECLINED", entity_type="Plan", entity_id=plan.id, details={"comment": comment})
+        db.session.commit()
+    return redirect(url_for("plans.plan_detail", plan_id=plan.id))
+
+
+@plans_bp.post("/<int:plan_id>/assessment")
+@admin_required
+def assess_plan(plan_id):
+    plan = get_plan(plan_id)
+    if plan is None:
+        abort(404)
+    if plan.status != PLAN_STATUS_APPROVED and plan.approved_snapshot is None:
+        abort(400)
+    assessment = request.form.get("assessment", "")
+    comment = request.form.get("comment", "").strip()
+    if assessment not in {*ASSESSMENTS, "AUTO"} or not comment or len(comment) > 5000:
+        flash("Выберите оценку и укажите пояснение до 5000 символов.", "danger")
+    else:
+        old_assessment = plan.manual_assessment
+        plan.manual_assessment = None if assessment == "AUTO" else assessment
+        plan.assessment_comment = comment
+        plan.assessed_by = current_user.id
+        plan.assessed_at = datetime.utcnow()
+        add_comment(plan, "PLAN", comment, "Оценка выполнения плана изменена")
+        audit(
+            "PLAN_ASSESSMENT_CHANGED",
+            entity_type="Plan",
+            entity_id=plan.id,
+            details={"old": old_assessment, "new": plan.manual_assessment, "comment": comment},
+        )
+        db.session.commit()
+        flash("Оценка сохранена.", "success")
+    return redirect(url_for("plans.plan_detail", plan_id=plan.id))
+
+
+@plans_bp.get("/<int:plan_id>/versions/<int:version_id>")
+@roles_required(ROLE_ADMIN, ROLE_DEPARTMENT_HEAD)
+def plan_version(plan_id, version_id):
+    plan = get_accessible_plan(plan_id)
+    version = db.session.get(PlanVersion, version_id)
+    if plan is None or version is None or version.plan_id != plan.id:
+        abort(404)
+    return render_template("plans/version.html", plan=plan, version=version)

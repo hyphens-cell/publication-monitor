@@ -1,0 +1,9 @@
+{% if pagination is defined and pagination.pages > 1 %}
+<nav class="pm-pagination mt-3" aria-label="{{ tr('Страницы') }}">
+<span class="small text-body-secondary">{{ pagination.first }}–{{ pagination.last }} / {{ pagination.total }}</span><div class="d-flex flex-wrap gap-1">
+{% if pagination.has_prev %}{% set args = request.args.to_dict() %}{% set _ = args.update(page=pagination.prev_num) %}<a class="btn btn-sm btn-light border" href="{{ url_for(request.endpoint, **args) }}" rel="prev">{{ tr('Назад') }}</a>{% endif %}
+{% for page in pagination.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=1) %}
+{% if page %}{% set args = request.args.to_dict() %}{% set _ = args.update(page=page) %}<a class="btn btn-sm {{ 'btn-pm-primary' if page == pagination.page else 'btn-light border' }}" href="{{ url_for(request.endpoint, **args) }}" {% if page == pagination.page %}aria-current="page"{% endif %} aria-label="{{ tr('Страница') }} {{ page }}">{{ page }}</a>{% else %}<span class="px-1 align-self-center" aria-hidden="true">…</span>{% endif %}
+{% endfor %}
+{% if pagination.has_next %}{% set args = request.args.to_dict() %}{% set _ = args.update(page=pagination.next_num) %}<a class="btn btn-sm btn-light border" href="{{ url_for(request.endpoint, **args) }}" rel="next">{{ tr('Далее') }}</a>{% endif %}
+</div></nav>{% endif %}

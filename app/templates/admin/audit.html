@@ -4,6 +4,7 @@
 {% block page_title %}Журнал действий{% endblock %}
 {% block page_subtitle %}<p class="text-body-secondary mb-0">Критические действия пользователей и системные события.</p>{% endblock %}
 
+{% block page_actions %}{% if current_user.role == 'TECH_ADMIN' %}<a class="btn btn-light border" href="{{ url_for('admin.audit_export', **request.args) }}">{{ tr('Экспорт журнала') }} · CSV</a>{% endif %}{% endblock %}
 {% block content %}
     <section class="card card-pm border-0 mb-4" aria-labelledby="audit-filters-title">
         <div class="card-body p-3 p-lg-4">

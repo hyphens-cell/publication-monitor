@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}{{ tr('Версия плана') }} {{ version.version_number }} — Publication Monitor{% endblock %}
+{% block page_title %}{{ tr('Версия плана') }} {{ version.version_number }}{% endblock %}
+{% block page_actions %}<a class="btn btn-light border" href="{{ url_for('plans.plan_detail', plan_id=plan.id) }}">{{ tr('К плану') }}</a>{% endblock %}
+{% block content %}
+<p>{{ plan.department.name }} · {{ plan.year }} · {{ plan_status_label(version.status) }} · {{ version.created_at.strftime('%d.%m.%Y %H:%M') }}</p>
+{% if version.comment %}<p class="text-break">{{ version.comment }}</p>{% endif %}
+<div class="card card-pm border-0"><div class="table-responsive">
+<table class="table table-pm"><thead><tr><th>{{ tr('Название') }}</th><th>{{ tr('Тип') }}</th><th>{{ tr('Журнал') }}</th><th>{{ tr('Квартиль') }}</th><th>{{ tr('Авторы') }}</th><th>{{ tr('Дата') }}</th></tr></thead>
+<tbody>{% for item in version.data.get('items', []) %}<tr>
+  <td class="text-break">{{ item.title }}</td>
+  <td>{{ item.publication_type.name_kk if current_language() == 'kk' else item.publication_type.name_ru }}</td>
+  <td>{{ item.journal or '—' }}</td><td>{{ item.quartile.code if item.quartile else '—' }}</td>
+  <td>{% for author in item.authors %}<div>{{ author.full_name }}</div>{% endfor %}</td><td>{{ item.planned_date or '—' }}</td>
+</tr>{% endfor %}</tbody></table></div></div>
+{% endblock %}

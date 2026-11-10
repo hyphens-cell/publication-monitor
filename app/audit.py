@@ -23,11 +23,6 @@ def _current_ip_address() -> str | None:
     if not has_request_context():
         return None
 
-    forwarded_for = request.headers.get("X-Forwarded-For", "")
-
-    if forwarded_for:
-        return forwarded_for.split(",", 1)[0].strip()[:45]
-
     return request.remote_addr[:45] if request.remote_addr else None
 
 
@@ -41,17 +36,13 @@ def audit(
     normalized_action = action.strip()
 
     if not normalized_action:
-        raise ValueError(
-            "Действие аудита не может быть пустым."
-        )
+        raise ValueError("Действие аудита не может быть пустым.")
 
     if entity_type is not None:
         entity_type = entity_type.strip() or None
 
     if details is not None and not isinstance(details, dict):
-        raise TypeError(
-            "details должен быть словарём."
-        )
+        raise TypeError("details должен быть словарём.")
 
     log = AuditLog(
         user_id=_current_user_id(),

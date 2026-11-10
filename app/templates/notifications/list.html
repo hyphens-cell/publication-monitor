@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}{{ tr('Уведомления') }} — Publication Monitor{% endblock %}
+{% block page_title %}{{ tr('Уведомления') }}{% endblock %}
+{% block content %}
+<div class="d-flex flex-column gap-3">
+{% for notice in pagination.items %}
+  <article class="card card-pm border-0"><div class="card-body p-4">
+    <div class="d-flex flex-wrap justify-content-between gap-2">
+      <h2 class="h6 text-break"><span class="badge {{ 'badge-pm-success' if notice.type == 'success' else 'badge-pm-danger' if notice.type == 'danger' else 'badge-pm-warning' }}">{{ '✓' if notice.type == 'success' else '!' }}</span> {{ tr(notice.title) }}</h2>
+      <time class="small text-body-secondary">{{ notice.created_at.strftime('%d.%m.%Y %H:%M') }}</time>
+    </div>
+    <p class="text-break" style="white-space: pre-wrap">{{ tr(notice.message) }}</p>
+    <form method="post" action="{{ url_for('discussion.read_notification', notification_id=notice.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="btn btn-light border">{{ tr('Открыть') }}{% if not notice.is_read %} · {{ tr('Новое') }}{% endif %}</button>
+    </form>
+  </div></article>
+{% else %}<p class="text-body-secondary">{{ tr('Уведомлений пока нет.') }}</p>{% endfor %}
+</div>
+<nav class="d-flex justify-content-between mt-4" aria-label="{{ tr('Страницы') }}">
+{% if pagination.has_prev %}<a class="btn btn-light border" href="{{ url_for('discussion.notifications', page=pagination.prev_num) }}">{{ tr('Назад') }}</a>{% else %}<span></span>{% endif %}
+{% if pagination.has_next %}<a class="btn btn-light border" href="{{ url_for('discussion.notifications', page=pagination.next_num) }}">{{ tr('Далее') }}</a>{% endif %}
+</nav>
+{% endblock %}

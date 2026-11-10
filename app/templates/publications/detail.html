@@ -1491,4 +1491,17 @@
 
 </section>
 
+{% with entity_type='PUBLICATION', entity_id=publication.id %}{% include 'shared/comments.html' %}{% endwith %}
+{% if changes %}
+<section class="card card-pm border-0 mt-4"><div class="card-body p-4">
+<h2 class="h5">{{ tr('История сведений о публикации') }}</h2>
+{% for change in changes %}<details class="border-bottom py-2">
+  <summary>{{ change.created_at.strftime('%d.%m.%Y %H:%M') }} · {{ change.user.full_name if change.user else tr('Система') }}</summary>
+  <div class="table-responsive"><table class="table table-pm"><thead><tr><th>{{ tr('Поле') }}</th><th>{{ tr('До изменения') }}</th><th>{{ tr('После изменения') }}</th></tr></thead><tbody>
+  {% for key, value in change.details.get('after', {}).items() %}
+    {% if value != change.details.get('before', {}).get(key) %}<tr><td>{{ tr(key) }}</td><td class="text-break">{{ change.details.get('before', {}).get(key) or '—' }}</td><td class="text-break">{{ value or '—' }}</td></tr>{% endif %}
+  {% endfor %}</tbody></table></div>
+</details>{% endfor %}
+</div></section>
+{% endif %}
 {% endblock %}

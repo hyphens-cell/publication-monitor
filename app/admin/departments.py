@@ -1,8 +1,7 @@
 from flask import flash, redirect, render_template, request, url_for
-from flask_login import current_user
-from sqlalchemy import or_, select
 
 from app.admin import admin_bp
+from app.admin.services import paginated_admin_list, validate_department_form
 from app.audit import audit
 from app.auth import technical_admin_required
 from app.extensions import db
@@ -12,49 +11,21 @@ from app.models import Department
 @admin_bp.route("/departments")
 @technical_admin_required
 def departments():
-    departments_list = db.session.scalars(
-        select(Department).order_by(Department.name)
-    ).all()
-
-    return render_template(
-        "admin/departments/list.html",
-        departments=departments_list,
+    pagination = paginated_admin_list(
+        Department,
+        (Department.name, Department.code),
+        {"name": Department.name, "code": Department.code},
+        Department.name,
     )
+    return render_template("admin/departments/list.html", departments=pagination.items, pagination=pagination)
 
 
 @admin_bp.route("/departments/create", methods=["GET", "POST"])
 @technical_admin_required
 def create_department():
     if request.method == "POST":
-        name = request.form.get("name", "").strip()
-        code = request.form.get("code", "").strip().upper()
-
-        errors = []
-
-        if not name:
-            errors.append("Введите название кафедры.")
-
-        if not code:
-            errors.append("Введите код кафедры.")
-
-        if len(code) > 50:
-            errors.append("Код кафедры не должен превышать 50 символов.")
-
-        existing_department = db.session.scalar(
-            select(Department).where(
-                or_(
-                    Department.name == name,
-                    Department.code == code,
-                )
-            )
-        )
-
-        if existing_department:
-            if existing_department.name == name:
-                errors.append("Кафедра с таким названием уже существует.")
-
-            if existing_department.code == code:
-                errors.append("Кафедра с таким кодом уже существует.")
+        values, errors = validate_department_form(request.form)
+        name, code = values["name"], values["code"]
 
         if errors:
             for error in errors:
@@ -106,40 +77,8 @@ def edit_department(department_id):
         return redirect(url_for("admin.departments"))
 
     if request.method == "POST":
-        name = request.form.get("name", "").strip()
-        code = request.form.get("code", "").strip().upper()
-
-        errors = []
-
-        if not name:
-            errors.append("Введите название кафедры.")
-
-        if not code:
-            errors.append("Введите код кафедры.")
-
-        if len(code) > 50:
-            errors.append("Код кафедры не должен превышать 50 символов.")
-
-        duplicate = db.session.scalar(
-            select(Department).where(
-                Department.id != department.id,
-                or_(
-                    Department.name == name,
-                    Department.code == code,
-                ),
-            )
-        )
-
-        if duplicate:
-            if duplicate.name == name:
-                errors.append(
-                    "Кафедра с таким названием уже существует."
-                )
-
-            if duplicate.code == code:
-                errors.append(
-                    "Кафедра с таким кодом уже существует."
-                )
+        values, errors = validate_department_form(request.form, department)
+        name, code = values["name"], values["code"]
 
         if errors:
             for error in errors:

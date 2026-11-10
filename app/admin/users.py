@@ -1,13 +1,20 @@
-from flask import flash, redirect, render_template, request, url_for
+from flask import flash, redirect, render_template, request, session, url_for
 from flask_login import current_user
-from sqlalchemy import func, or_, select
+from sqlalchemy import func, select
 
 from app.admin import admin_bp
+from app.admin.services import (
+    active_departments,
+    department_assignment_errors,
+    lock_technical_admins,
+    paginated_admin_list,
+    validate_user_form,
+)
 from app.audit import audit
 from app.auth import technical_admin_required
 from app.extensions import db
 from app.models import Department, User
-
+from app.security import password_stamp
 
 ROLE_TECH_ADMIN = "TECH_ADMIN"
 ROLE_ADMIN = "ADMIN"
@@ -41,11 +48,7 @@ def has_another_active_technical_admin(user_id):
 
 
 def get_active_departments():
-    return db.session.scalars(
-        select(Department)
-        .where(Department.is_active.is_(True))
-        .order_by(Department.name)
-    ).all()
+    return active_departments()
 
 
 def get_user_form_context(user=None):
@@ -62,13 +65,9 @@ def validate_department_assignment(role, department):
 
     if role == ROLE_DEPARTMENT_HEAD:
         if department is None:
-            errors.append(
-                "Для заведующего кафедрой необходимо указать кафедру."
-            )
+            errors.append("Для заведующего кафедрой необходимо указать кафедру.")
         elif not department.is_active:
-            errors.append(
-                "Нельзя назначить заведующего на архивную кафедру."
-            )
+            errors.append("Нельзя назначить заведующего на архивную кафедру.")
         else:
             existing_head = db.session.scalar(
                 select(User).where(
@@ -79,9 +78,7 @@ def validate_department_assignment(role, department):
             )
 
             if existing_head:
-                errors.append(
-                    "У этой кафедры уже есть активный заведующий."
-                )
+                errors.append("У этой кафедры уже есть активный заведующий.")
 
     return errors
 
@@ -103,9 +100,7 @@ def get_department_from_form():
         return None, ["Выбрана некорректная кафедра."]
 
     if not department.is_active:
-        return None, [
-            "Нельзя назначить пользователя на архивную кафедру."
-        ]
+        return None, ["Нельзя назначить пользователя на архивную кафедру."]
 
     return department, []
 
@@ -113,14 +108,13 @@ def get_department_from_form():
 @admin_bp.route("/users")
 @technical_admin_required
 def users():
-    users_list = db.session.scalars(
-        select(User).order_by(User.full_name)
-    ).all()
-
-    return render_template(
-        "admin/users/list.html",
-        users=users_list,
+    pagination = paginated_admin_list(
+        User,
+        (User.full_name, User.username, User.email),
+        {"name": User.full_name, "username": User.username, "role": User.role},
+        User.full_name,
     )
+    return render_template("admin/users/list.html", users=pagination.items, pagination=pagination)
 
 
 @admin_bp.route("/users/create", methods=["GET", "POST"])
@@ -129,70 +123,8 @@ def create_user():
     departments = get_active_departments()
 
     if request.method == "POST":
-        username = request.form.get("username", "").strip()
-        full_name = request.form.get("full_name", "").strip()
-        email = request.form.get("email", "").strip().lower()
-        password = request.form.get("password", "")
-        password_confirmation = request.form.get(
-            "password_confirmation",
-            "",
-        )
-        role = request.form.get("role", "").strip()
-        language = request.form.get("language", "ru").strip()
-
-        errors = []
-
-        if not username:
-            errors.append("Введите логин.")
-
-        if not full_name:
-            errors.append("Введите ФИО.")
-
-        if not email:
-            errors.append("Введите email.")
-
-        if role not in {value for value, _ in ROLES}:
-            errors.append("Выберите корректную роль.")
-
-        if language not in {value for value, _ in LANGUAGES}:
-            errors.append("Выберите корректный язык.")
-
-        if len(password) < 8:
-            errors.append(
-                "Пароль должен содержать минимум 8 символов."
-            )
-
-        if password != password_confirmation:
-            errors.append("Пароли не совпадают.")
-
-        existing_user = db.session.scalar(
-            select(User).where(
-                or_(
-                    User.username == username,
-                    User.email == email,
-                )
-            )
-        )
-
-        if existing_user:
-            errors.append(
-                "Пользователь с таким логином или email уже существует."
-            )
-
-        department, department_errors = get_department_from_form()
-        errors.extend(department_errors)
-
-        if role != ROLE_DEPARTMENT_HEAD:
-            department = None
-
-        if role == ROLE_DEPARTMENT_HEAD and not department_errors:
-            errors.extend(
-                validate_department_assignment(
-                    role,
-                    department,
-                )
-            )
-
+        lock_technical_admins()
+        values, password, errors = validate_user_form(request.form, actor=current_user)
         if errors:
             for error in errors:
                 flash(error, "danger")
@@ -205,19 +137,7 @@ def create_user():
                 languages=LANGUAGES,
             )
 
-        user = User(
-            username=username,
-            full_name=full_name,
-            email=email,
-            role=role,
-            language=language,
-            department_id=(
-                department.id
-                if department is not None
-                else None
-            ),
-            is_active=True,
-        )
+        user = User(**values)
 
         user.set_password(password)
 
@@ -272,112 +192,8 @@ def edit_user(user_id):
     departments = get_active_departments()
 
     if request.method == "POST":
-        username = request.form.get("username", "").strip()
-        full_name = request.form.get("full_name", "").strip()
-        email = request.form.get("email", "").strip().lower()
-        password = request.form.get("password", "")
-        password_confirmation = request.form.get(
-            "password_confirmation",
-            "",
-        )
-        role = request.form.get("role", "").strip()
-        language = request.form.get("language", "ru").strip()
-        is_active = request.form.get("is_active") == "on"
-
-        errors = []
-
-        if not username:
-            errors.append("Введите логин.")
-
-        if not full_name:
-            errors.append("Введите ФИО.")
-
-        if not email:
-            errors.append("Введите email.")
-
-        if role not in {value for value, _ in ROLES}:
-            errors.append("Выберите корректную роль.")
-
-        if language not in {value for value, _ in LANGUAGES}:
-            errors.append("Выберите корректный язык.")
-
-        duplicate = db.session.scalar(
-            select(User).where(
-                User.id != user.id,
-                or_(
-                    User.username == username,
-                    User.email == email,
-                ),
-            )
-        )
-
-        if duplicate:
-            errors.append(
-                "Логин или email уже используются другим пользователем."
-            )
-
-        department, department_errors = get_department_from_form()
-        errors.extend(department_errors)
-
-        if role == ROLE_DEPARTMENT_HEAD:
-            if department is None:
-                errors.append(
-                    "Для заведующего кафедрой необходимо указать кафедру."
-                )
-            elif not department_errors:
-                existing_head = db.session.scalar(
-                    select(User).where(
-                        User.id != user.id,
-                        User.department_id == department.id,
-                        User.role == ROLE_DEPARTMENT_HEAD,
-                        User.is_active.is_(True),
-                    )
-                )
-
-                if existing_head:
-                    errors.append(
-                        "У этой кафедры уже есть активный заведующий."
-                    )
-        else:
-            department = None
-
-        if role == ROLE_DEPARTMENT_HEAD and not is_active:
-            errors.append(
-                "Заведующий кафедрой должен иметь активную учетную запись."
-            )
-
-        if password or password_confirmation:
-            if len(password) < 8:
-                errors.append(
-                    "Новый пароль должен содержать минимум 8 символов."
-                )
-
-            if password != password_confirmation:
-                errors.append(
-                    "Пароли не совпадают."
-                )
-
-        if user.id == current_user.id:
-            if role != "TECH_ADMIN":
-                errors.append(
-                    "Нельзя лишить себя роли технического администратора."
-                )
-
-            if not is_active:
-                errors.append(
-                    "Нельзя заблокировать собственную учетную запись."
-                )
-
-        if (
-            user.role == ROLE_TECH_ADMIN
-            and user.is_active
-            and (role != ROLE_TECH_ADMIN or not is_active)
-            and not has_another_active_technical_admin(user.id)
-        ):
-            errors.append(
-                "В системе должен оставаться хотя бы один активный технический администратор."
-            )
-
+        lock_technical_admins()
+        values, password, errors = validate_user_form(request.form, actor=current_user, user=user)
         if errors:
             for error in errors:
                 flash(error, "danger")
@@ -390,17 +206,8 @@ def edit_user(user_id):
                 languages=LANGUAGES,
             )
 
-        user.username = username
-        user.full_name = full_name
-        user.email = email
-        user.role = role
-        user.language = language
-        user.department_id = (
-            department.id
-            if department is not None
-            else None
-        )
-        user.is_active = is_active
+        for key, value in values.items():
+            setattr(user, key, value)
 
         if password:
             user.set_password(password)
@@ -420,6 +227,8 @@ def edit_user(user_id):
         )
 
         db.session.commit()
+        if user.id == current_user.id and password:
+            session["auth_stamp"] = password_stamp(user)
 
         flash(
             "Пользователь успешно изменён.",
@@ -443,6 +252,7 @@ def edit_user(user_id):
 )
 @technical_admin_required
 def block_user(user_id):
+    lock_technical_admins()
     user = db.session.get(User, user_id)
 
     if user is None:
@@ -490,6 +300,7 @@ def block_user(user_id):
 )
 @technical_admin_required
 def delete_user(user_id):
+    lock_technical_admins()
     user = db.session.get(User, user_id)
 
     if user is None:
@@ -540,6 +351,7 @@ def delete_user(user_id):
 )
 @technical_admin_required
 def unblock_user(user_id):
+    lock_technical_admins()
     user = db.session.get(User, user_id)
 
     if user is None:
@@ -553,6 +365,16 @@ def unblock_user(user_id):
     if user.role == ROLE_DEPARTMENT_HEAD and user.department_id is None:
         flash("Нельзя разблокировать заведующего без назначенной кафедры.", "danger")
         return redirect(url_for("admin.users"))
+
+    if user.role == ROLE_DEPARTMENT_HEAD:
+        department = db.session.scalar(
+            select(Department).where(Department.id == user.department_id).with_for_update()
+        )
+        errors = department_assignment_errors(department, exclude_user_id=user.id)
+        if errors:
+            for message in errors:
+                flash(message, "danger")
+            return redirect(url_for("admin.users"))
 
     user.is_active = True
     audit(

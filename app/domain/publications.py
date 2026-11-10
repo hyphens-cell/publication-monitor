@@ -1,0 +1,95 @@
+"""Publication states and canonical DOI normalization."""
+
+PUBLICATION_STATUS_PREPARATION = "PREPARATION"
+PUBLICATION_STATUS_SUBMITTED_TO_JOURNAL = "SUBMITTED_TO_JOURNAL"
+PUBLICATION_STATUS_UNDER_REVIEW = "UNDER_REVIEW"
+PUBLICATION_STATUS_REVISION_REQUIRED = "REVISION_REQUIRED"
+PUBLICATION_STATUS_ACCEPTED = "ACCEPTED"
+PUBLICATION_STATUS_PUBLISHED = "PUBLISHED"
+PUBLICATION_STATUS_REJECTED = "REJECTED"
+
+
+PUBLICATION_STATUSES = {
+    PUBLICATION_STATUS_PREPARATION: "Подготовка статьи",
+    PUBLICATION_STATUS_SUBMITTED_TO_JOURNAL: "Отправлена в журнал",
+    PUBLICATION_STATUS_UNDER_REVIEW: "На рецензировании",
+    PUBLICATION_STATUS_REVISION_REQUIRED: "Требуется доработка",
+    PUBLICATION_STATUS_ACCEPTED: "Принята к публикации",
+    PUBLICATION_STATUS_PUBLISHED: "Опубликована",
+    PUBLICATION_STATUS_REJECTED: "Отклонена",
+}
+
+
+PUBLICATION_VERIFICATION_PENDING = "PENDING"
+PUBLICATION_VERIFICATION_APPROVED = "APPROVED"
+PUBLICATION_VERIFICATION_RETURNED = "RETURNED"
+PUBLICATION_VERIFICATION_DUPLICATE = "DUPLICATE"
+
+
+PUBLICATION_VERIFICATION_STATUSES = {
+    PUBLICATION_VERIFICATION_PENDING: "На проверке",
+    PUBLICATION_VERIFICATION_APPROVED: "Проверена",
+    PUBLICATION_VERIFICATION_RETURNED: "Возвращена на доработку",
+    PUBLICATION_VERIFICATION_DUPLICATE: "Дубликат",
+}
+
+
+ALLOWED_ATTACHMENT_EXTENSIONS = {
+    "pdf",
+    "doc",
+    "docx",
+    "jpg",
+    "jpeg",
+    "zip",
+    "rar",
+}
+
+
+ALLOWED_PUBLICATION_STATUS_TRANSITIONS = {
+    PUBLICATION_STATUS_PREPARATION: {
+        PUBLICATION_STATUS_SUBMITTED_TO_JOURNAL,
+        PUBLICATION_STATUS_REJECTED,
+    },
+    PUBLICATION_STATUS_SUBMITTED_TO_JOURNAL: {
+        PUBLICATION_STATUS_UNDER_REVIEW,
+        PUBLICATION_STATUS_REVISION_REQUIRED,
+        PUBLICATION_STATUS_REJECTED,
+    },
+    PUBLICATION_STATUS_UNDER_REVIEW: {
+        PUBLICATION_STATUS_REVISION_REQUIRED,
+        PUBLICATION_STATUS_ACCEPTED,
+        PUBLICATION_STATUS_REJECTED,
+    },
+    PUBLICATION_STATUS_REVISION_REQUIRED: {
+        PUBLICATION_STATUS_SUBMITTED_TO_JOURNAL,
+        PUBLICATION_STATUS_UNDER_REVIEW,
+        PUBLICATION_STATUS_REJECTED,
+    },
+    PUBLICATION_STATUS_ACCEPTED: {
+        PUBLICATION_STATUS_PUBLISHED,
+        PUBLICATION_STATUS_REJECTED,
+    },
+    PUBLICATION_STATUS_PUBLISHED: set(),
+    PUBLICATION_STATUS_REJECTED: set(),
+}
+
+
+def normalize_doi(value: str | None) -> str | None:
+    """Return a canonical DOI suitable for storage and duplicate checks."""
+    if not value:
+        return None
+
+    normalized = value.strip().lower()
+    for prefix in (
+        "https://doi.org/",
+        "http://doi.org/",
+        "https://dx.doi.org/",
+        "http://dx.doi.org/",
+        "doi:",
+    ):
+        if normalized.startswith(prefix):
+            normalized = normalized[len(prefix) :]
+            break
+
+    normalized = "".join(normalized.split())
+    return normalized or None

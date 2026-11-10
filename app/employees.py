@@ -1,12 +1,13 @@
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_login import current_user
-from sqlalchemy import select
+from sqlalchemy import or_, select
 
-from app.auth import department_head_required
 from app.audit import audit
+from app.auth import department_head_required
 from app.extensions import db
 from app.models import Employee
-
+from app.services.listing import paginate, search_term, sort_order
+from app.services.validation import validate_employee
 
 employees_bp = Blueprint(
     "employees",
@@ -39,20 +40,25 @@ def employees():
         )
         return redirect(url_for("main.index"))
 
-    employees_list = db.session.scalars(
-        select(Employee)
-        .where(
-            Employee.department_id == current_user.department_id,
+    query = select(Employee).where(Employee.department_id == current_user.department_id)
+    term = search_term(request.args)
+    if term:
+        query = query.where(
+            or_(
+                Employee.full_name.ilike(f"%{term}%", escape="\\"),
+                Employee.position.ilike(f"%{term}%", escape="\\"),
+                Employee.email.ilike(f"%{term}%", escape="\\"),
+            )
         )
-        .order_by(
-            Employee.is_active.desc(),
-            Employee.full_name,
-        )
-    ).all()
+    order = sort_order(
+        request.args, {"name": Employee.full_name.asc(), "name_desc": Employee.full_name.desc()}, "name"
+    )
+    pagination = paginate(query.order_by(Employee.is_active.desc(), order, Employee.id), request.args)
 
     return render_template(
         "employees/list.html",
-        employees=employees_list,
+        employees=pagination.items,
+        pagination=pagination,
     )
 
 
@@ -67,29 +73,8 @@ def create_employee():
         return redirect(url_for("main.index"))
 
     if request.method == "POST":
-        full_name = request.form.get("full_name", "").strip()
-        position = request.form.get("position", "").strip()
-        email = request.form.get("email", "").strip().lower()
-
-        errors = []
-
-        if not full_name:
-            errors.append("Введите ФИО сотрудника.")
-
-        if len(full_name) > 255:
-            errors.append(
-                "ФИО не должно превышать 255 символов."
-            )
-
-        if len(position) > 255:
-            errors.append(
-                "Должность не должна превышать 255 символов."
-            )
-
-        if len(email) > 255:
-            errors.append(
-                "Email не должен превышать 255 символов."
-            )
+        values, errors = validate_employee(request.form)
+        full_name, position, email = values.full_name, values.position, values.email
 
         if errors:
             for error in errors:
@@ -110,7 +95,12 @@ def create_employee():
 
         db.session.add(employee)
         db.session.flush()
-        audit("EMPLOYEE_CREATED", entity_type="Employee", entity_id=employee.id, details={"department_id": employee.department_id, "full_name": employee.full_name})
+        audit(
+            "EMPLOYEE_CREATED",
+            entity_type="Employee",
+            entity_id=employee.id,
+            details={"department_id": employee.department_id, "full_name": employee.full_name},
+        )
         db.session.commit()
 
         flash(
@@ -138,29 +128,8 @@ def edit_employee(employee_id):
         return redirect(url_for("employees.employees"))
 
     if request.method == "POST":
-        full_name = request.form.get("full_name", "").strip()
-        position = request.form.get("position", "").strip()
-        email = request.form.get("email", "").strip().lower()
-
-        errors = []
-
-        if not full_name:
-            errors.append("Введите ФИО сотрудника.")
-
-        if len(full_name) > 255:
-            errors.append(
-                "ФИО не должно превышать 255 символов."
-            )
-
-        if len(position) > 255:
-            errors.append(
-                "Должность не должна превышать 255 символов."
-            )
-
-        if len(email) > 255:
-            errors.append(
-                "Email не должен превышать 255 символов."
-            )
+        values, errors = validate_employee(request.form)
+        full_name, position, email = values.full_name, values.position, values.email
 
         if errors:
             for error in errors:
@@ -175,7 +144,12 @@ def edit_employee(employee_id):
         employee.position = position or None
         employee.email = email or None
 
-        audit("EMPLOYEE_UPDATED", entity_type="Employee", entity_id=employee.id, details={"department_id": employee.department_id, "full_name": employee.full_name})
+        audit(
+            "EMPLOYEE_UPDATED",
+            entity_type="Employee",
+            entity_id=employee.id,
+            details={"department_id": employee.department_id, "full_name": employee.full_name},
+        )
 
         db.session.commit()
 
@@ -205,7 +179,12 @@ def archive_employee(employee_id):
 
     employee.is_active = False
 
-    audit("EMPLOYEE_ARCHIVED", entity_type="Employee", entity_id=employee.id, details={"department_id": employee.department_id})
+    audit(
+        "EMPLOYEE_ARCHIVED",
+        entity_type="Employee",
+        entity_id=employee.id,
+        details={"department_id": employee.department_id},
+    )
 
     db.session.commit()
 
@@ -230,7 +209,12 @@ def restore_employee(employee_id):
 
     employee.is_active = True
 
-    audit("EMPLOYEE_RESTORED", entity_type="Employee", entity_id=employee.id, details={"department_id": employee.department_id})
+    audit(
+        "EMPLOYEE_RESTORED",
+        entity_type="Employee",
+        entity_id=employee.id,
+        details={"department_id": employee.department_id},
+    )
 
     db.session.commit()
 

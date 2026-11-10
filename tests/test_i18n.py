@@ -29,7 +29,14 @@ def test_all_jinja_templates_compile(app):
     names = app.jinja_env.list_templates()
     for name in names:
         app.jinja_env.get_template(name)
-    assert len(names) == 24
+    assert {
+        "auth/login.html",
+        "notifications/list.html",
+        "plans/version.html",
+        "plans/progress.html",
+        "publications/detail.html",
+        "shared/comments.html",
+    } <= set(names)
 
 
 def test_anonymous_kazakh_login_is_fully_localized(client):

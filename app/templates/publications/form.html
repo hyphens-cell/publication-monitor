@@ -64,6 +64,14 @@
 
 
                     <div class="row g-4">
+                        <div class="col-12">
+                            <input type="hidden" name="authors_present" value="1">
+                            <label for="author_ids" class="form-label">{{ tr('Авторы') }}</label>
+                            <select id="author_ids" name="author_ids" class="form-select" multiple size="5">
+                              {% for employee in employees %}<option value="{{ employee.id }}" {% if employee.id in selected_author_ids %}selected{% endif %}>{{ employee.full_name }}</option>{% endfor %}
+                            </select>
+                            <p class="small text-body-secondary mt-2">{{ tr('Выберите авторов из сотрудников кафедры.') }}</p>
+                        </div>
 
                         <div class="col-12">
 
